@@ -14,8 +14,5 @@ export class UserResponseDto {
   role!: string;
 
   @IsString()
-  passwordHash!: string;
-
-  @IsString()
   createdAt!: string;
 }
