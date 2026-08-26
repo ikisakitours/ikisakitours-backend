@@ -7,12 +7,17 @@ import { TourServicesModule } from './tour-services/tour-services.module';
 import { CommentsModule } from './comments/comments.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { AddpackagesModule } from './addpackages/addpackages.module';
+import { DatabaseModule } from './database/database.module';
 
 @Module({
   imports: [
     UsersModule, 
     ToursModule, 
-    TourServicesModule, CommentsModule, ContactsModule, AddpackagesModule
+    TourServicesModule,
+    CommentsModule,
+    ContactsModule,
+    AddpackagesModule,
+    DatabaseModule
   ],
   controllers: [AppController],
   providers: [AppService],

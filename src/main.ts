@@ -5,9 +5,16 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  // 1. Enable CORS so your Next.js frontend can call this backend
+  // 1. Dynamic CORS allowing local dev, deployed frontend, and admin panel
+  const allowedOrigins = [
+    'http://localhost:3000',      // Local laptop frontend
+    'http://localhost:3001',      // Local laptop admin panel (if applicable)
+    process.env.FRONTEND_URL,     // Production frontend on Vercel
+    process.env.ADMINPANEL_URL,   // Production admin panel on Vercel
+  ].filter(Boolean) as string[];  // Strips undefined values
+
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: allowedOrigins,
     methods: 'GET,POST,PUT,DELETE,PATCH',
     credentials: true,
   });
@@ -20,10 +27,12 @@ async function bootstrap() {
     }),
   );
 
-  // 3. Set global API prefix (e.g., http://localhost:4000/api/...)
+  // 3. Set global API prefix
   app.setGlobalPrefix('api');
 
-  await app.listen(4000);
-  console.log(`NestJS Admin Backend running on: http://localhost:4000/api`);
+  // 4. Dynamic port binding for Vercel dynamic routing
+  const port = process.env.PORT || 4000;
+  await app.listen(port);
+  console.log(`NestJS Admin Backend running on port ${port}`);
 }
 bootstrap();

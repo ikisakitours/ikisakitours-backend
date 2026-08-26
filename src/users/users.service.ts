@@ -1,15 +1,24 @@
-import { Injectable, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
+
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { UserResponseDto } from './dto/user-response.dto';
+import * as schema from '../database/schema';
+import { DRIZZLE_DB } from '../database/database.provider';
+
+type User = typeof schema.users.$inferSelect;
 
 @Injectable()
 export class UsersService {
-  private users: any[] = []; // In-memory store (Replace with DB repo later)
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+  ) {}
 
   // Private helper to format raw database entities into UserResponseDto
-  private toUserResponseDto(user: any): UserResponseDto {
+  private toUserResponseDto(user: User): UserResponseDto {
     return {
       id: user.id,
       name: user.name,
@@ -20,30 +29,38 @@ export class UsersService {
   }
 
   async register(createUserDto: CreateUserDto): Promise<UserResponseDto> {
-    const existingUser = this.users.find((u) => u.email === createUserDto.email);
+    // Check if user exists in Supabase DB
+    const existingUser = await this.db.query.users.findFirst({
+      where: eq(schema.users.email, createUserDto.email),
+    });
+
     if (existingUser) {
       throw new ConflictException('Email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
 
-    const newUser = {
-      id: `usr_${Date.now()}`,
-      name: createUserDto.name,
-      email: createUserDto.email,
-      role: createUserDto.role || 'User',
-      passwordHash: hashedPassword,
-      createdAt: new Date().toISOString(),
-    };
-
-    this.users.push(newUser);
+    // Insert into Supabase DB via Drizzle
+    const [newUser] = await this.db
+      .insert(schema.users)
+      .values({
+        name: createUserDto.name,
+        email: createUserDto.email,
+        role: createUserDto.role || 'User',
+        passwordHash: hashedPassword,
+      })
+      .returning();
 
     // Formatted cleanly via DTO helper
     return this.toUserResponseDto(newUser);
   }
 
   async validateUser(loginDto: LoginDto): Promise<UserResponseDto> {
-    const user = this.users.find((u) => u.email === loginDto.email);
+    // Fetch user from DB by email
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.email, loginDto.email),
+    });
+
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
@@ -53,7 +70,8 @@ export class UsersService {
   }
 
   // Used by Admin Panel GET /users
-  findAll(): UserResponseDto[] {
-    return this.users.map((user) => this.toUserResponseDto(user));
+  async findAll(): Promise<UserResponseDto[]> {
+    const allUsers = await this.db.query.users.findMany();
+    return allUsers.map((user) => this.toUserResponseDto(user));
   }
 }
