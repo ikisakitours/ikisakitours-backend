@@ -12,7 +12,7 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
-  // POST: signup/Create user in DB
+  // POST: signup to create a new user in DB
   @Post('signup')
   async register(@Body() createUserDto: CreateUserDto) {
     return await this.usersService.register(createUserDto);
