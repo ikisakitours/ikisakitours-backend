@@ -5,13 +5,16 @@ export class UserResponseDto {
   id!: string;
 
   @IsString()
-  name!: string;
+  firstname!: string;
+
+  @IsString()
+  lastname!: string;
 
   @IsEmail()
   email!: string;
 
   @IsString()
-  role!: string;
+  country!: string;
 
   @IsDate()
   createdAt!: Date;

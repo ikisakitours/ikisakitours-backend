@@ -17,13 +17,14 @@ export class UsersService {
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
-  // Private helper to format raw database entities into UserResponseDto
+
   private toUserResponseDto(user: User): UserResponseDto {
     return {
       id: user.id,
-      name: user.name,
+      firstname: user.firstName,
+      lastname: user.lastName,
       email: user.email,
-      role: user.role,
+      country: user.country,
       createdAt: user.createdAt,
     };
   }
@@ -44,9 +45,11 @@ export class UsersService {
     const [newUser] = await this.db
       .insert(schema.users)
       .values({
-        name: createUserDto.name,
+        firstName: createUserDto.firstname,
+        lastName: createUserDto.lastname,
         email: createUserDto.email,
-        role: createUserDto.role || 'User',
+        country: createUserDto.country,
+        terms: createUserDto.terms,
         passwordHash: hashedPassword,
       })
       .returning();
