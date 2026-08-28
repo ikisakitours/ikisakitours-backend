@@ -19,18 +19,21 @@ async function bootstrap() {
         'http://localhost:3001',
         'https://www.ikisakitours.com',
         'https://ikisakitours.com',
+        'https://ikisakitours-admin-panel.vercel.app',
         process.env.FRONTEND_URL,
         process.env.ADMINPANEL_URL,
       ].filter(Boolean) as string[];
 
-      if (allowedOrigins.includes(origin) || origin.endsWith('.ikisakitours.com')) {
+      if (allowedOrigins.includes(origin) || 
+        origin.endsWith('.ikisakitours.com') ||
+        origin.endsWith('.vercel.app')) {
         return callback(null, true);
       }
 
       return callback(new Error('Blocked by CORS policy'));
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'x-admin-key',],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204,
