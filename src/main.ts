@@ -8,7 +8,9 @@ async function bootstrap() {
   // 1. Dynamic CORS allowing local dev, deployed frontend, and admin panel
   const allowedOrigins = [
     'http://localhost:3000',      // Local laptop frontend
-    'http://localhost:3001',      // Local laptop admin panel (if applicable)
+    'http://localhost:3001',
+    'https://www.ikisakitours.com',
+    'https://ikisakitours.com',
     process.env.FRONTEND_URL,     // Production frontend on Vercel
     process.env.ADMINPANEL_URL,   // Production admin panel on Vercel
   ].filter(Boolean) as string[];  // Strips undefined values
