@@ -15,6 +15,7 @@ type User = typeof schema.users.$inferSelect;
 export interface AuthResponse {
   user: UserResponseDto;
   access_token: string;
+  maxAgeMs?: number; // Added maxAgeMs to pass cookie duration to controller
 }
 
 @Injectable()
@@ -35,9 +36,14 @@ export class UsersService {
     };
   }
 
-  private generateToken(user: User): string {
+  // Updated generateToken to dynamically accept custom expiresIn options
+  private generateToken(user: User, expiresIn?: string): string {
     const payload = { sub: user.id, email: user.email };
-    return this.jwtService.sign(payload);
+    
+    // Explicitly construct the options object if expiresIn is provided
+    const options = expiresIn ? { expiresIn: expiresIn as any } : undefined;
+    
+    return this.jwtService.sign(payload, options);
   }
 
   async register(createUserDto: CreateUserDto): Promise<AuthResponse> {
@@ -79,9 +85,23 @@ export class UsersService {
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
     if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
 
+    // Check if user checked 'staySignedIn'
+    const isLongSession = Boolean(loginDto.staySignedIn);
+
+    // Set JWT token expiration (30 days vs 1 day)
+    const expiresIn = isLongSession ? '30d' : '1d';
+
+    // Calculate cookie maxAge duration in milliseconds (30 days vs 1 day)
+    const maxAgeMs = isLongSession
+      ? 30 * 24 * 60 * 60 * 1000
+      : 1 * 24 * 60 * 60 * 1000;
+
     return {
       user: this.toUserResponseDto(user),
-      access_token: this.generateToken(user),
+      // Pass dynamic expiresIn option to token generator
+      access_token: this.generateToken(user, expiresIn),
+      // Return maxAgeMs to be used by the controller for cookie creation
+      maxAgeMs,
     };
   }
 
