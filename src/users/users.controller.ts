@@ -7,7 +7,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   // PUBLIC: Handles POST /api/auth/signup
   @Post('signup')
@@ -36,6 +36,17 @@ export class UsersController {
 
     // Return the response object (access_token and user remain intact for JSON responses)
     return authResult;
+  }
+
+  @Post('logout')
+  logout(@Res({ passthrough: true }) res: Response) {
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    });
+
+    return { message: 'Logged out successfully' };
   }
 
   // PROTECTED: Handles GET /api/auth/users (Requires valid Bearer Token)
