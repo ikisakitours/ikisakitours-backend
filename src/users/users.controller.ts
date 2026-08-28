@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Res } from '@nestjs/common'; // Added Res import
+import type { Response } from 'express'; // Added Response type import
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
@@ -16,8 +17,25 @@ export class UsersController {
 
   // PUBLIC: Handles POST /api/auth/login
   @Post('login')
-  async login(@Body() loginDto: LoginDto) {
-    return await this.usersService.validateUser(loginDto);
+  async login(
+    @Body() loginDto: LoginDto,
+    @Res({ passthrough: true }) res: Response, // Added response decorator to attach cookies dynamically
+  ) {
+    const authResult = await this.usersService.validateUser(loginDto);
+
+    // Check if maxAgeMs was provided by usersService
+    if (authResult.maxAgeMs) {
+      // Set the token inside an HTTP-only cookie
+      res.cookie('token', authResult.access_token, {
+        httpOnly: true,                                // Protects from XSS (JavaScript cannot access cookie)
+        secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
+        sameSite: 'lax',                               // Protects against CSRF attacks
+        maxAge: authResult.maxAgeMs,                   // Dynamic duration (1 day vs 30 days)
+      });
+    }
+
+    // Return the response object (access_token and user remain intact for JSON responses)
+    return authResult;
   }
 
   // PROTECTED: Handles GET /api/auth/users (Requires valid Bearer Token)
