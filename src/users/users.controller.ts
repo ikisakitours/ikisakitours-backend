@@ -4,6 +4,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { AdminApiKeyGuard } from './admin-api-key.guard';
 
 @Controller('auth')
 export class UsersController {
@@ -50,7 +51,7 @@ export class UsersController {
   }
 
   // PROTECTED: Handles GET /api/auth/users (Requires valid Bearer Token)
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AdminApiKeyGuard)
   @Get('users')
   async findAll() {
     return await this.usersService.findAll();
