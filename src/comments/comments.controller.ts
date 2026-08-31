@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Param, Body, Req, UnauthorizedException } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { CommentsService } from './comments.service';
 import { CommentResponseDto } from './dto/comment-response.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ReplyCommentDto } from './dto/reply-comment.dto';
+import { JwtAuthGuard } from '@/users/jwt-auth.guard';
 
 @Controller('comments')
 export class CommentsController {
@@ -20,6 +21,7 @@ export class CommentsController {
   }
 
   // 2. User creates a new comment (JWT extracted automatically)
+  /*
   @Post()
   async create(
     @Body() createCommentDto: CreateCommentDto,
@@ -37,6 +39,19 @@ export class CommentsController {
     } catch {
       throw new UnauthorizedException('Invalid or expired session');
     }
+  }
+  */
+
+  @UseGuards(JwtAuthGuard) 
+  @Post()
+  async create(
+    @Body() createCommentDto: CreateCommentDto,
+    @Req() req: Request & { user: { sub: string } }, 
+  ): Promise<CommentResponseDto> {
+  
+    const userId = req.user.sub;
+
+    return await this.commentsService.createComment(createCommentDto, userId);
   }
 
   // 3. Admin replies to a specific comment card
