@@ -30,8 +30,10 @@ export class UsersController {
       // Set the token inside an HTTP-only cookie
       res.cookie('token', authResult.access_token, {
         httpOnly: true,                                // Protects from XSS (JavaScript cannot access cookie)
-        secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
-        sameSite: 'lax',                               // Protects against CSRF attacks
+        //secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
+        secure: true,
+        //sameSite: 'lax',                               // Protects against CSRF attacks
+        sameSite: 'none',
         maxAge: authResult.maxAgeMs,                   // Dynamic duration (1 day vs 30 days)
       });
     }
@@ -44,8 +46,10 @@ export class UsersController {
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      //secure: process.env.NODE_ENV === 'production',
+      //sameSite: 'lax',
+      sameSite: 'none',
+      secure: true,
     });
 
     return { message: 'Logged out successfully' };
