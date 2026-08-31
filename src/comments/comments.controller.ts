@@ -5,7 +5,7 @@ import { CommentsService } from './comments.service';
 import { CommentResponseDto } from './dto/comment-response.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ReplyCommentDto } from './dto/reply-comment.dto';
-import { JwtAuthGuard } from '@/users/jwt-auth.guard';
+import { JwtAuthGuard } from '../users/jwt-auth.guard';
 
 @Controller('comments')
 export class CommentsController {
