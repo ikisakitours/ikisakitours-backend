@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
@@ -108,5 +108,17 @@ export class UsersService {
   async findAll(): Promise<UserResponseDto[]> {
     const allUsers = await this.db.query.users.findMany();
     return allUsers.map((user) => this.toUserResponseDto(user));
+  }
+
+  async findMe(userId: string): Promise<UserResponseDto> {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    return this.toUserResponseDto(user);
   }
 }

@@ -1,4 +1,4 @@
-import { IsString, IsBoolean, IsOptional } from 'class-validator';
+import { IsString, IsBoolean, IsOptional, IsInt, Min, Max } from 'class-validator';
 
 export class CommentResponseDto {
   @IsString()
@@ -21,9 +21,15 @@ export class CommentResponseDto {
   content!: string;
 
   @IsString()
-  date!: string; // e.g., "Aug 18, 2026"
+  date!: string;
 
   @IsOptional()
   @IsString()
   adminReply?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating?: number;
 }

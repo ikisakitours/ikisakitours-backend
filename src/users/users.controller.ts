@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, UseGuards, Res } from '@nestjs/common'; // Added Res import
+import { Controller, Get, Post, Body, UseGuards, Res, Req } from '@nestjs/common'; // Added Res import
 import type { Response } from 'express'; // Added Response type import
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AdminApiKeyGuard } from './admin-api-key.guard';
+import { UserResponseDto } from './dto/user-response.dto';
 
 @Controller('auth')
 export class UsersController {
@@ -55,5 +56,11 @@ export class UsersController {
   @Get('users')
   async findAll() {
     return await this.usersService.findAll();
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  async findMe(@Req() req: Request & { user: { sub: string } }): Promise<UserResponseDto> {
+    return await this.usersService.findMe(req.user.sub);
   }
 }
