@@ -13,6 +13,9 @@ export class CommentResponseDto {
   @IsString()
   authorName!: string;
 
+  @IsString()
+  country!: string;
+
   @IsOptional()
   @IsString()
   avatarUrl?: string | null;
