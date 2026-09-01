@@ -21,6 +21,8 @@ export class CommentsService {
       source: comment.type,
       rating: comment.rating ?? null,
       isPubliclyVisible: comment.isPublic ?? true,
+      firstName: comment.user?.firstName,
+      lastName:comment.user?.lastName,
       authorName: comment.user ? `${comment.user.firstName} ${comment.user.lastName}` : 'Anonymous User',
       country: comment.user?.country || 'Unknown',
       avatarUrl: comment.user?.avatarUrl ?? null,
