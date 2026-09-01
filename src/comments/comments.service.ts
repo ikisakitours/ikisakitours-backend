@@ -6,6 +6,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { ReplyCommentDto } from './dto/reply-comment.dto';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
+import { CommentListResponseDto } from './dto/comment-list-response.dto';
 
 @Injectable()
 export class CommentsService {
@@ -37,7 +38,7 @@ export class CommentsService {
   }
 
   // 1. Fetch all comments with joined author details
-  async findAll(): Promise<CommentResponseDto[]> {
+  async findAll(): Promise<CommentListResponseDto> {
     const records = await this.db.query.comments.findMany({
       with: {
         user: true, // Relational join with users table
@@ -45,7 +46,28 @@ export class CommentsService {
       orderBy: [desc(schema.comments.createdAt)],
     });
 
-    return records.map((comment) => this.toCommentResponseDto(comment));
+    const totalComments = records.length;
+
+    // Filter comments with valid ratings to calculate the overall average
+    const ratedComments = records.filter(
+      (comment) => comment.rating !== null && comment.rating !== undefined,
+    );
+
+    const totalRatingSum = ratedComments.reduce(
+      (sum, comment) => sum + (comment.rating || 0),
+      0,
+    );
+
+    const averageRating =
+      ratedComments.length > 0
+        ? Number((totalRatingSum / ratedComments.length).toFixed(1))
+        : 0;
+
+    return {
+      comments: records.map((comment) => this.toCommentResponseDto(comment)),
+      totalComments,
+      averageRating,
+    };
   }
 
   // 2. Create a comment using authenticated userId from JWT
