@@ -6,17 +6,18 @@ import { CommentResponseDto } from './dto/comment-response.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ReplyCommentDto } from './dto/reply-comment.dto';
 import { JwtAuthGuard } from '../users/jwt-auth.guard';
+import { CommentListResponseDto } from './dto/comment-list-response.dto';
 
 @Controller('comments')
 export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   // 1. Fetch all comments (for Admin Panel view)
   @Get()
-  async findAll(): Promise<CommentResponseDto[]> {
+  async findAll(): Promise<CommentListResponseDto> {
     return await this.commentsService.findAll();
   }
 
@@ -42,13 +43,13 @@ export class CommentsController {
   }
   */
 
-  @UseGuards(JwtAuthGuard) 
+  @UseGuards(JwtAuthGuard)
   @Post()
   async create(
     @Body() createCommentDto: CreateCommentDto,
-    @Req() req: Request & { user: { sub: string } }, 
+    @Req() req: Request & { user: { sub: string } },
   ): Promise<CommentResponseDto> {
-  
+
     const userId = req.user.sub;
 
     return await this.commentsService.createComment(createCommentDto, userId);
