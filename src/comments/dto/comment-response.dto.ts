@@ -11,6 +11,12 @@ export class CommentResponseDto {
   isPubliclyVisible!: boolean;
 
   @IsString()
+  firstName!: string;
+
+  @IsString()
+  lastName!: string;
+
+  @IsString()
   authorName!: string;
 
   @IsString()
