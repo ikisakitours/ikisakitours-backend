@@ -1,4 +1,4 @@
-import { IsString, IsEmail, IsDate } from 'class-validator';
+import { IsString, IsEmail, IsDate, IsBoolean, IsOptional } from 'class-validator';
 
 export class UserResponseDto {
   @IsString()
@@ -15,6 +15,19 @@ export class UserResponseDto {
 
   @IsString()
   country!: string;
+
+  @IsOptional()
+  @IsString()
+  avatarUrl!: string | null;
+
+  @IsBoolean()
+  isVerified!: boolean;
+
+  @IsBoolean()
+  isVip!: boolean;
+
+  @IsBoolean()
+  hasAccess!: boolean;
 
   @IsDate()
   createdAt!: Date;
