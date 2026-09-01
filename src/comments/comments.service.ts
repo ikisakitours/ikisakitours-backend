@@ -11,7 +11,7 @@ import { DRIZZLE_DB } from '../database/database.provider';
 export class CommentsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   // Helper to map DB record + Joined User to Response DTO
   private toCommentResponseDto(comment: any): CommentResponseDto {
@@ -21,7 +21,10 @@ export class CommentsService {
       rating: comment.rating ?? null,
       isPubliclyVisible: comment.isPublic ?? true,
       authorName: comment.user ? `${comment.user.firstName} ${comment.user.lastName}` : 'Anonymous User',
-      authorAvatarUrl: comment.user?.avatarUrl || null,
+      avatarUrl: comment.user?.avatarUrl ?? null,
+      isVerified: comment.user?.isVerified ?? false,
+      isVip: comment.user?.isVip ?? false,
+      hasAccess: comment.user?.hasAccess ?? true,
       content: comment.content,
       adminReply: comment.adminReply || undefined,
       date: new Date(comment.createdAt).toLocaleDateString('en-US', {

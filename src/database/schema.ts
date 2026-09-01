@@ -8,6 +8,12 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   country: varchar('country', { length: 100 }).notNull(),
   passwordHash: text('password_hash').notNull(),
+
+  avatarUrl: text('avatar_url'),
+  isVerified: boolean('is_verified').notNull().default(false),
+  isVip: boolean('is_vip').notNull().default(false),
+  hasAccess: boolean('has_access').notNull().default(true),
+
   terms: boolean('terms').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

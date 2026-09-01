@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsString, MinLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
 
 export class CreateUserDto {
   @IsString()
@@ -19,4 +19,20 @@ export class CreateUserDto {
 
   @IsBoolean()
   terms!: boolean;
+
+  @IsOptional()
+  @IsUrl({}, { message: 'avatarUrl must be a valid URL string' })
+  avatarUrl?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isVerified?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isVip?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  hasAccess?: boolean;
 }

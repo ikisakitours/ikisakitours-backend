@@ -15,7 +15,16 @@ export class CommentResponseDto {
 
   @IsOptional()
   @IsString()
-  authorAvatarUrl?: string;
+  avatarUrl?: string | null;
+
+  @IsBoolean()
+  isVerified!: boolean;
+
+  @IsBoolean()
+  isVip!: boolean;
+
+  @IsBoolean()
+  hasAccess!: boolean;
 
   @IsString()
   content!: string;

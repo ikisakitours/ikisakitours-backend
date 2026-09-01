@@ -32,6 +32,10 @@ export class UsersService {
       lastname: user.lastName,
       email: user.email,
       country: user.country,
+      avatarUrl: user.avatarUrl ?? null,
+      isVerified: user.isVerified,
+      isVip: user.isVip,
+      hasAccess: user.hasAccess,
       createdAt: user.createdAt,
     };
   }
@@ -66,6 +70,10 @@ export class UsersService {
         country: createUserDto.country,
         terms: createUserDto.terms,
         passwordHash: hashedPassword,
+        avatarUrl: null,
+        isVerified: createUserDto.isVerified ?? true,
+        isVip: createUserDto.isVip ?? true,
+        hasAccess: createUserDto.hasAccess ?? true,
       })
       .returning();
 
