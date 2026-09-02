@@ -8,9 +8,11 @@ import { CommentsModule } from './comments/comments.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { AddpackagesModule } from './addpackages/addpackages.module';
 import { DatabaseModule } from './database/database.module';
+import { ConfigModule } from '@nestjs/config';
 
 @Module({
   imports: [
+    ConfigModule.forRoot({ isGlobal: true }),
     UsersModule, 
     ToursModule, 
     TourServicesModule,

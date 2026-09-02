@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Res, Req } from '@nestjs/common'; // Added Res import
+import { Controller, Get, Post, Body, UseGuards, Res, Req, Patch, UseInterceptors, UploadedFile } from '@nestjs/common'; // Added Res import
 import type { Response } from 'express'; // Added Response type import
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -6,6 +6,10 @@ import { LoginDto } from './dto/login.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { AdminApiKeyGuard } from './admin-api-key.guard';
 import { UserResponseDto } from './dto/user-response.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import 'multer';
+import { FileInterceptor } from '@nestjs/platform-express';
+
 
 @Controller('auth')
 export class UsersController {
@@ -67,4 +71,16 @@ export class UsersController {
   async findMe(@Req() req: Request & { user: { sub: string } }): Promise<UserResponseDto> {
     return await this.usersService.findMe(req.user.sub);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me')
+  @UseInterceptors(FileInterceptor('avatar'))
+  async updateMe(
+    @Req() req: Request & { user: { sub: string } },
+    @Body() updateUserDto: UpdateUserDto,
+    @UploadedFile() avatar?: Express.Multer.File,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateProfile(req.user.sub, updateUserDto, avatar);
+  }
+
 }
