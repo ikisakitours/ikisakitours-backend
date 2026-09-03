@@ -72,15 +72,26 @@ export class UsersController {
     return await this.usersService.findMe(req.user.sub);
   }
 
+
+  // Text fields only
   @UseGuards(JwtAuthGuard)
   @Patch('me')
-  @UseInterceptors(FileInterceptor('avatar'))
   async updateMe(
     @Req() req: Request & { user: { sub: string } },
     @Body() updateUserDto: UpdateUserDto,
-    @UploadedFile() avatar?: Express.Multer.File,
   ): Promise<UserResponseDto> {
-    return await this.usersService.updateProfile(req.user.sub, updateUserDto, avatar);
+    return await this.usersService.updateProfile(req.user.sub, updateUserDto);
+  }
+
+  // Avatar only
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/avatar')
+  @UseInterceptors(FileInterceptor('avatar'))
+  async updateAvatar(
+    @Req() req: Request & { user: { sub: string } },
+    @UploadedFile() avatar: Express.Multer.File,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.updateAvatar(req.user.sub, avatar);
   }
 
 }
