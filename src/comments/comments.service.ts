@@ -7,6 +7,7 @@ import { ReplyCommentDto } from './dto/reply-comment.dto';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
+import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 
 @Injectable()
 export class CommentsService {
@@ -22,7 +23,7 @@ export class CommentsService {
       rating: comment.rating ?? null,
       isPubliclyVisible: comment.isPublic ?? true,
       firstName: comment.user?.firstName,
-      lastName:comment.user?.lastName,
+      lastName: comment.user?.lastName,
       authorName: comment.user ? `${comment.user.firstName} ${comment.user.lastName}` : 'Anonymous User',
       country: comment.user?.country || 'Unknown',
       avatarUrl: comment.user?.avatarUrl ?? null,
@@ -101,6 +102,28 @@ export class CommentsService {
     const [updatedComment] = await this.db
       .update(schema.comments)
       .set({ adminReply: dto.adminReply })
+      .where(eq(schema.comments.id, id))
+      .returning();
+
+    if (!updatedComment) {
+      throw new NotFoundException(`Comment with ID "${id}" not found`);
+    }
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, updatedComment.userId),
+    });
+
+    return this.toCommentResponseDto({ ...updatedComment, user });
+  }
+
+  // 4. Change visibility on a comment
+  async updateVisibility(
+    id: string,
+    updateVisibilityDto: UpdateVisibilityDto,
+  ): Promise<CommentResponseDto> {
+    const [updatedComment] = await this.db
+      .update(schema.comments)
+      .set({ isPublic: updateVisibilityDto.isPubliclyVisible })
       .where(eq(schema.comments.id, id))
       .returning();
 

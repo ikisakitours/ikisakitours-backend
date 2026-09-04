@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Req, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Req, UnauthorizedException, UseGuards, Patch } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { CommentsService } from './comments.service';
@@ -7,6 +7,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { ReplyCommentDto } from './dto/reply-comment.dto';
 import { JwtAuthGuard } from '../users/jwt-auth.guard';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
+import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 
 @Controller('comments')
 export class CommentsController {
@@ -62,5 +63,14 @@ export class CommentsController {
     @Body() replyDto: ReplyCommentDto,
   ): Promise<CommentResponseDto> {
     return await this.commentsService.replyToComment(id, replyDto);
+  }
+
+  //change visibility
+  @Patch(':id/visibility')
+  async updateVisibility(
+    @Param('id') id: string,
+    @Body() updateVisibilityDto: UpdateVisibilityDto,
+  ): Promise<CommentResponseDto> {
+    return await this.commentsService.updateVisibility(id, updateVisibilityDto);
   }
 }
