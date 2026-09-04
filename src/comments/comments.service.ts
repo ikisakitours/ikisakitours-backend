@@ -100,7 +100,7 @@ export class CommentsService {
   async replyToComment(id: string, dto: ReplyCommentDto): Promise<CommentResponseDto> {
     const [updatedComment] = await this.db
       .update(schema.comments)
-      .set({ adminReply: dto.reply })
+      .set({ adminReply: dto.adminReply })
       .where(eq(schema.comments.id, id))
       .returning();
 
