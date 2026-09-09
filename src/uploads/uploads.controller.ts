@@ -24,7 +24,7 @@ export class UploadsController {
 
   // Multiple images (your shoe example): POST /uploads/batch
   @Post('batch')
-  @UseInterceptors(FilesInterceptor('images', 4)) // max 4 files
+  @UseInterceptors(FilesInterceptor('images', 10))
   async uploadBatch(
     @UploadedFiles() images: Express.Multer.File[],
     @Body('folder') folder?: string,

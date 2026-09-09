@@ -86,6 +86,7 @@ export class CommentsService {
     const [newComment] = await this.db
       .insert(schema.comments)
       .values({
+        packageId: dto.packageId,
         content: dto.content,
         type: dto.type,
         rating: dto.rating ?? null,
