@@ -9,12 +9,24 @@ import {
   Max,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer'; // ADDED: Transform imported from class-transformer
 
 export enum PackageType {
   ONE_DAY = 'oneday',
   MULTI_DAY = 'multiday',
 }
+
+// ADDED: Helper function to safely parse JSON strings sent via FormData
+const parseJson = (value: any) => {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value);
+    } catch {
+      return value;
+    }
+  }
+  return value;
+};
 
 // --- SUB DTOs DEFINED FIRST ---
 
@@ -27,6 +39,7 @@ export class ActivityDetailDto {
 }
 
 export class ItineraryItemDto {
+  @Type(() => Number) // ADDED: Converts string "1" from FormData into number 1 for sub-item validation
   @IsNumber()
   day!: number;
 
@@ -37,6 +50,7 @@ export class ItineraryItemDto {
   description!: string;
 
   @IsOptional()
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses nested JSON string arrays if passed inside FormData
   @IsArray()
   @IsUrl({}, { each: true })
   images?: string[];
@@ -51,6 +65,7 @@ export class DestinationItemDto {
   description?: string;
 
   @IsOptional()
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses nested JSON string arrays if passed inside FormData
   @IsArray()
   @IsUrl({}, { each: true })
   images?: string[];
@@ -71,11 +86,13 @@ export class CreateAddPackageDto {
   @IsString()
   title!: string;
 
+  @Type(() => Number) // ADDED: Converts FormData string "450" to numeric 450 before @IsNumber check
   @IsNumber()
   @Min(0)
   price!: number;
 
   @IsOptional()
+  @Type(() => Number) // ADDED: Converts FormData string "10" to numeric 10 before @IsNumber check
   @IsNumber()
   @Min(0)
   @Max(100)
@@ -90,16 +107,19 @@ export class CreateAddPackageDto {
   @IsString()
   leadDescription!: string;
 
+  @IsOptional()
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses stringified JSON array into native Array
   @IsArray()
   @IsUrl({}, { each: true })
-  @IsOptional()
-  gallery!: string[];
+  gallery?: string[];
 
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses JSON string before @IsArray & @ValidateNested run
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ActivityDetailDto)
   activityDetails!: ActivityDetailDto[];
 
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses JSON string into native string[] array
   @IsArray()
   @IsString({ each: true })
   highlights!: string[];
@@ -107,20 +127,24 @@ export class CreateAddPackageDto {
   @IsString()
   description!: string;
 
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses JSON string before @IsArray & @ValidateNested run
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ItineraryItemDto)
   itinerary!: ItineraryItemDto[];
 
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses JSON string before @IsArray & @ValidateNested run
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => DestinationItemDto)
   destinations!: DestinationItemDto[];
 
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses JSON string into native string[] array
   @IsArray()
   @IsString({ each: true })
   includes!: string[];
 
+  @Transform(({ value }) => parseJson(value)) // ADDED: Parses JSON string into native string[] array
   @IsArray()
   @IsString({ each: true })
   excludes!: string[];
