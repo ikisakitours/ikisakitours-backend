@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsInt, Min, Max } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsInt, Min, Max, IsUUID } from 'class-validator';
 
 export enum CommentType {
     WEBSITE = 'WEBSITE',
@@ -6,6 +6,9 @@ export enum CommentType {
 }
 
 export class CreateCommentDto {
+    @IsUUID()
+    packageId!: string;
+
     @IsString()
     @IsNotEmpty()
     content!: string;

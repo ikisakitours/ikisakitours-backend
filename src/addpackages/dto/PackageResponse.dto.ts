@@ -8,6 +8,9 @@ import {
   Min,
   Max,
   ValidateNested,
+  IsUUID,
+  IsDate,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -16,7 +19,7 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
-// --- SUB DTOs DEFINED FIRST ---
+// --- SUB DTOs ---
 
 export class ActivityDetailDto {
   @IsString()
@@ -56,7 +59,7 @@ export class DestinationItemDto {
   images?: string[];
 }
 
-// --- MAIN DTO ---
+// --- CREATE DTO ---
 
 export class CreateAddPackageDto {
   @IsEnum(PackageType)
@@ -92,7 +95,6 @@ export class CreateAddPackageDto {
 
   @IsArray()
   @IsUrl({}, { each: true })
-  @IsOptional()
   gallery!: string[];
 
   @IsArray()
@@ -124,4 +126,83 @@ export class CreateAddPackageDto {
   @IsArray()
   @IsString({ each: true })
   excludes!: string[];
+}
+
+// --- COMMENT / REVIEW RESPONSE DTO ---
+
+export class PackageCommentResponseDto {
+  @IsUUID()
+  id!: string;
+
+  @IsOptional()
+  @IsUUID()
+  userId?: string;
+
+  @IsString()
+  userName!: string;
+
+  @IsOptional()
+  @IsString()
+  userAvatar?: string;
+
+  @IsString()
+  content!: string;
+
+  @IsString()
+  type!: string;
+
+  @IsBoolean()
+  isPublic!: boolean;
+
+  @IsOptional()
+  @IsString()
+  adminReply?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(5)
+  rating?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsUrl({}, { each: true })
+  images?: string[];
+
+  @IsDate()
+  @Type(() => Date)
+  createdAt!: Date;
+}
+
+// --- COMPLETE PACKAGE RESPONSE DTO ---
+
+export class PackageResponseDto extends CreateAddPackageDto {
+  @IsUUID()
+  id!: string;
+
+  @IsNumber()
+  @Min(0)
+  @Max(5)
+  rating!: number;
+
+  @IsNumber()
+  @Min(0)
+  likeCount!: number;
+
+  @IsNumber()
+  @Min(0)
+  reviewCount!: number;
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PackageCommentResponseDto)
+  comments!: PackageCommentResponseDto[];
+
+  @IsDate()
+  @Type(() => Date)
+  createdAt!: Date;
+
+  @IsDate()
+  @Type(() => Date)
+  updatedAt!: Date;
 }
