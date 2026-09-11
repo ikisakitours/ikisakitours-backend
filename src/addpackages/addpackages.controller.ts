@@ -24,6 +24,7 @@ export class AddpackagesController {
     @Body() createDto: CreateAddPackageDto,
     @UploadedFiles() images: Express.Multer.File[],
   ): Promise<AddPackageResponseDto> {
+    console.log('Parsed DTO:', createDto);
     return await this.addpackagesService.create(createDto, images);
   }
 
