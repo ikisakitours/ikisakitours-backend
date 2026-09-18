@@ -19,6 +19,14 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
+//badge
+export enum PackageBadge {
+  NEW_ARRIVAL = 'new_arrival',
+  DISCOUNTED = 'discounted',
+  POPULAR = 'popular',
+  FEATURED = 'featured',
+}
+
 // --- SUB DTOs ---
 
 export class ActivityDetailDto {
@@ -64,6 +72,10 @@ export class DestinationItemDto {
 export class CreateAddPackageDto {
   @IsEnum(PackageType)
   type!: PackageType;
+
+  @IsOptional()
+  @IsEnum(PackageBadge)
+  badge?: PackageBadge;
 
   @IsString()
   slug!: string;

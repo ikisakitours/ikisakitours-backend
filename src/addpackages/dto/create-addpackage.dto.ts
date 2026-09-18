@@ -16,6 +16,14 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
+//badge
+export enum PackageBadge {
+  NEW_ARRIVAL = 'new_arrival',
+  DISCOUNTED = 'discounted',
+  POPULAR = 'popular',
+  FEATURED = 'featured',
+}
+
 // Helper to safely parse JSON strings and preserve plain object properties
 const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] => {
   let parsed = value;
@@ -90,6 +98,10 @@ export class DestinationItemDto {
 export class CreateAddPackageDto {
   @IsEnum(PackageType)
   type!: PackageType;
+
+  @IsOptional()
+  @IsEnum(PackageBadge)
+  badge?: PackageBadge;
 
   @IsString()
   slug!: string;

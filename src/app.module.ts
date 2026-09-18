@@ -9,6 +9,7 @@ import { ContactsModule } from './contacts/contacts.module';
 import { AddpackagesModule } from './addpackages/addpackages.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
+import { CronController } from './cron/cron.controller';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { ConfigModule } from '@nestjs/config';
     AddpackagesModule,
     DatabaseModule
   ],
-  controllers: [AppController],
+  controllers: [AppController, CronController],
   providers: [AppService],
 })
 export class AppModule {}
