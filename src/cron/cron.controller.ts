@@ -1,13 +1,13 @@
 import { Controller, Get, Headers, UnauthorizedException, Logger, Inject } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
-import { NodePgDatabase } from 'drizzle-orm/node-postgres';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 
 @Controller('cron')
 export class CronController {
   private readonly logger = new Logger(CronController.name);
 
   constructor(
-    @Inject('DATABASE_CONNECTION') private readonly db: NodePgDatabase,
+    @Inject('DRIZZLE_DB') private readonly db: PostgresJsDatabase,
   ) {}
 
   @Get('keep-alive')
