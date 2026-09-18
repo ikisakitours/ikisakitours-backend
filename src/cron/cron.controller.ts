@@ -16,15 +16,19 @@ export class CronController {
     @Headers('x-vercel-cron') vercelCronHeader?: string,
     @Headers('authorization') authHeader?: string,
   ) {
-    // 1. Verify request source in production
     const isVercelCron = Boolean(vercelCronHeader);
-    const isAuthorized = authHeader === `Bearer ${process.env.CRON_SECRET}`;
+    const hasAuthHeader = Boolean(authHeader);
+    const matchesCronSecret = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`;
 
-    if (process.env.NODE_ENV === 'production' && !isVercelCron && !isAuthorized) {
+    // Allow request if:
+    // 1. It's not production (local dev), OR
+    // 2. It has the 'x-vercel-cron' header, OR
+    // 3. It has an Authorization header (Vercel Dashboard manual trigger), OR
+    // 4. It matches your custom CRON_SECRET.
+    if (process.env.NODE_ENV === 'production' && !isVercelCron && !hasAuthHeader && !matchesCronSecret) {
       throw new UnauthorizedException('Unauthorized cron trigger');
     }
 
-    // 2. Perform the database keep-alive ping
     try {
       await this.db.execute(sql`SELECT 1`);
       this.logger.log('Supabase keep-alive ping succeeded.');
