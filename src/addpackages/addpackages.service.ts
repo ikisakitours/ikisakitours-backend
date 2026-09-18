@@ -26,6 +26,7 @@ export class AddpackagesService {
       .insert(schema.packages)
       .values({
         type: dto.type,
+        badge: dto.badge,
         slug: dto.slug,
         titleEmphasis: dto.titleEmphasis,
         title: dto.title,

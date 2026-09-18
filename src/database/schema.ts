@@ -41,6 +41,7 @@ export const packages = pgTable('packages', {
   id: uuid('id').defaultRandom().primaryKey(),
   slug: text('slug').notNull().unique(),
   type: text('type').notNull(),
+  badge: text('badge'),
   titleEmphasis: text('title_emphasis').notNull(),
   title: text('title').notNull(),
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
