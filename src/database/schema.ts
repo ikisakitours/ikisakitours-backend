@@ -72,6 +72,18 @@ export const packages = pgTable('packages', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+//blog part
+export const blogs = pgTable('blogs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  blog: text('blog').notNull(),
+  author: text('author').notNull(),
+  images: text('images').array().notNull(),
+  likes: integer('likes').notNull().default(0),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
 }));
@@ -81,6 +93,8 @@ export const packagesRelations = relations(packages, ({ many }) => ({
   comments: many(comments),
 }));
 
+//blog part
+export const blogsRelations = relations(blogs, ({ many }) => ({}));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
   user: one(users, {
