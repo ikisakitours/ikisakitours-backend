@@ -10,6 +10,7 @@ import { AddpackagesModule } from './addpackages/addpackages.module';
 import { DatabaseModule } from './database/database.module';
 import { ConfigModule } from '@nestjs/config';
 import { CronController } from './cron/cron.controller';
+import { BlogsModule } from './blogs/blogs.module';
 
 @Module({
   imports: [
@@ -20,7 +21,8 @@ import { CronController } from './cron/cron.controller';
     CommentsModule,
     ContactsModule,
     AddpackagesModule,
-    DatabaseModule
+    DatabaseModule,
+    BlogsModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
