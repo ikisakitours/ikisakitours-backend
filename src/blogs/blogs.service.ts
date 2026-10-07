@@ -14,10 +14,15 @@ export class BlogsService {
   ) {}
 
   // Helper method: Map database row -> BlogResponseDto
-  private mapToBlogResponseDto(blog: typeof schema.blogs.$inferSelect): BlogResponseDto {
+  private mapToBlogResponseDto(
+    blog: typeof schema.blogs.$inferSelect,
+  ): BlogResponseDto {
     return {
       id: blog.id,
       title: blog.title,
+      summary: blog.summary,
+      category: blog.category,
+      readTime: blog.readTime,
       content: blog.blog,
       author: blog.author,
       gallery: blog.images || [],
@@ -28,12 +33,18 @@ export class BlogsService {
   }
 
   // Helper method: Map database row -> BlogPreviewResponseDto
-  private mapToBlogPreviewResponseDto(blog: typeof schema.blogs.$inferSelect): BlogPreviewResponseDto {
+  private mapToBlogPreviewResponseDto(
+    blog: typeof schema.blogs.$inferSelect,
+  ): BlogPreviewResponseDto {
     return {
       id: blog.id,
       title: blog.title,
+      summary: blog.summary,
+      category: blog.category,
+      readTime: blog.readTime,
       author: blog.author,
-      previewImage: blog.images && blog.images.length > 0 ? blog.images[0] : null,
+      previewImage:
+        blog.images && blog.images.length > 0 ? blog.images[0] : null,
       likes: blog.likes,
       createdAt: blog.createdAt,
     };
@@ -45,6 +56,9 @@ export class BlogsService {
       .insert(schema.blogs)
       .values({
         title: dto.title,
+        summary: dto.summary,
+        category: dto.category,
+        readTime: dto.readTime,
         blog: dto.blog,
         author: dto.author,
         images: dto.images ?? [],

@@ -13,7 +13,19 @@ export class CreateBlogDto {
 
   @IsString()
   @IsNotEmpty()
-  blog!: string; // Main blog content
+  summary!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  category!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  readTime!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  blog!: string;
 
   @IsString()
   @IsNotEmpty()
@@ -22,5 +34,5 @@ export class CreateBlogDto {
   @IsOptional()
   @IsArray()
   @IsUrl({}, { each: true })
-  images?: string[]; // Validates array of Cloudflare R2 URLs
+  images?: string[];
 }
