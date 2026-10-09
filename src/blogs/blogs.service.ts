@@ -13,6 +13,16 @@ export class BlogsService {
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  // Helper method: Generate URL-friendly slug from text
+  private slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
   // Helper method: Map database row -> BlogResponseDto
   private mapToBlogResponseDto(
     blog: typeof schema.blogs.$inferSelect,
@@ -20,6 +30,7 @@ export class BlogsService {
     return {
       id: blog.id,
       title: blog.title,
+      slug: blog.slug,
       summary: blog.summary,
       category: blog.category,
       readTime: blog.readTime,
@@ -39,6 +50,7 @@ export class BlogsService {
     return {
       id: blog.id,
       title: blog.title,
+      slug: blog.slug,
       summary: blog.summary,
       category: blog.category,
       readTime: blog.readTime,
@@ -52,10 +64,14 @@ export class BlogsService {
 
   // 1. Create Blog
   async create(dto: CreateBlogDto): Promise<BlogResponseDto> {
+    // Generate slug from custom DTO slug or fallback to title
+    const generatedSlug = dto.slug ? this.slugify(dto.slug) : this.slugify(dto.title);
+
     const [newBlog] = await this.db
       .insert(schema.blogs)
       .values({
         title: dto.title,
+        slug: generatedSlug,
         summary: dto.summary,
         category: dto.category,
         readTime: dto.readTime,
@@ -91,7 +107,20 @@ export class BlogsService {
     return this.mapToBlogResponseDto(blog);
   }
 
-  // 4. Update likes count
+  // 4. Fetch single blog post by Slug (for frontend public route)
+  async findBySlug(slug: string): Promise<BlogResponseDto> {
+    const blog = await this.db.query.blogs.findFirst({
+      where: eq(schema.blogs.slug, slug),
+    });
+
+    if (!blog) {
+      throw new NotFoundException(`Blog with slug "${slug}" not found`);
+    }
+
+    return this.mapToBlogResponseDto(blog);
+  }
+
+  // 5. Update likes count
   async updateLikes(id: string, increment: boolean): Promise<BlogResponseDto> {
     await this.findOne(id);
 
@@ -108,7 +137,7 @@ export class BlogsService {
     return this.mapToBlogResponseDto(updatedBlog);
   }
 
-  // 5. Delete blog post by ID
+  // 6. Delete blog post by ID
   async remove(id: string): Promise<{ message: string }> {
     await this.findOne(id);
 

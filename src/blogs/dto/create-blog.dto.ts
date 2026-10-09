@@ -11,6 +11,10 @@ export class CreateBlogDto {
   @IsNotEmpty()
   title!: string;
 
+  @IsOptional()
+  @IsString()
+  slug?: string;
+
   @IsString()
   @IsNotEmpty()
   summary!: string;

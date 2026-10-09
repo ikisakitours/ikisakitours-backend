@@ -76,6 +76,7 @@ export const packages = pgTable('packages', {
 export const blogs = pgTable('blogs', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: text('title').notNull(),
+  slug: text('slug').notNull().unique(),
   summary: text('summary').notNull(),
   category: text('category').notNull(),
   readTime: text('read_time').notNull(),
