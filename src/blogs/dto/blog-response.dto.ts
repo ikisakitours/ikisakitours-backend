@@ -1,6 +1,7 @@
 export class BlogResponseDto {
   id!: string;
   title!: string;
+  slug!: string;
   summary!: string;
   category!: string;
   readTime!: string;
