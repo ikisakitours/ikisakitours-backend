@@ -34,6 +34,26 @@ export class BlogsController {
     return await this.blogsService.findBySlug(slug);
   }
 
+
+  //-----------------------------------------------
+  //test rotes for like button
+  @Post('view')
+  async getBlogWithUserCheck(
+    @Body() body: { blogId: string; userId?: string },
+  ) {
+    return await this.blogsService.findBlogWithUserCheck(body.blogId, body.userId);
+  }
+
+  @Post('like')
+  async toggleLikeWithUser(
+    @Body() body: { blogId: string; userId: string },
+  ) {
+    return await this.blogsService.toggleLike(body.blogId, body.userId);
+  }
+
+  //------------------------------------------------
+
+
   // 4. Detailed version for reading a single post by ID (Dynamic route MUST be last)
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<BlogResponseDto> {

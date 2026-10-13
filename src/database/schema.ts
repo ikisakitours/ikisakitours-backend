@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -88,8 +88,34 @@ export const blogs = pgTable('blogs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// new changes ( like button )
+export const blogLikes = pgTable(
+  'blog_likes',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    blogId: uuid('blog_id')
+      .notNull()
+      .references(() => blogs.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      // new changes ( like button )
+      userBlogUniqueIdx: uniqueIndex('user_blog_unique_idx').on(
+        table.blogId,
+        table.userId,
+      ),
+    };
+  },
+);
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
+  // new changes ( like button )
+  blogLikes: many(blogLikes),
 }));
 
 //new
@@ -98,7 +124,22 @@ export const packagesRelations = relations(packages, ({ many }) => ({
 }));
 
 //blog part
-export const blogsRelations = relations(blogs, ({ many }) => ({}));
+export const blogsRelations = relations(blogs, ({ many }) => ({
+  // new changes ( like button )
+  blogLikes: many(blogLikes),
+}));
+
+// new changes ( like button )
+export const blogLikesRelations = relations(blogLikes, ({ one }) => ({
+  blog: one(blogs, {
+    fields: [blogLikes.blogId],
+    references: [blogs.id],
+  }),
+  user: one(users, {
+    fields: [blogLikes.userId],
+    references: [users.id],
+  }),
+}));
 
 export const commentsRelations = relations(comments, ({ one }) => ({
   user: one(users, {

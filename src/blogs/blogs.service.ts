@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and } from 'drizzle-orm';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateBlogDto } from './dto/create-blog.dto';
@@ -144,5 +144,84 @@ export class BlogsService {
     await this.db.delete(schema.blogs).where(eq(schema.blogs.id, id));
 
     return { message: `Blog post with ID "${id}" deleted successfully.` };
+  }
+
+  // 7. Fetch full blog with a user-specific like check
+  async findBlogWithUserCheck(
+    blogId: string,
+    userId?: string,
+  ): Promise<BlogResponseDto & { isLiked: boolean }> {
+    const blog = await this.findOne(blogId);
+    let isLiked = false;
+
+    if (userId) {
+      const existingLike = await this.db.query.blogLikes.findFirst({
+        where: and(
+          eq(schema.blogLikes.blogId, blogId),
+          eq(schema.blogLikes.userId, userId),
+        ),
+      });
+      isLiked = !!existingLike;
+    }
+
+    return {
+      ...blog,
+      isLiked,
+    };
+  }
+
+  // 8. Toggle like/unlike with explicit user tracking via join table
+  async toggleLike(
+    blogId: string,
+    userId: string,
+  ): Promise<{ liked: boolean; likesCount: number }> {
+    await this.findOne(blogId);
+
+    const existingLike = await this.db.query.blogLikes.findFirst({
+      where: and(
+        eq(schema.blogLikes.blogId, blogId),
+        eq(schema.blogLikes.userId, userId),
+      ),
+    });
+
+    let isLiked: boolean;
+
+    if (existingLike) {
+      // Unlike: Remove row and decrement likes
+      await this.db
+        .delete(schema.blogLikes)
+        .where(eq(schema.blogLikes.id, existingLike.id));
+
+      await this.db
+        .update(schema.blogs)
+        .set({
+          likes: sql`GREATEST(${schema.blogs.likes} - 1, 0)`,
+        })
+        .where(eq(schema.blogs.id, blogId));
+
+      isLiked = false;
+    } else {
+      // Like: Insert row and increment likes
+      await this.db.insert(schema.blogLikes).values({
+        blogId,
+        userId,
+      });
+
+      await this.db
+        .update(schema.blogs)
+        .set({
+          likes: sql`${schema.blogs.likes} + 1`,
+        })
+        .where(eq(schema.blogs.id, blogId));
+
+      isLiked = true;
+    }
+
+    const updatedBlog = await this.findOne(blogId);
+
+    return {
+      liked: isLiked,
+      likesCount: updatedBlog.likes,
+    };
   }
 }
