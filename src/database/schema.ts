@@ -95,6 +95,7 @@ export const destinations = pgTable('destinations', {
   slug: text('slug').notNull().unique(),
   summary: text('summary').notNull(),
   description: text('description').notNull(),
+  province: text('province').notNull(),
   highlights: text('highlights').array().notNull(),
   images: text('images').array().notNull(),
   bestTimeToVisit: text('best_time_to_visit').notNull(),
