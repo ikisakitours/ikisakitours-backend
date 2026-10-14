@@ -6,12 +6,13 @@ import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateDestinationDto } from './dto/create-destination.dto';
 import { DestinationResponseDto } from './dto/destination-response.dto';
 import { DestinationPreviewResponseDto } from './dto/destination-preview-response.dto';
+import { DestinationMapResponseDto } from './dto/destination-map-response.dto';
 
 @Injectable()
 export class DestinationsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   // Helper method: Generate URL-friendly slug from text
   private slugify(text: string): string {
@@ -57,6 +58,19 @@ export class DestinationsService {
       heroImage: dest.images && dest.images.length > 0 ? dest.images[0] : null,
       bestTimeToVisit: dest.bestTimeToVisit,
       climate: dest.climate,
+    };
+  }
+
+  // Helper method: Map database row -> DestinationMapResponseDto
+  private mapToDestinationMapResponseDto(
+    dest: typeof schema.destinations.$inferSelect,
+  ): DestinationMapResponseDto {
+    return {
+      id: dest.id,
+      title: dest.title,
+      slug: dest.slug,
+      coordinates: dest.coordinates,
+      heroImage: dest.images && dest.images.length > 0 ? dest.images[0] : null,
     };
   }
 
@@ -126,5 +140,14 @@ export class DestinationsService {
     await this.db.delete(schema.destinations).where(eq(schema.destinations.id, id));
 
     return { message: `Destination with ID "${id}" deleted successfully.` };
+  }
+
+  // 6. Fetch lightweight data specifically for map markers
+  async findForMap(): Promise<DestinationMapResponseDto[]> {
+    const records = await this.db.query.destinations.findMany({
+      orderBy: [desc(schema.destinations.createdAt)],
+    });
+
+    return records.map((d) => this.mapToDestinationMapResponseDto(d));
   }
 }
