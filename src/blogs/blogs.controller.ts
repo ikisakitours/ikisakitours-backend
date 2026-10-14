@@ -39,6 +39,7 @@ export class BlogsController {
   //test rotes for like button
   @Post('view')
   async getBlogWithUserCheck(
+    
     @Body() body: { blogId: string; userId?: string },
   ) {
     return await this.blogsService.findBlogWithUserCheck(body.blogId, body.userId);
