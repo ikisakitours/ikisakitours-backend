@@ -4,6 +4,7 @@ export class DestinationResponseDto {
   slug!: string;
   summary!: string;
   description!: string;
+  province!: string;
   highlights!: string[];
   images!: string[];
   bestTimeToVisit!: string;

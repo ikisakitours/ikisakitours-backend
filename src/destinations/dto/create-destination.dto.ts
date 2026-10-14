@@ -17,6 +17,10 @@ export class CreateDestinationDto {
   @IsNotEmpty()
   description!: string;
 
+  @IsString()
+  @IsNotEmpty()
+  province!: string;
+
   @IsArray()
   @IsString({ each: true })
   highlights!: string[];
