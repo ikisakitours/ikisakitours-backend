@@ -88,6 +88,24 @@ export const blogs = pgTable('blogs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+//destination table
+export const destinations = pgTable('destinations', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  title: text('title').notNull(),
+  slug: text('slug').notNull().unique(),
+  summary: text('summary').notNull(),
+  description: text('description').notNull(),
+  highlights: text('highlights').array().notNull(),
+  images: text('images').array().notNull(),
+  bestTimeToVisit: text('best_time_to_visit').notNull(),
+  climate: text('climate').notNull(),
+  primaryLanguage: text('primary_language').notNull(),
+  localCurrency: text('local_currency').notNull(),
+  coordinates: jsonb('coordinates').$type<{ lat: number; lng: number }>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // new changes ( like button )
 export const blogLikes = pgTable(
   'blog_likes',
