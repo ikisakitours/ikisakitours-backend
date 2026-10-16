@@ -2,6 +2,7 @@ export class DestinationMapResponseDto {
   id!: string;
   title!: string;
   slug!: string;
+  summary!: string;
   coordinates!: {
     lat: number;
     lng: number;

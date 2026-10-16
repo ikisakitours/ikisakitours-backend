@@ -71,6 +71,7 @@ export class DestinationsService {
       id: dest.id,
       title: dest.title,
       slug: dest.slug,
+      summary: dest.summary,
       coordinates: dest.coordinates,
       heroImage: dest.images && dest.images.length > 0 ? dest.images[0] : null,
     };
