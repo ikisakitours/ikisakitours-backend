@@ -28,7 +28,7 @@ export class CreateDestinationDto {
   @IsOptional()
   @IsArray()
   @IsUrl({}, { each: true })
-  images!: string[];
+  images?: string[];
 
   @IsString()
   @IsNotEmpty()
