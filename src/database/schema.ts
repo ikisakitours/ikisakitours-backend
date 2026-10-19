@@ -131,6 +131,23 @@ export const blogLikes = pgTable(
   },
 );
 
+//cookie table
+export const cookieConsents = pgTable('cookie_consents', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('user_id')
+    .notNull()
+    .unique()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  preferences: jsonb('preferences').$type<{
+    strictlyNecessary: boolean;
+    performance: boolean;
+    functional: boolean;
+    targetingAndMarketing: boolean;
+  }>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   // new changes ( like button )

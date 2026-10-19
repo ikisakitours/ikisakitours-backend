@@ -12,6 +12,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CronController } from './cron/cron.controller';
 import { BlogsModule } from './blogs/blogs.module';
 import { DestinationsModule } from './destinations/destinations.module';
+import { CookiesModule } from './cookies/cookies.module';
 
 @Module({
   imports: [
@@ -24,7 +25,8 @@ import { DestinationsModule } from './destinations/destinations.module';
     AddpackagesModule,
     DatabaseModule,
     BlogsModule,
-    DestinationsModule
+    DestinationsModule,
+    CookiesModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
