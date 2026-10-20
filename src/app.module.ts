@@ -13,6 +13,7 @@ import { CronController } from './cron/cron.controller';
 import { BlogsModule } from './blogs/blogs.module';
 import { DestinationsModule } from './destinations/destinations.module';
 import { CookiesModule } from './cookies/cookies.module';
+import { ServicesModule } from './tourservice/tourservice.module';
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { CookiesModule } from './cookies/cookies.module';
     DatabaseModule,
     BlogsModule,
     DestinationsModule,
-    CookiesModule
+    CookiesModule,
+    ServicesModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
