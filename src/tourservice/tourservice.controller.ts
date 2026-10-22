@@ -40,4 +40,10 @@ export class ServicesController {
   async findAllTransfers() {
     return this.servicesService.findAllByCategory('transfer');
   }
+
+  // --- TEMPORARY DEBUG ROUTE ---
+  @Get('test-debug')
+  testDebug() {
+    return { status: "Online", timestamp: new Date().toISOString() };
+  }
 }
