@@ -90,7 +90,7 @@ export class ServicesService {
     return { message: 'Transfer request submitted successfully', data: record };
   }
 
-  // 4. Fetch Requests by Category (for Admin Panel cards display)
+  // 4. Fetch Requests by Category
   async findAllByCategory(category: 'custom-made' | 'private-chauffeur' | 'transfer') {
     const records = await this.db
       .select()
