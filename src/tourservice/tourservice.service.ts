@@ -11,7 +11,7 @@ import { CreateTransferServiceDto } from './dto/create-transfer-service.dto';
 export class ServicesService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   // 1. Create Custom Made Service Request
   async createCustomService(dto: CreateCustomServiceDto) {
@@ -92,10 +92,11 @@ export class ServicesService {
 
   // 4. Fetch Requests by Category (for Admin Panel cards display)
   async findAllByCategory(category: 'custom-made' | 'private-chauffeur' | 'transfer') {
-    const records = await this.db.query.serviceRequests.findMany({
-      where: eq(schema.serviceRequests.serviceCategory, category),
-      orderBy: [desc(schema.serviceRequests.createdAt)],
-    });
+    const records = await this.db
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.serviceCategory, category))
+      .orderBy(desc(schema.serviceRequests.createdAt));
 
     return records;
   }
