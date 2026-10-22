@@ -3,7 +3,6 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { ToursModule } from './tours/tours.module';
-import { TourServicesModule } from './tour-services/tour-services.module';
 import { CommentsModule } from './comments/comments.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { AddpackagesModule } from './addpackages/addpackages.module';
@@ -20,7 +19,6 @@ import { ServicesModule } from './tourservice/tourservice.module';
     ConfigModule.forRoot({ isGlobal: true }),
     UsersModule, 
     ToursModule, 
-    TourServicesModule,
     CommentsModule,
     ContactsModule,
     AddpackagesModule,
