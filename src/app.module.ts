@@ -13,7 +13,7 @@ import { BlogsModule } from './blogs/blogs.module';
 import { DestinationsModule } from './destinations/destinations.module';
 import { CookiesModule } from './cookies/cookies.module';
 import { ServicesModule } from './tourservice/tourservice.module';
-
+import { NewsletterModule } from './newsletter/newsletter.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -26,7 +26,8 @@ import { ServicesModule } from './tourservice/tourservice.module';
     BlogsModule,
     DestinationsModule,
     CookiesModule,
-    ServicesModule
+    ServicesModule,
+    NewsletterModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
