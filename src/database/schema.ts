@@ -193,6 +193,19 @@ export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   status: text('status').default('active').notNull(), // 'active', 'unsubscribed'
 });
 
+//contact table
+export const contacts = pgTable('contacts', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  fullName: text('full_name').notNull(),
+  email: text('email').notNull(),
+  phone: text('phone').notNull(),
+  inquiryType: text('inquiry_type').notNull(),
+  subject: text('subject').notNull(),
+  message: text('message').notNull(),
+  status: text('status').default('Pending Review').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   // new changes ( like button )
