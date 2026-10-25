@@ -14,6 +14,7 @@ import { DestinationsModule } from './destinations/destinations.module';
 import { CookiesModule } from './cookies/cookies.module';
 import { ServicesModule } from './tourservice/tourservice.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),

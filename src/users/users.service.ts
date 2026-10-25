@@ -12,6 +12,7 @@ import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UploadsService } from '../uploads/uploads.service';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 type User = typeof schema.users.$inferSelect;
 
@@ -183,5 +184,29 @@ export class UsersService {
       .returning();
 
     return this.toUserResponseDto(updatedUser);
+  }
+
+  // Delete user account securely
+  async deleteAccount(userId: string, passwordDto: DeleteAccountDto) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    // Verify password using bcrypt (just like login)
+    const isPasswordValid = await bcrypt.compare(passwordDto.password, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Incorrect password. Account deletion failed.');
+    }
+
+    // Delete user from database
+    await this.db
+      .delete(schema.users)
+      .where(eq(schema.users.id, userId));
+
+    return { message: 'Account deleted successfully' };
   }
 }
