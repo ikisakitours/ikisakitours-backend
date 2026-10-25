@@ -1,5 +1,5 @@
-import { Controller, Get, Post, Body, UseGuards, Res, Req, Patch, UseInterceptors, UploadedFile } from '@nestjs/common'; // Added Res import
-import type { Response } from 'express'; // Added Response type import
+import { Controller, Get, Post, Body, UseGuards, Res, Req, Patch, UseInterceptors, UploadedFile, Delete } from '@nestjs/common'; // Added Res import
+import type { Response } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { LoginDto } from './dto/login.dto';
@@ -9,6 +9,7 @@ import { UserResponseDto } from './dto/user-response.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { DeleteAccountDto } from './dto/delete-account.dto';
 
 
 @Controller('auth')
@@ -72,7 +73,6 @@ export class UsersController {
     return await this.usersService.findMe(req.user.sub);
   }
 
-
   // Text fields only
   @UseGuards(JwtAuthGuard)
   @Patch('me')
@@ -92,6 +92,28 @@ export class UsersController {
     @UploadedFile() avatar: Express.Multer.File,
   ): Promise<UserResponseDto> {
     return await this.usersService.updateAvatar(req.user.sub, avatar);
+  }
+
+
+  // PROTECTED: Handles DELETE /api/auth/me
+  @UseGuards(JwtAuthGuard)
+  @Delete('me')
+  async deleteMe(
+    @Req() req: Request & { user: { sub: string } },
+    @Body() deleteAccountDto: DeleteAccountDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    // 1. Delete the user from the database after password validation
+    const result = await this.usersService.deleteAccount(req.user.sub, deleteAccountDto);
+
+    // 2. Clear the cookie since the user's account is now deleted and they are logged out
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'none',
+    });
+
+    return result;
   }
 
 }

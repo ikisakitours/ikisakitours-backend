@@ -43,16 +43,25 @@ export class CookiesService {
     return { message: 'Cookie preferences saved successfully', data: created };
   }
 
-  // 2. Fetch user consent status (used on frontend after login to check if popup is needed)
+  // 2. Fetch user consent status and a list of what they accepted
   async getConsent(userId: string) {
     const record = await this.db.query.cookieConsents.findFirst({
       where: eq(schema.cookieConsents.userId, userId),
     });
 
-    if (!record) {
-      return { hasConsent: false, preferences: null };
+    if (!record || !record.preferences) {
+      return { hasConsent: false, acceptedList: [], preferences: null };
     }
 
-    return { hasConsent: true, preferences: record.preferences };
+    // Filter out only the keys/categories where the user's preference is true
+    const acceptedList = Object.entries(record.preferences)
+      .filter(([key, value]) => value === true)
+      .map(([key]) => key);
+
+    return { 
+      hasConsent: true, 
+      acceptedList, // e.g., ['analytics', 'marketing'] depending on your keys
+      preferences: record.preferences 
+    };
   }
 }
