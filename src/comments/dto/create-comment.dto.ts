@@ -6,8 +6,9 @@ export enum CommentType {
 }
 
 export class CreateCommentDto {
+    @IsOptional()
     @IsUUID()
-    packageId!: string;
+   packageId?: string;
 
     @IsString()
     @IsNotEmpty()
