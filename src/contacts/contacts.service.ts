@@ -1,46 +1,79 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
+import * as schema from '../database/schema';
+import { DRIZZLE_DB } from '../database/database.provider';
 import { ContactResponseDto } from './dto/contact-response.dto';
+import { CreateContactDto } from './dto/create-contact.dto';
 
 @Injectable()
 export class ContactsService {
-  private readonly mockContacts: ContactResponseDto[] = [
-    {
-      id: 'cnt_01',
-      inquiryType: 'Tour Inquiry & Availability',
-      date: 'Aug 03, 2026',
-      status: 'Pending Review',
-      fullName: 'Alexander Knight',
-      email: 'alex@example.com',
-      phone: '+94 77 123 4567',
-      subject: 'AVAILABILITY FOR SIGIRIYA & KANDY 3-DAY TOUR IN SEPTEMBER',
-      message:
-        'Hi, I would like to check if you have an available driver and guide for a 3-day trip starting September 12th from Colombo.',
-    },
-    {
-      id: 'cnt_02',
-      inquiryType: 'General Question',
-      date: 'Aug 01, 2026',
-      status: 'Reviewed',
-      fullName: 'Jessica Taylor',
-      email: 'jessica.t@example.com',
-      phone: '+1 202 555 0143',
-      subject: 'CUSTOM ITINERARY REQUEST',
-      message:
-        'Hello, can you help us build a custom 5-day nature and wildlife itinerary for a family of 4?',
-    },
-  ];
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+  ) {}
 
-  async findAll(): Promise<ContactResponseDto[]> {
-    return this.mockContacts;
+  // Helper formatter to transform database row into your Response DTO structure
+  private toContactResponseDto(contact: typeof schema.contacts.$inferSelect): ContactResponseDto {
+    return {
+      id: contact.id,
+      inquiryType: contact.inquiryType,
+      // Formats timestamp nicely for your admin panel (e.g., "Aug 03, 2026")
+      date: new Date(contact.createdAt).toLocaleDateString('en-US', {
+        month: 'short',
+        day: '2-digit',
+        year: 'numeric',
+      }),
+      status: contact.status,
+      fullName: contact.fullName,
+      email: contact.email,
+      phone: contact.phone,
+      subject: contact.subject,
+      message: contact.message,
+    };
   }
 
+  // Save new contact form submission to the database
+  async create(dto: CreateContactDto): Promise<ContactResponseDto> {
+    try {
+      const [newContact] = await this.db
+        .insert(schema.contacts)
+        .values({
+          fullName: dto.fullName,
+          email: dto.email,
+          phone: dto.phone,
+          inquiryType: dto.inquiryType,
+          subject: dto.subject,
+          message: dto.message,
+          status: 'Pending Review',
+        })
+        .returning();
+
+      return this.toContactResponseDto(newContact);
+    } catch (error) {
+      console.error('Contact Submission Error:', error);
+      throw new BadRequestException('Failed to submit contact form');
+    }
+  }
+
+  // Fetch all contact entries for the admin panel
+  async findAll(): Promise<ContactResponseDto[]> {
+    const contactsList = await this.db.query.contacts.findMany({
+      orderBy: (contacts, { desc }) => [desc(contacts.createdAt)],
+    });
+
+    return contactsList.map((contact) => this.toContactResponseDto(contact));
+  }
+
+  // Fetch a single entry by ID
   async findOne(id: string): Promise<ContactResponseDto> {
-    const contact = this.mockContacts.find((item) => item.id === id);
+    const contact = await this.db.query.contacts.findFirst({
+      where: eq(schema.contacts.id, id),
+    });
 
     if (!contact) {
       throw new NotFoundException(`Contact inquiry with ID "${id}" not found`);
     }
 
-    return contact;
+    return this.toContactResponseDto(contact);
   }
 }
