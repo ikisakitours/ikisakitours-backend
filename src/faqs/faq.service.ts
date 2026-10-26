@@ -1,9 +1,10 @@
-import { Injectable, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateFaqDto } from './dto/create-faq.dto';
 import { FaqResponseDto } from './dto/faq-response.dto';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class FaqService {
@@ -46,5 +47,20 @@ export class FaqService {
     });
 
     return faqList.map((faq) => this.toFaqResponseDto(faq));
+  }
+
+  // ADMIN: Delete an FAQ entry by ID
+  async remove(id: string): Promise<{ message: string }> {
+    const faq = await this.db.query.faqs.findFirst({
+      where: eq(schema.faqs.id, id),
+    });
+
+    if (!faq) {
+      throw new NotFoundException(`FAQ with ID "${id}" not found`);
+    }
+
+    await this.db.delete(schema.faqs).where(eq(schema.faqs.id, id));
+
+    return { message: 'FAQ deleted successfully' };
   }
 }
