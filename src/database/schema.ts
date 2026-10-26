@@ -207,6 +207,15 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+//faq table
+export const faqs = pgTable('faqs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  category: text('category').notNull(),
+  question: text('question').notNull(),
+  answer: text('answer').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   // new changes ( like button )
