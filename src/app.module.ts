@@ -14,6 +14,7 @@ import { DestinationsModule } from './destinations/destinations.module';
 import { CookiesModule } from './cookies/cookies.module';
 import { ServicesModule } from './tourservice/tourservice.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
+import { FaqModule } from './faqs/faq.module';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { NewsletterModule } from './newsletter/newsletter.module';
     DestinationsModule,
     CookiesModule,
     ServicesModule,
-    NewsletterModule
+    NewsletterModule,
+    FaqModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
