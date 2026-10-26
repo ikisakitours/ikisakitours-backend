@@ -29,6 +29,7 @@ export class ContactsService {
       phone: contact.phone,
       subject: contact.subject,
       message: contact.message,
+      tourInterest: contact.tourInterest ?? undefined,
     };
   }
 
@@ -44,6 +45,7 @@ export class ContactsService {
           inquiryType: dto.inquiryType,
           subject: dto.subject,
           message: dto.message,
+          tourInterest: dto.tourInterest || null,
           status: 'Pending Review',
         })
         .returning();
