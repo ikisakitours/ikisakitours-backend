@@ -1,4 +1,4 @@
-import { IsString, IsEmail } from 'class-validator';
+import { IsString, IsEmail, IsOptional } from 'class-validator';
 
 export class ContactResponseDto {
   @IsString()
@@ -27,4 +27,8 @@ export class ContactResponseDto {
 
   @IsString()
   message!: string;
+
+  @IsOptional()
+  @IsString()
+  tourInterest?: string;
 }

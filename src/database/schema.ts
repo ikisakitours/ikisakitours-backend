@@ -202,6 +202,7 @@ export const contacts = pgTable('contacts', {
   inquiryType: text('inquiry_type').notNull(),
   subject: text('subject').notNull(),
   message: text('message').notNull(),
+  tourInterest: text('tour_interest'),
   status: text('status').default('Pending Review').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
