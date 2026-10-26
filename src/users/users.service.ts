@@ -187,7 +187,7 @@ export class UsersService {
   }
 
   // Delete user account securely
-  async deleteAccount(userId: string, passwordDto: DeleteAccountDto) {
+ async deleteAccount(userId: string, payloadDto: DeleteAccountDto) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
     });
@@ -195,11 +195,17 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User profile not found');
     }
-
+   
     // Verify password using bcrypt (just like login)
-    const isPasswordValid = await bcrypt.compare(passwordDto.password, user.passwordHash);
-    if (!isPasswordValid) {
-      throw new UnauthorizedException('Incorrect password. Account deletion failed.');
+    if (payloadDto.deleteMethod === 'password') {
+      const isPasswordValid = await bcrypt.compare(payloadDto.value, user.passwordHash);
+      if (!isPasswordValid) {
+        throw new UnauthorizedException('Incorrect password. Account deletion failed.');
+      }
+    } else if (payloadDto.deleteMethod === 'text') {
+      if (payloadDto.value !== 'DELETE') {
+        throw new UnauthorizedException('Confirmation text does not match. Type DELETE to confirm.');
+      }
     }
 
     // Delete user from database
