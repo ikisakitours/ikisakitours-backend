@@ -5,7 +5,7 @@ import { SocialAuthController } from './social-auth.controller';
 import { SocialAuthService } from './social-auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { DatabaseModule } from '../database/database.module';
-import { InstagramStrategy } from './strategies/instagram.strategy';
+//import { InstagramStrategy } from './strategies/instagram.strategy';
 
 @Module({
   imports: [
@@ -16,6 +16,10 @@ import { InstagramStrategy } from './strategies/instagram.strategy';
     }),
   ],
   controllers: [SocialAuthController],
-  providers: [SocialAuthService, GoogleStrategy, InstagramStrategy],
+  providers: [
+    SocialAuthService,
+    GoogleStrategy,
+    // InstagramStrategy, // <-- Disabled for now
+  ],
 })
 export class SocialAuthModule {}
