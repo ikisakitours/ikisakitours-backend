@@ -13,6 +13,7 @@ export class FaqController {
     return await this.faqService.findAll();
   }
 
+  
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async create(@Body() createFaqDto: CreateFaqDto): Promise<FaqResponseDto> {
