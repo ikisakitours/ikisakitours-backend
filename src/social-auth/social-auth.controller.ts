@@ -31,10 +31,10 @@ export class SocialAuthController {
       });
 
       // Redirect user back to your Next.js frontend dashboard
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const frontendUrl = process.env.FRONTEND_URL;
       return res.redirect(`${frontendUrl}`);
     } catch (error) {
-      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
+      const frontendUrl = process.env.FRONTEND_URL;
       return res.redirect(`${frontendUrl}/login?error=SocialLoginFailed`);
     }
   }
