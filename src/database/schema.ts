@@ -7,7 +7,12 @@ export const users = pgTable('users', {
   lastName: varchar('last_name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   country: varchar('country', { length: 100 }).notNull(),
-  passwordHash: text('password_hash').notNull(),
+  // 1. Made nullable for social login users who do not have passwords
+  passwordHash: text('password_hash'),
+
+  // 2. New columns to track social sign-ups directly in the same table
+  provider: varchar('provider', { length: 50 }), // e.g. 'google', 'facebook', or null
+  providerId: varchar('provider_id', { length: 255 }), // Unique ID from Google/FB
 
   avatarUrl: text('avatar_url'),
   isVerified: boolean('is_verified').notNull().default(false),
