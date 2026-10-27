@@ -13,6 +13,7 @@ import { DRIZZLE_DB } from '../database/database.provider';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UploadsService } from '../uploads/uploads.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 
 type User = typeof schema.users.$inferSelect;
 
@@ -94,11 +95,12 @@ export class UsersService {
     });
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
-
+    if (!user.passwordHash) {
+      throw new UnauthorizedException('This account uses social login. Please log in with Google or Instagram.');
+    }
     const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
     if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
 
-    // Check if user checked 'staySignedIn'
     const isLongSession = Boolean(loginDto.staySignedIn);
 
     // Set JWT token expiration (30 days vs 1 day)
@@ -187,7 +189,7 @@ export class UsersService {
   }
 
   // Delete user account securely
- async deleteAccount(userId: string, payloadDto: DeleteAccountDto) {
+  async deleteAccount(userId: string, payloadDto: DeleteAccountDto) {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
     });
@@ -198,6 +200,10 @@ export class UsersService {
    
     // Verify password using bcrypt (just like login)
     if (payloadDto.deleteMethod === 'password') {
+      if (!user.passwordHash) {
+        throw new UnauthorizedException('Social login accounts do not have a password. Please use the text confirmation method instead.');
+      }
+
       const isPasswordValid = await bcrypt.compare(payloadDto.value, user.passwordHash);
       if (!isPasswordValid) {
         throw new UnauthorizedException('Incorrect password. Account deletion failed.');
@@ -215,4 +221,30 @@ export class UsersService {
 
     return { message: 'Account deleted successfully' };
   }
+
+  //update status of a user
+  async updateUserStatus(userId: string, dto: UpdateUserStatusDto) {
+  // 1. Check if user exists
+  const existingUser = await this.db.query.users.findFirst({
+    where: eq(schema.users.id, userId),
+  });
+
+  if (!existingUser) {
+    throw new NotFoundException(`User with ID ${userId} not found`);
+  }
+
+  // 2. Build dynamic update payload matching your Drizzle schema fields
+  const updateData: Partial<typeof schema.users.$inferInsert> = {};
+  if (dto.isVip !== undefined) updateData.isVip = dto.isVip;
+  if (dto.hasAccess !== undefined) updateData.hasAccess = dto.hasAccess;
+
+  // 3. Execute update in PostgreSQL
+  const [updatedUser] = await this.db
+    .update(schema.users)
+    .set(updateData)
+    .where(eq(schema.users.id, userId))
+    .returning();
+
+  return updatedUser;
+}
 }

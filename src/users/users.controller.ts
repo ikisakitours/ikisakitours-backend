@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Res, Req, Patch, UseInterceptors, UploadedFile, Delete } from '@nestjs/common'; // Added Res import
+import { Controller, Get, Post, Body, UseGuards, Res, Req, Patch, UseInterceptors, UploadedFile, Delete, Param } from '@nestjs/common'; // Added Res import
 import type { Response } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -10,6 +10,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DeleteAccountDto } from './dto/delete-account.dto';
+import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 
 
 @Controller('auth')
@@ -94,7 +95,17 @@ export class UsersController {
     return await this.usersService.updateAvatar(req.user.sub, avatar);
   }
 
+  //update status of a user
+  @UseGuards(AdminApiKeyGuard)
+  @Patch('users/:id/status')
+  async updateUserStatus(
+    @Param('id') userId: string,
+    @Body() updateUserStatusDto: UpdateUserStatusDto,
+  ) {
+    return await this.usersService.updateUserStatus(userId, updateUserStatusDto);
+  }
 
+  
   // PROTECTED: Handles DELETE /api/auth/me
   @UseGuards(JwtAuthGuard)
   @Delete('me')
