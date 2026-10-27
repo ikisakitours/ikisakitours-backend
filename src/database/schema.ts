@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex, serial } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -77,7 +77,7 @@ export const packages = pgTable('packages', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-//blog part
+//blog table
 export const blogs = pgTable('blogs', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: text('title').notNull(),
@@ -219,6 +219,13 @@ export const faqs = pgTable('faqs', {
   question: text('question').notNull(),
   answer: text('answer').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+//availability table
+export const availability = pgTable('availability', {
+  id: serial('id').primaryKey(),
+  apiClosedDates: text('api_closed_dates').array().notNull().default([]),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
