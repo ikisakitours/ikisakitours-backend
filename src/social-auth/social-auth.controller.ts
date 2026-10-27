@@ -5,7 +5,7 @@ import { SocialAuthService } from './social-auth.service';
 
 @Controller('social-auth')
 export class SocialAuthController {
-  constructor(private readonly socialAuthService: SocialAuthService) {}
+  constructor(private readonly socialAuthService: SocialAuthService) { }
 
   // 1. Trigger Google Login Redirect
   @Get('google')
@@ -18,11 +18,31 @@ export class SocialAuthController {
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res: express.Response) {
-    try {
-      const socialUser = req.user; // Comes from GoogleStrategy validate()
-      const { access_token, maxAgeMs } = await this.socialAuthService.validateSocialUser(socialUser);
+    return this.handleAuthRedirect(req, res);
+  }
 
-      // Set the standard app cookie (same as your local login controller)
+  // 1. Trigger Instagram Login Redirect
+  @Get('instagram')
+  @UseGuards(AuthGuard('instagram'))
+  async instagramAuth(@Req() req) {
+    // Initiates the Instagram OAuth flow
+  }
+
+  // 2. Instagram Callback Redirect
+  @Get('instagram/redirect')
+  @UseGuards(AuthGuard('instagram'))
+  async instagramAuthRedirect(@Req() req, @Res() res: express.Response) {
+    return this.handleAuthRedirect(req, res);
+  }
+
+  private async handleAuthRedirect(req: any, res: express.Response) {
+    const frontendUrl = process.env.FRONTEND_URL;
+    try {
+      const socialUser = req.user; // Comes from strategy validate()
+      const { access_token, maxAgeMs } =
+        await this.socialAuthService.validateSocialUser(socialUser);
+
+      // Set the standard app cookie
       res.cookie('access_token', access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
@@ -30,11 +50,9 @@ export class SocialAuthController {
         maxAge: maxAgeMs,
       });
 
-      // Redirect user back to your Next.js frontend dashboard
-      const frontendUrl = process.env.FRONTEND_URL;
+      // Redirect user back to Next.js frontend
       return res.redirect(`${frontendUrl}`);
     } catch (error) {
-      const frontendUrl = process.env.FRONTEND_URL;
       return res.redirect(`${frontendUrl}/login?error=SocialLoginFailed`);
     }
   }

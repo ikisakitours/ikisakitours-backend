@@ -5,6 +5,7 @@ import { SocialAuthController } from './social-auth.controller';
 import { SocialAuthService } from './social-auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { DatabaseModule } from '../database/database.module';
+import { InstagramStrategy } from './strategies/instagram.strategy';
 
 @Module({
   imports: [
@@ -15,6 +16,6 @@ import { DatabaseModule } from '../database/database.module';
     }),
   ],
   controllers: [SocialAuthController],
-  providers: [SocialAuthService, GoogleStrategy],
+  providers: [SocialAuthService, GoogleStrategy, InstagramStrategy],
 })
 export class SocialAuthModule {}
