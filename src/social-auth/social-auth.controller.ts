@@ -32,7 +32,7 @@ export class SocialAuthController {
 
       // Redirect user back to your Next.js frontend dashboard
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
-      return res.redirect(`${frontendUrl}/dashboard`);
+      return res.redirect(`${frontendUrl}`);
     } catch (error) {
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
       return res.redirect(`${frontendUrl}/login?error=SocialLoginFailed`);
