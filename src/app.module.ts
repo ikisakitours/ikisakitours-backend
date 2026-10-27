@@ -15,6 +15,7 @@ import { CookiesModule } from './cookies/cookies.module';
 import { ServicesModule } from './tourservice/tourservice.module';
 import { NewsletterModule } from './newsletter/newsletter.module';
 import { FaqModule } from './faqs/faq.module';
+import { SocialAuthModule } from './social-auth/social-auth.module';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { FaqModule } from './faqs/faq.module';
     CookiesModule,
     ServicesModule,
     NewsletterModule,
-    FaqModule
+    FaqModule,
+    SocialAuthModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
