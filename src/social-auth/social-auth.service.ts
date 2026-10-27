@@ -25,6 +25,7 @@ export class SocialAuthService {
     lastName: string;
     avatarUrl: string | null;
     provider: string;
+    providerId: string;
   }) {
     // 1. Check if user already exists by email
     let user = await this.db.query.users.findFirst({
@@ -39,10 +40,12 @@ export class SocialAuthService {
           firstName: profile.firstName,
           lastName: profile.lastName,
           email: profile.email,
-          country: 'Unknown', // Default or fallback
+          country: 'Unknown',
           terms: true,
-          passwordHash: '', // Empty for social users (no local password)
+          passwordHash: '',
           avatarUrl: profile.avatarUrl,
+          provider: profile.provider,
+          providerId: profile.providerId,
           isVerified: true,
           isVip: false,
           hasAccess: true,
