@@ -20,7 +20,7 @@ type User = typeof schema.users.$inferSelect;
 export interface AuthResponse {
   user: UserResponseDto;
   access_token: string;
-  maxAgeMs?: number; // Added maxAgeMs to pass cookie duration to controller
+  maxAgeMs?: number;
 }
 
 @Injectable()
@@ -28,7 +28,7 @@ export class UsersService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly jwtService: JwtService,
-    private readonly uploadsService: UploadsService, // new
+    private readonly uploadsService: UploadsService,
   ) { }
 
   private toUserResponseDto(user: User): UserResponseDto {

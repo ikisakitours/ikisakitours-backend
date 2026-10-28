@@ -35,6 +35,20 @@ export class SocialAuthController {
     return this.handleAuthRedirect(req, res);
   }
 
+  // 1. Trigger Facebook Login Redirect
+  @Get('facebook')
+  @UseGuards(AuthGuard('facebook'))
+  async facebookAuth(@Req() req) {
+    // Initiates the Facebook OAuth flow
+  }
+
+  // 2. Facebook Callback Redirect
+  @Get('facebook/redirect')
+  @UseGuards(AuthGuard('facebook'))
+  async facebookAuthRedirect(@Req() req, @Res() res: express.Response) {
+    return this.handleAuthRedirect(req, res);
+  }
+
   private async handleAuthRedirect(req: any, res: express.Response) {
     const frontendUrl = process.env.FRONTEND_URL;
     try {
@@ -46,7 +60,7 @@ export class SocialAuthController {
       res.cookie('access_token', access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
+        sameSite: 'none',
         maxAge: maxAgeMs,
       });
 
