@@ -23,6 +23,7 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+//comments
 export const comments = pgTable('comments', {
   id: uuid('id').defaultRandom().primaryKey(),
   content: text('content').notNull(),
@@ -39,6 +40,20 @@ export const comments = pgTable('comments', {
   packageId: uuid('package_id').references(() => packages.id, {
     onDelete: 'cascade',
   }),
+});
+
+//package reviews table
+export const packageReviews = pgTable('package_reviews', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  packageId: text('package_id').notNull(),
+  packageName: text('package_name').notNull(),
+  type: text('type').notNull().default('PACKAGE'),
+  fullName: text('full_name').notNull(),
+  email: text('email').notNull(),
+  rating: integer('rating').notNull(),
+  experience: text('experience').notNull(),
+  imageUrls: jsonb('image_urls').default([]),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 //new
