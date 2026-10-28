@@ -31,4 +31,10 @@ export class UserResponseDto {
 
   @IsDate()
   createdAt!: Date;
+
+  @IsString()
+  provider?: string | null;
+
+  @IsString()
+  providerId?: string | null;
 }
