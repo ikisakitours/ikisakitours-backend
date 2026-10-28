@@ -17,6 +17,7 @@ import { NewsletterModule } from './newsletter/newsletter.module';
 import { FaqModule } from './faqs/faq.module';
 import { SocialAuthModule } from './social-auth/social-auth.module';
 import { AvailabilityModule } from './availability/availability.module';
+import { PackageBookingModule } from './packagebooking/packagebooking.module';
 
 @Module({
   imports: [
@@ -34,7 +35,8 @@ import { AvailabilityModule } from './availability/availability.module';
     NewsletterModule,
     FaqModule,
     SocialAuthModule,
-    AvailabilityModule
+    AvailabilityModule,
+    PackageBookingModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],

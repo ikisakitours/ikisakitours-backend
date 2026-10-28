@@ -228,6 +228,22 @@ export const availability = pgTable('availability', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+//package booking table ( for adim panel )
+export const packageBookings = pgTable('package_bookings', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  packageId: text('package_id').notNull(),
+  packageName: text('package_name').notNull(),
+  journeyDate: text('journey_date').notNull(),
+  travelers: jsonb('travelers').notNull(),
+  firstname: text('firstname').notNull(),
+  lastname: text('lastname').notNull(),
+  email: text('email').notNull(),
+  country: text('country').notNull(),
+  type: text('type').notNull(),
+  status: text('status').notNull().default('pending'),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   // new changes ( like button )
