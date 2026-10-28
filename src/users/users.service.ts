@@ -239,6 +239,7 @@ export class UsersService {
   const updateData: Partial<typeof schema.users.$inferInsert> = {};
   if (dto.isVip !== undefined) updateData.isVip = dto.isVip;
   if (dto.hasAccess !== undefined) updateData.hasAccess = dto.hasAccess;
+  if (dto.isVerified !== undefined) updateData.isVerified = dto.isVerified;
 
   // 3. Execute update in PostgreSQL
   const [updatedUser] = await this.db

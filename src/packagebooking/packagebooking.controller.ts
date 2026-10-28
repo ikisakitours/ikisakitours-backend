@@ -2,7 +2,6 @@ import { Controller, Get, Post, Patch, Body, Param, Delete, UseGuards } from '@n
 import { PackageBookingService } from './packagebooking.service';
 import { CreatePackageBookingDto } from './dto/create-package-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
-import { AdminApiKeyGuard } from '../users/admin-api-key.guard';
 
 @Controller('package-bookings')
 export class PackageBookingController {
