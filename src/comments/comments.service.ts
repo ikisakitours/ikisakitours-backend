@@ -166,4 +166,18 @@ export class CommentsService {
       orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
     });
   }
+
+  async replyToPackageReview(id: string, adminReply: string) {
+    const [updatedReview] = await this.db
+      .update(schema.packageReviews)
+      .set({ adminReply })
+      .where(eq(schema.packageReviews.id, id))
+      .returning();
+
+    if (!updatedReview) {
+      throw new NotFoundException(`Package review with ID "${id}" not found`);
+    }
+
+    return updatedReview;
+  }
 }

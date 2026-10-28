@@ -39,4 +39,8 @@ export class CreatePackageReviewDto {
     @ArrayMaxSize(5, { message: 'You can upload a maximum of 5 images' })
     @IsString({ each: true })
     imageUrls?: string[];
+
+    @IsString()
+    @IsOptional()
+    adminReply?: string;
 }
