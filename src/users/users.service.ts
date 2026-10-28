@@ -43,6 +43,8 @@ export class UsersService {
       isVip: user.isVip,
       hasAccess: user.hasAccess,
       createdAt: user.createdAt,
+      provider: user.provider ?? null,
+      providerId: user.providerId ?? null,
     };
   }
 
