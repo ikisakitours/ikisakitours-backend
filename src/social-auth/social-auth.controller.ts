@@ -57,7 +57,7 @@ export class SocialAuthController {
         await this.socialAuthService.validateSocialUser(socialUser);
 
       // Set the standard app cookie
-      res.cookie('access_token', access_token, {
+      res.cookie('token', access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
