@@ -8,6 +8,7 @@ import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
+import { CreatePackageReviewDto } from './dto/create-package-review.dto';
 
 @Injectable()
 export class CommentsService {
@@ -137,5 +138,32 @@ export class CommentsService {
     });
 
     return this.toCommentResponseDto({ ...updatedComment, user });
+  }
+
+  //Only package reviews
+  //Create a package review in the dedicated package_reviews table
+  async createPackageReview(dto: CreatePackageReviewDto) {
+    const [newReview] = await this.db
+      .insert(schema.packageReviews)
+      .values({
+        packageId: dto.packageId,
+        packageName: dto.packageName,
+        type: 'PACKAGE', // Hardcoded as requested
+        fullName: dto.fullName,
+        email: dto.email,
+        rating: dto.rating,
+        experience: dto.experience,
+        imageUrls: dto.imageUrls || [],
+      })
+      .returning();
+
+    return newReview;
+  }
+
+  // Fetch all package reviews ordered by newest first
+  async findAllPackageReviews() {
+    return await this.db.query.packageReviews.findMany({
+      orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
+    });
   }
 }

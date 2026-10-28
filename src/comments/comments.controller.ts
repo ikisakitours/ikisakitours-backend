@@ -8,6 +8,7 @@ import { ReplyCommentDto } from './dto/reply-comment.dto';
 import { JwtAuthGuard } from '../users/jwt-auth.guard';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
+import { CreatePackageReviewDto } from './dto/create-package-review.dto';
 
 @Controller('comments')
 export class CommentsController {
@@ -72,5 +73,20 @@ export class CommentsController {
     @Body() updateVisibilityDto: UpdateVisibilityDto,
   ): Promise<CommentResponseDto> {
     return await this.commentsService.updateVisibility(id, updateVisibilityDto);
+  }
+
+  //--------------package--------
+  //only package reviews
+  @Get('package-reviews')
+  async findAllPackageReviews() {
+    return await this.commentsService.findAllPackageReviews();
+  }
+
+  //User creates a package review
+  @Post('package-review')
+  async createPackageReview(
+    @Body() createPackageReviewDto: CreatePackageReviewDto,
+  ) {
+    return await this.commentsService.createPackageReview(createPackageReviewDto);
   }
 }
