@@ -7,5 +7,9 @@ export class UpdateUserStatusDto {
 
   @IsOptional()
   @IsBoolean()
+  isVerified?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
   hasAccess?: boolean;
 }
