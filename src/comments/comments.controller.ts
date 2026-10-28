@@ -89,4 +89,13 @@ export class CommentsController {
   ) {
     return await this.commentsService.createPackageReview(createPackageReviewDto);
   }
+
+  // Admin replies to a package review
+  @Patch('package-review/:id/reply')
+  async replyToPackageReview(
+    @Param('id') id: string,
+    @Body('adminReply') adminReply: string,
+  ) {
+    return await this.commentsService.replyToPackageReview(id, adminReply);
+  }
 }

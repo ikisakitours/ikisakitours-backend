@@ -53,6 +53,7 @@ export const packageReviews = pgTable('package_reviews', {
   rating: integer('rating').notNull(),
   experience: text('experience').notNull(),
   imageUrls: jsonb('image_urls').default([]),
+  adminReply: text('admin_reply'),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
