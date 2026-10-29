@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsEmail, IsInt, Min, Max, IsArray, IsOptional, ArrayMaxSize, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsInt, Min, Max, IsOptional, IsEnum } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 export enum CommentType {
     WEBSITE = 'WEBSITE',
@@ -25,6 +26,8 @@ export class CreatePackageReviewDto {
     @IsEmail()
     email!: string;
 
+    // Transforms string "5" from FormData into integer 5 before validation runs
+    @Transform(({ value }) => parseInt(value, 10))
     @IsInt()
     @Min(1)
     @Max(5)
@@ -33,12 +36,6 @@ export class CreatePackageReviewDto {
     @IsString()
     @IsNotEmpty()
     experience!: string;
-
-    @IsArray()
-    @IsOptional()
-    @ArrayMaxSize(5, { message: 'You can upload a maximum of 5 images' })
-    @IsString({ each: true })
-    imageUrls?: string[];
 
     @IsString()
     @IsOptional()

@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Req, UnauthorizedException, UseGuards, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, Req, UnauthorizedException, UseGuards, Patch, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { CommentsService } from './comments.service';
@@ -9,6 +9,7 @@ import { JwtAuthGuard } from '../users/jwt-auth.guard';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { CreatePackageReviewDto } from './dto/create-package-review.dto';
+import { FilesInterceptor } from '@nestjs/platform-express';
 
 @Controller('comments')
 export class CommentsController {
@@ -84,10 +85,12 @@ export class CommentsController {
 
   //User creates a package review
   @Post('package-review')
+  @UseInterceptors(FilesInterceptor('images', 5))
   async createPackageReview(
     @Body() createPackageReviewDto: CreatePackageReviewDto,
+    @UploadedFiles() images?: Express.Multer.File[],
   ) {
-    return await this.commentsService.createPackageReview(createPackageReviewDto);
+    return await this.commentsService.createPackageReview(createPackageReviewDto, images);
   }
 
   // Admin replies to a package review

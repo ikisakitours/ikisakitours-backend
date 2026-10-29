@@ -9,11 +9,13 @@ import { DRIZZLE_DB } from '../database/database.provider';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { CreatePackageReviewDto } from './dto/create-package-review.dto';
+import { UploadsService } from '@/uploads/uploads.service';
 
 @Injectable()
 export class CommentsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly uploadsService: UploadsService,
   ) { }
 
   // Helper to map DB record + Joined User to Response DTO
@@ -142,18 +144,29 @@ export class CommentsService {
 
   //Only package reviews
   //Create a package review in the dedicated package_reviews table
-  async createPackageReview(dto: CreatePackageReviewDto) {
+  async createPackageReview(
+    dto: CreatePackageReviewDto, 
+    images?: Express.Multer.File[]
+  ) {
+    let imageUrls: string[] = [];
+
+    // 1. Upload files to Cloudflare R2 if present
+    if (images && images.length > 0) {
+      imageUrls = await this.uploadsService.uploadMultiple(images, 'package-reviews'); // <-- 3. Works now!
+    }
+
+    // 2. Save into Supabase DB
     const [newReview] = await this.db
       .insert(schema.packageReviews)
       .values({
         packageId: dto.packageId,
         packageName: dto.packageName,
-        type: 'PACKAGE', // Hardcoded as requested
+        type: 'PACKAGE',
         fullName: dto.fullName,
         email: dto.email,
-        rating: dto.rating,
+        rating: Number(dto.rating),
         experience: dto.experience,
-        imageUrls: dto.imageUrls || [],
+        imageUrls: imageUrls,
       })
       .returning();
 
