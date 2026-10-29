@@ -101,4 +101,10 @@ export class CommentsController {
   ) {
     return await this.commentsService.replyToPackageReview(id, adminReply);
   }
+
+  // Get top 2 highest rating package reviews
+  @Get('package-reviews/top')
+  async getTopPackageReviews() {
+    return await this.commentsService.getTopPackageReviews();
+  }
 }

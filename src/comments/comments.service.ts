@@ -193,4 +193,12 @@ export class CommentsService {
 
     return updatedReview;
   }
+
+  // Fetch top 2 highest rating package reviews
+  async getTopPackageReviews() {
+    return await this.db.query.packageReviews.findMany({
+      orderBy: (reviews, { desc }) => [desc(reviews.rating), desc(reviews.createdAt)],
+      limit: 2,
+    });
+  }
 }
