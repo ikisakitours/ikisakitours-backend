@@ -5,6 +5,7 @@ import { AddPackageResponseDto } from './dto/addpackage-response.dto';
 import { PackageResponseDto } from './dto/PackageResponse.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { PackageSummaryResponseDto } from './dto/package-summary-response.dto';
+import { PackageListItemDto } from './dto/package-list-item.dto';
 
 export enum PackageType {
   ONE_DAY = 'oneday',
@@ -23,6 +24,12 @@ export class AddpackagesController {
   ): Promise<AddPackageResponseDto> {
     console.log('Parsed DTO:', createDto);
     return await this.addpackagesService.create(createDto, images);
+  }
+
+  // --- GET ALL PACKAGES (For Manage Table) ---
+  @Get()
+  async findAll(): Promise<PackageListItemDto[]> {
+    return await this.addpackagesService.findAll();
   }
 
   // --- GET SINGLE PACKAGE BY SLUG ---
