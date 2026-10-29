@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -99,5 +99,23 @@ export class ServicesService {
       .orderBy(desc(schema.serviceRequests.createdAt));
 
     return records;
+  }
+
+  // 5 update status
+  async updateServiceStatus(id: string, status: string) {
+    const [updatedService] = await this.db
+      .update(schema.serviceRequests)
+      .set({ 
+        status, 
+        updatedAt: new Date()
+      })
+      .where(eq(schema.serviceRequests.id, id))
+      .returning();
+
+    if (!updatedService) {
+      throw new NotFoundException(`Service request with ID ${id} not found`);
+    }
+
+    return updatedService;
   }
 }
