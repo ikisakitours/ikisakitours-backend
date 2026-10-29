@@ -1,12 +1,13 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, inArray } from 'drizzle-orm';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateDestinationDto } from './dto/create-destination.dto';
 import { DestinationResponseDto } from './dto/destination-response.dto';
 import { DestinationPreviewResponseDto } from './dto/destination-preview-response.dto';
 import { DestinationMapResponseDto } from './dto/destination-map-response.dto';
+import { DestinationPackageResponseDto } from './dto/destination-package-response.dto';
 
 @Injectable()
 export class DestinationsService {
@@ -154,4 +155,26 @@ export class DestinationsService {
 
     return records.map((d) => this.mapToDestinationMapResponseDto(d));
   }
+
+  async findPackagePreviewsByIds(ids: string[]): Promise<DestinationPackageResponseDto[]> {
+  if (!ids || ids.length === 0) return [];
+
+  const destinations = await this.db.query.destinations.findMany({
+    where: inArray(schema.destinations.id, ids),
+  });
+
+  return destinations.map((dest: any) => {
+    const imagesArray = (dest.images as string[]) || [];
+    const heroImage = imagesArray.length > 0 ? imagesArray[0] : null;
+
+    return {
+      id: dest.id,
+      title: dest.title,
+      slug: dest.slug,
+      summary: dest.summary,
+      heroImage: heroImage,
+      coordinates: dest.coordinates,
+    };
+  });
+}
 }

@@ -11,6 +11,7 @@ import { CreateDestinationDto } from './dto/create-destination.dto';
 import { DestinationResponseDto } from './dto/destination-response.dto';
 import { DestinationPreviewResponseDto } from './dto/destination-preview-response.dto';
 import { DestinationMapResponseDto } from './dto/destination-map-response.dto';
+import { DestinationPackageResponseDto } from './dto/destination-package-response.dto';
 
 @Controller('destinations')
 export class DestinationsController {
@@ -49,5 +50,13 @@ export class DestinationsController {
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return await this.destinationsService.remove(id);
+  }
+
+  // Fetch package preview data for a list of specific destination IDs
+  @Post('package/batch')
+  async findPackagePreviewsByIds(
+    @Body('ids') ids: string[],
+  ): Promise<DestinationPackageResponseDto[]> {
+    return await this.destinationsService.findPackagePreviewsByIds(ids);
   }
 }
