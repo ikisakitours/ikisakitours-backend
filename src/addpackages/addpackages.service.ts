@@ -67,6 +67,71 @@ export class AddpackagesService {
     };
   }
 
+  // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
+  async findOne(slug: string): Promise<PackageResponseDto> {
+    const pkg = await this.db.query.packages.findFirst({
+      where: eq(schema.packages.slug, slug),
+    });
+
+    if (!pkg) {
+      throw new NotFoundException(`Package with slug "${slug}" not found`);
+    }
+
+    return this.mapToPackageResponseDto(pkg);
+  }
+
+  // --- PATCH /addpackages/:slug -> Update package without re-uploading images ---
+  async updateTextOnly(
+    slug: string,
+    dto: Partial<CreateAddPackageDto>,
+  ): Promise<PackageResponseDto> {
+    const existing = await this.findOne(slug);
+
+    const [updatedPkg] = await this.db
+      .update(schema.packages)
+      .set({
+        type: dto.type ?? (existing.type as any),
+        category: dto.category ?? existing.category,
+        origin: dto.origin ?? existing.origin,
+        duration: dto.duration ?? existing.duration,
+        badge: dto.badge ?? existing.badge,
+        slug: dto.slug ?? existing.slug,
+        titleEmphasis: dto.titleEmphasis ?? existing.titleEmphasis,
+        title: dto.title ?? existing.title,
+        price: dto.price !== undefined ? dto.price.toString() : existing.price.toString(),
+        discount: dto.discount !== undefined ? dto.discount.toString() : (existing.discount ?? 0).toString(),
+        provider: dto.provider ?? existing.provider,
+        leadTitle: dto.leadTitle ?? existing.leadTitle,
+        leadDescription: dto.leadDescription ?? existing.leadDescription,
+        description: dto.description ?? existing.description,
+        activityDetails: dto.activityDetails ? JSON.parse(JSON.stringify(dto.activityDetails)) : existing.activityDetails,
+        highlights: dto.highlights ?? existing.highlights,
+        itinerary: dto.itinerary ? JSON.parse(JSON.stringify(dto.itinerary)) : existing.itinerary,
+        destinations: dto.destinations ? JSON.parse(JSON.stringify(dto.destinations)) : existing.destinations,
+        includes: dto.includes ?? existing.includes,
+        excludes: dto.excludes ?? existing.excludes,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.packages.slug, slug))
+      .returning();
+
+    return this.mapToPackageResponseDto(updatedPkg);
+  }
+
+  // --- DELETE /addpackages/:slug -> Delete package by slug ---
+  async remove(slug: string): Promise<{ success: boolean; message: string }> {
+    const existing = await this.findOne(slug);
+
+    await this.db
+      .delete(schema.packages)
+      .where(eq(schema.packages.slug, slug));
+
+    return {
+      success: true,
+      message: `Package "${existing.title}" (${slug}) was successfully deleted.`,
+    };
+  }
+
   async findSummariesPaginated(
     page: number = 1,
     limit: number = 5,
@@ -116,26 +181,7 @@ export class AddpackagesService {
     };
   }
 
-  // --- GET /addpackages/:id -> Returns PackageResponseDto ---
-  async findOne(id: string): Promise<PackageResponseDto> {
-    const pkg = await this.db.query.packages.findFirst({
-      where: eq(schema.packages.id, id),
-      with: {
-        comments: {
-          with: {
-            user: true,
-          },
-        },
-      },
-    });
-
-    if (!pkg) {
-      throw new NotFoundException(`Package with ID "${id}" not found`);
-    }
-
-    return this.mapToPackageResponseDto(pkg);
-  }
-
+  
   //like button
   async toggleLike(packageId: string, userId: string) {
     return await this.db.transaction(async (tx) => {
