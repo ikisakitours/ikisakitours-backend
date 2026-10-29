@@ -172,15 +172,13 @@ export const cookieConsents = pgTable('cookie_consents', {
 //service table can be changed in the future
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
-  // Categorization: 'custom-made', 'private-chauffeur', or 'transfer'
   serviceCategory: text('service_category').notNull(), 
-  // Specific to Transfers ('airport-pickup', 'hotel-and-city', 'airport-dropoff')
   transferServiceType: text('transfer_service_type'), 
   // Shared fields
-  vehicleType: text('vehicle_type').notNull(), // 'sedans', 'vans', 'suvs'
-  tourPackageType: text('tour_package_type'), // 'with-driver', 'with-guide' (Custom/Chauffeur)
+  vehicleType: text('vehicle_type').notNull(),
+  tourPackageType: text('tour_package_type'),
   pickupLocation: text('pickup_location').notNull(),
-  dropOffLocation: text('drop_off_location'), // Transfer only
+  dropOffLocation: text('drop_off_location'),
   language: text('language').notNull(),
   journeyDate: text('journey_date').notNull(),
   pickupTime: text('pickup_time').notNull(),
@@ -192,7 +190,7 @@ export const serviceRequests = pgTable('service_requests', {
     infants: number;
   }>().notNull(),
   // Custom & Chauffeur specific fields
-  tourDuration: text('tour_duration'), // '1day', '2day', etc.
+  tourDuration: text('tour_duration'),
   description: text('description'),
   // Contact Info (Shared across all)
   fullName: text('full_name').notNull(),
@@ -200,7 +198,7 @@ export const serviceRequests = pgTable('service_requests', {
   phoneNumber: text('phone_number').notNull(),
   specialRequests: text('special_requests'),
   // Admin status tracking
-  status: text('status').default('pending').notNull(), // 'pending', 'confirmed', 'completed'
+  status: text('status').default('pending').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
