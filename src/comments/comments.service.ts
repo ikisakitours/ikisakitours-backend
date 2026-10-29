@@ -9,7 +9,7 @@ import { DRIZZLE_DB } from '../database/database.provider';
 import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { CreatePackageReviewDto } from './dto/create-package-review.dto';
-import { UploadsService } from '@/uploads/uploads.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class CommentsService {
