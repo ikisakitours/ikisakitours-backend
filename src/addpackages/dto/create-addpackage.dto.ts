@@ -8,6 +8,7 @@ import {
   Min,
   Max,
   ValidateNested,
+  IsUUID,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
@@ -16,7 +17,7 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
-//badge
+// Badge enum
 export enum PackageBadge {
   NEW_ARRIVAL = 'new_arrival',
   DISCOUNTED = 'discounted',
@@ -78,19 +79,38 @@ export class ItineraryItemDto {
   images?: string[];
 }
 
+// Coordinate nested DTO for destinations
+export class CoordinatesDto {
+  @Type(() => Number)
+  @IsNumber()
+  lat!: number;
+
+  @Type(() => Number)
+  @IsNumber()
+  lng!: number;
+}
+
+// Updated DestinationItemDto matching the database schema JSONB shape
 export class DestinationItemDto {
+  @IsUUID()
+  id!: string;
+
   @IsString()
-  name!: string;
+  title!: string;
+
+  @IsString()
+  slug!: string;
+
+  @IsString()
+  summary!: string;
 
   @IsOptional()
-  @IsString()
-  description?: string;
+  @IsUrl()
+  heroImage?: string | null;
 
-  @IsOptional()
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsUrl({}, { each: true })
-  images?: string[];
+  @ValidateNested()
+  @Type(() => CoordinatesDto)
+  coordinates!: CoordinatesDto;
 }
 
 // --- MAIN DTO ---
@@ -98,6 +118,15 @@ export class DestinationItemDto {
 export class CreateAddPackageDto {
   @IsEnum(PackageType)
   type!: PackageType;
+
+  @IsString()
+  category!: string;
+
+  @IsString()
+  origin!: string;
+
+  @IsString()
+  duration!: string;
 
   @IsOptional()
   @IsEnum(PackageBadge)
@@ -139,7 +168,6 @@ export class CreateAddPackageDto {
   @IsUrl({}, { each: true })
   gallery?: string[];
 
-  // FIX: Maps parsed JSON to ActivityDetailDto instances with all keys preserved
   @Transform(({ value }) => parseAndMap(value, ActivityDetailDto))
   @IsArray()
   @ValidateNested({ each: true })
@@ -154,14 +182,12 @@ export class CreateAddPackageDto {
   @IsString()
   description!: string;
 
-  // FIX: Maps parsed JSON to ItineraryItemDto instances with all keys preserved
   @Transform(({ value }) => parseAndMap(value, ItineraryItemDto))
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ItineraryItemDto)
   itinerary!: ItineraryItemDto[];
 
-  // FIX: Maps parsed JSON to DestinationItemDto instances with all keys preserved
   @Transform(({ value }) => parseAndMap(value, DestinationItemDto))
   @IsArray()
   @ValidateNested({ each: true })

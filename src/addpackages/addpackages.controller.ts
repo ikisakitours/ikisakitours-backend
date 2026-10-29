@@ -4,19 +4,16 @@ import { CreateAddPackageDto } from './dto/create-addpackage.dto';
 import { AddPackageResponseDto } from './dto/addpackage-response.dto';
 import { PackageResponseDto } from './dto/PackageResponse.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { PackageSummaryResponseDto } from './dto/package-summary-response.dto';
+
+export enum PackageType {
+  ONE_DAY = 'oneday',
+  MULTI_DAY = 'multiday',
+}
 
 @Controller('addpackages')
 export class AddpackagesController {
   constructor(private readonly addpackagesService: AddpackagesService) { }
-
-  /*
-  @Post()
-  async create(
-    @Body() createDto: CreateAddPackageDto,
-  ): Promise<AddPackageResponseDto> {
-    return await this.addpackagesService.create(createDto);
-  }
-  */
 
   @Post()
   @UseInterceptors(FilesInterceptor('images', 10))
@@ -28,19 +25,39 @@ export class AddpackagesController {
     return await this.addpackagesService.create(createDto, images);
   }
 
-  @Get()
-  async findAll(
-    @Query('page') page: string = '1',
-    @Query('limit') limit: string = '5',
-  ): Promise<{ data: PackageResponseDto[]; totalCount: number; hasMore: boolean }> {
-    const pageNum = Math.max(1, parseInt(page, 10) || 1);
-    const limitNum = Math.max(1, parseInt(limit, 10) || 5);
-
-    return await this.addpackagesService.findAllPaginated(pageNum, limitNum);
-  }
-
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<PackageResponseDto> {
     return await this.addpackagesService.findOne(id);
+  }
+
+  // --- ONE DAY SUMMARIES ROUTE ---
+  @Get('oneday')
+  async findOndayPackageSummaries(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '5',
+  ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 5);
+    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'oneday');
+  }
+
+  // --- MULTI DAY SUMMARIES ROUTE ---
+  @Get('multiday')
+  async findMultidayPackageSummaries(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '5',
+  ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, parseInt(limit, 10) || 5);
+    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'multiday');
+  }
+
+  // --- TOGGLE LIKE / UNLIKE ROUTE ---
+  @Post(':packageId/like')
+  async toggleLike(
+    @Param('packageId') packageId: string,
+    @Body('userId') userId: string,
+  ) {
+    return await this.addpackagesService.toggleLike(packageId, userId);
   }
 }
