@@ -7,6 +7,7 @@ import { AddPackageResponseDto } from './dto/addpackage-response.dto'; import { 
 import { PackageResponseDto, PackageType } from './dto/PackageResponse.dto';
 import { UploadsService } from '../uploads/uploads.service';
 import { PackageSummaryResponseDto } from './dto/package-summary-response.dto';
+import { PackageListItemDto } from './dto/package-list-item.dto';
 
 @Injectable()
 export class AddpackagesService {
@@ -65,6 +66,20 @@ export class AddpackagesService {
       createdAt: newPackage.createdAt,
       updatedAt: newPackage.updatedAt,
     };
+  }
+
+  // --- GET /addpackages -> Returns minimal admin list (id, slug, title) ---
+  async findAll(): Promise<PackageListItemDto[]> {
+    const records = await this.db
+      .select({
+        id: schema.packages.id,
+        slug: schema.packages.slug,
+        title: schema.packages.title,
+      })
+      .from(schema.packages)
+      .orderBy(desc(schema.packages.createdAt));
+
+    return records;
   }
 
   // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
@@ -181,7 +196,7 @@ export class AddpackagesService {
     };
   }
 
-  
+
   //like button
   async toggleLike(packageId: string, userId: string) {
     return await this.db.transaction(async (tx) => {
