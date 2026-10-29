@@ -102,9 +102,15 @@ export class CommentsController {
     return await this.commentsService.replyToPackageReview(id, adminReply);
   }
 
-  // Get top 2 highest rating package reviews
-  @Get('package-reviews/top')
-  async getTopPackageReviews() {
-    return await this.commentsService.getTopPackageReviews();
+  // Get all package reviews for a specific package ID
+  @Get('package-reviews/:packageId')
+  async getAllReviewsByPackageId(@Param('packageId') packageId: string) {
+    return await this.commentsService.getAllReviewsByPackageId(packageId);
+  }
+
+  // Get package review summary, top reviews, ratings, and random images by packageId
+  @Get('package-reviews/:packageId/summary')
+  async getPackageReviewSummary(@Param('packageId') packageId: string) {
+    return await this.commentsService.getPackageReviewSummary(packageId);
   }
 }
