@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import { Controller, Post, Patch, Delete, Body, Get, Param, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
 import { AddpackagesService } from './addpackages.service';
 import { CreateAddPackageDto } from './dto/create-addpackage.dto';
 import { AddPackageResponseDto } from './dto/addpackage-response.dto';
@@ -25,9 +25,25 @@ export class AddpackagesController {
     return await this.addpackagesService.create(createDto, images);
   }
 
-  @Get(':id')
-  async findOne(@Param('id') id: string): Promise<PackageResponseDto> {
-    return await this.addpackagesService.findOne(id);
+  // --- GET SINGLE PACKAGE BY SLUG ---
+  @Get(':slug')
+  async findOne(@Param('slug') slug: string): Promise<PackageResponseDto> {
+    return await this.addpackagesService.findOne(slug);
+  }
+
+  // --- TEXT-ONLY UPDATE BY SLUG ---
+  @Patch(':slug')
+  async updateTextOnly(
+    @Param('slug') slug: string,
+    @Body() updateDto: Partial<CreateAddPackageDto>,
+  ): Promise<PackageResponseDto> {
+    return await this.addpackagesService.updateTextOnly(slug, updateDto);
+  }
+
+  // --- DELETE PACKAGE BY SLUG ---
+  @Delete(':slug')
+  async remove(@Param('slug') slug: string) {
+    return await this.addpackagesService.remove(slug);
   }
 
   // --- ONE DAY SUMMARIES ROUTE ---
