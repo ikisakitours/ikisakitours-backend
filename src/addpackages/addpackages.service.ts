@@ -1,11 +1,12 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc, count } from 'drizzle-orm';
+import { eq, desc, count, sql, and } from 'drizzle-orm';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { AddPackageResponseDto } from './dto/addpackage-response.dto'; import { CreateAddPackageDto } from './dto/create-addpackage.dto';
 import { PackageResponseDto, PackageType } from './dto/PackageResponse.dto';
 import { UploadsService } from '../uploads/uploads.service';
+import { PackageSummaryResponseDto } from './dto/package-summary-response.dto';
 
 @Injectable()
 export class AddpackagesService {
@@ -19,65 +20,94 @@ export class AddpackagesService {
     dto: CreateAddPackageDto,
     images: Express.Multer.File[],
   ): Promise<AddPackageResponseDto> {
-    // Upload all images first, get back the array of URLs
+    // 1. Upload all images first, get back the array of URLs
     const gallery = await this.uploadsService.uploadMultiple(images, 'package-images');
 
+    // 2. Ensure JSONB destinations are plain JavaScript objects (stripping class prototypes)
+    const plainDestinations = JSON.parse(JSON.stringify(dto.destinations));
+
+    // 3. Insert into database
     const [newPackage] = await this.db
       .insert(schema.packages)
       .values({
         type: dto.type,
+        category: dto.category,
+        origin: dto.origin,
+        duration: dto.duration,
         badge: dto.badge,
         slug: dto.slug,
         titleEmphasis: dto.titleEmphasis,
         title: dto.title,
         price: dto.price.toString(),
-        discount: dto.discount ? dto.discount.toString() : '0',
+        discount: dto.discount !== undefined ? dto.discount.toString() : '0',
         provider: dto.provider,
         leadTitle: dto.leadTitle,
         leadDescription: dto.leadDescription,
         gallery: gallery,
-        activityDetails: dto.activityDetails,
+        activityDetails: JSON.parse(JSON.stringify(dto.activityDetails)),
         highlights: dto.highlights,
         description: dto.description,
-        itinerary: dto.itinerary,
-        destinations: dto.destinations,
+        itinerary: JSON.parse(JSON.stringify(dto.itinerary)),
+        destinations: plainDestinations, // Clean plain object array for JSONB
         includes: dto.includes,
         excludes: dto.excludes,
+        likes: 0, // Initialize cached likes count
       })
       .returning();
 
+    // 4. Return matching the AddPackageResponseDto structure
     return {
       ...dto,
       gallery: gallery,
+      destinations: plainDestinations,
       id: newPackage.id,
+      likes: newPackage.likes,
       createdAt: newPackage.createdAt,
+      updatedAt: newPackage.updatedAt,
     };
   }
 
-  // --- GET /addpackages -> Returns PackageResponseDto[] ---
-  async findAllPaginated(page: number = 1, limit: number = 5) {
+  async findSummariesPaginated(
+    page: number = 1,
+    limit: number = 5,
+    packageType: string,
+  ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
     const offset = (page - 1) * limit;
 
-    // 1. Fetch total count of packages
+    // 1. Fetch total count of packages for this specific type
     const [{ total }] = await this.db
       .select({ total: count() })
-      .from(schema.packages);
+      .from(schema.packages)
+      .where(eq(schema.packages.type, packageType));
 
     const totalCount = Number(total);
 
-    // 2. Fetch paginated records using Drizzle
-    const records = await this.db.query.packages.findMany({
-      limit: limit,
-      offset: offset,
-      with: {
-        comments: {
-          with: { user: true },
-        },
-      },
-      orderBy: [desc(schema.packages.createdAt)],
-    });
+    // 2. Fetch paginated summary records using the Core Select API
+    const records = await this.db
+      .select()
+      .from(schema.packages)
+      .where(eq(schema.packages.type, packageType))
+      .limit(limit)
+      .offset(offset)
+      .orderBy(desc(schema.packages.createdAt));
 
-    const data = records.map((pkg) => this.mapToPackageResponseDto(pkg));
+    // 3. Map records to the summary DTO, including category, duration, and likes
+    const data: PackageSummaryResponseDto[] = records.map((pkg: any) => {
+      const galleryArray = (pkg.gallery as string[]) || [];
+      const heroImage = galleryArray.length > 0 ? galleryArray[0] : null;
+
+      return {
+        id: pkg.id,
+        slug: pkg.slug,
+        discount: pkg.discount,
+        badge: pkg.badge,
+        description: pkg.description,
+        heroImage: heroImage,
+        category: pkg.category,
+        duration: pkg.duration,
+        likes: pkg.likes ?? 0,
+      };
+    });
 
     return {
       data,
@@ -106,29 +136,52 @@ export class AddpackagesService {
     return this.mapToPackageResponseDto(pkg);
   }
 
+  //like button
+  async toggleLike(packageId: string, userId: string) {
+    return await this.db.transaction(async (tx) => {
+      // 1. Check if the user already liked this package
+      const existingLike = await tx.query.packageLikes.findFirst({
+        where: and(
+          eq(schema.packageLikes.packageId, packageId),
+          eq(schema.packageLikes.userId, userId),
+        ),
+      });
+
+      if (existingLike) {
+        // --- UNLIKE: Remove the record and decrement likes count ---
+        await tx.delete(schema.packageLikes).where(eq(schema.packageLikes.id, existingLike.id));
+
+        await tx.update(schema.packages)
+          .set({ likes: sql`${schema.packages.likes} - 1` })
+          .where(eq(schema.packages.id, packageId));
+
+        return { liked: false, message: 'Package unliked successfully' };
+      } else {
+        // --- LIKE: Insert the record and increment likes count ---
+        await tx.insert(schema.packageLikes).values({
+          packageId,
+          userId,
+        });
+
+        await tx.update(schema.packages)
+          .set({ likes: sql`${schema.packages.likes} + 1` })
+          .where(eq(schema.packages.id, packageId));
+
+        return { liked: true, message: 'Package liked successfully' };
+      }
+    });
+  }
+
   // Helper method for GET requests mapping database values to PackageResponseDto
   private mapToPackageResponseDto(pkg: any): PackageResponseDto {
-    const rawComments = pkg.comments || [];
-    const visibleComments = rawComments.filter((c: any) => c.isPublic ?? true);
-
-    const ratedComments = visibleComments.filter(
-      (c: any) => c.rating !== null && c.rating !== undefined,
-    );
-
-    const totalRatingSum = ratedComments.reduce(
-      (sum: number, c: any) => sum + Number(c.rating || 0),
-      0,
-    );
-
-    const averageRating =
-      ratedComments.length > 0
-        ? Number((totalRatingSum / ratedComments.length).toFixed(1))
-        : 0;
-
     return {
       id: pkg.id,
       slug: pkg.slug,
       type: pkg.type as PackageType,
+      category: pkg.category,
+      origin: pkg.origin,
+      duration: pkg.duration,
+      badge: pkg.badge || undefined,
       titleEmphasis: pkg.titleEmphasis,
       title: pkg.title,
       price: Number(pkg.price),
@@ -144,24 +197,7 @@ export class AddpackagesService {
       activityDetails: pkg.activityDetails || [],
       itinerary: pkg.itinerary || [],
       destinations: pkg.destinations || [],
-      rating: averageRating,
-      likeCount: visibleComments.filter((c: any) => c.type === 'like').length,
-      reviewCount: ratedComments.length,
-      comments: visibleComments.map((comment: any) => ({
-        id: comment.id,
-        userId: comment.userId || undefined,
-        userName: comment.user
-          ? `${comment.user.firstName} ${comment.user.lastName}`
-          : comment.userName || 'Anonymous User',
-        userAvatar: comment.user?.avatarUrl ?? comment.userAvatar ?? undefined,
-        content: comment.content,
-        type: comment.type,
-        isPublic: comment.isPublic ?? true,
-        adminReply: comment.adminReply || undefined,
-        rating: comment.rating ? Number(comment.rating) : undefined,
-        images: comment.images || [],
-        createdAt: comment.createdAt,
-      })),
+      likes: pkg.likes ?? 0,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
     };

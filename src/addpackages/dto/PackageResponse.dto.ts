@@ -10,7 +10,6 @@ import {
   ValidateNested,
   IsUUID,
   IsDate,
-  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -19,7 +18,7 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
-//badge
+// Badge enum
 export enum PackageBadge {
   NEW_ARRIVAL = 'new_arrival',
   DISCOUNTED = 'discounted',
@@ -53,25 +52,52 @@ export class ItineraryItemDto {
   images?: string[];
 }
 
-export class DestinationItemDto {
-  @IsString()
-  name!: string;
+export class CoordinatesDto {
+  @Type(() => Number)
+  @IsNumber()
+  lat!: number;
 
-  @IsOptional()
-  @IsString()
-  description?: string;
-
-  @IsOptional()
-  @IsArray()
-  @IsUrl({}, { each: true })
-  images?: string[];
+  @Type(() => Number)
+  @IsNumber()
+  lng!: number;
 }
 
-// --- CREATE DTO ---
+export class DestinationItemDto {
+  @IsUUID()
+  id!: string;
+
+  @IsString()
+  title!: string;
+
+  @IsString()
+  slug!: string;
+
+  @IsString()
+  summary!: string;
+
+  @IsOptional()
+  @IsUrl()
+  heroImage?: string | null;
+
+  @ValidateNested()
+  @Type(() => CoordinatesDto)
+  coordinates!: CoordinatesDto;
+}
+
+// --- BASE PACKAGE DTO ---
 
 export class CreateAddPackageDto {
   @IsEnum(PackageType)
   type!: PackageType;
+
+  @IsString()
+  category!: string;
+
+  @IsString()
+  origin!: string;
+
+  @IsString()
+  duration!: string;
 
   @IsOptional()
   @IsEnum(PackageBadge)
@@ -140,53 +166,7 @@ export class CreateAddPackageDto {
   excludes!: string[];
 }
 
-// --- COMMENT / REVIEW RESPONSE DTO ---
-
-export class PackageCommentResponseDto {
-  @IsUUID()
-  id!: string;
-
-  @IsOptional()
-  @IsUUID()
-  userId?: string;
-
-  @IsString()
-  userName!: string;
-
-  @IsOptional()
-  @IsString()
-  userAvatar?: string;
-
-  @IsString()
-  content!: string;
-
-  @IsString()
-  type!: string;
-
-  @IsBoolean()
-  isPublic!: boolean;
-
-  @IsOptional()
-  @IsString()
-  adminReply?: string;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  @Max(5)
-  rating?: number;
-
-  @IsOptional()
-  @IsArray()
-  @IsUrl({}, { each: true })
-  images?: string[];
-
-  @IsDate()
-  @Type(() => Date)
-  createdAt!: Date;
-}
-
-// --- COMPLETE PACKAGE RESPONSE DTO ---
+// --- ULTIMATE SINGLE PACKAGE RESPONSE DTO ---
 
 export class PackageResponseDto extends CreateAddPackageDto {
   @IsUUID()
@@ -194,21 +174,7 @@ export class PackageResponseDto extends CreateAddPackageDto {
 
   @IsNumber()
   @Min(0)
-  @Max(5)
-  rating!: number;
-
-  @IsNumber()
-  @Min(0)
-  likeCount!: number;
-
-  @IsNumber()
-  @Min(0)
-  reviewCount!: number;
-
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => PackageCommentResponseDto)
-  comments!: PackageCommentResponseDto[];
+  likes!: number;
 
   @IsDate()
   @Type(() => Date)

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex, serial } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex, serial, unique } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -11,8 +11,8 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash'),
 
   // 2. New columns to track social sign-ups directly in the same table
-  provider: varchar('provider', { length: 50 }), // e.g. 'google', 'facebook', or null
-  providerId: varchar('provider_id', { length: 255 }), // Unique ID from Google/FB
+  provider: varchar('provider', { length: 50 }),
+  providerId: varchar('provider_id', { length: 255 }),
 
   avatarUrl: text('avatar_url'),
   isVerified: boolean('is_verified').notNull().default(false),
@@ -57,11 +57,17 @@ export const packageReviews = pgTable('package_reviews', {
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
-//new
+
+
+//--------------------------------------------------------
+//package table
 export const packages = pgTable('packages', {
   id: uuid('id').defaultRandom().primaryKey(),
   slug: text('slug').notNull().unique(),
   type: text('type').notNull(),
+  category: text('category').notNull(),
+  origin: text('origin').notNull(),
+  duration: text('duration').notNull(),
   badge: text('badge'),
   titleEmphasis: text('title_emphasis').notNull(),
   title: text('title').notNull(),
@@ -77,6 +83,17 @@ export const packages = pgTable('packages', {
   includes: text('includes').array().notNull(),
   excludes: text('excludes').array().notNull(),
 
+  destinations: jsonb('destinations').$type<
+    {
+      id: string;
+      title: string;
+      slug: string;
+      summary: string;
+      heroImage: string | null;
+      coordinates: { lat: number; lng: number };
+    }[]
+  >().notNull(),
+
   activityDetails: jsonb('activity_details').$type<
     { title: string; description: string }[]
   >().notNull(),
@@ -85,14 +102,39 @@ export const packages = pgTable('packages', {
     { day: number; title: string; description: string; images?: string[] }[]
   >().notNull(),
 
-  destinations: jsonb('destinations').$type<
-    { name: string; description?: string; images?: string[] }[]
-  >().notNull(),
+  likes: integer('likes').default(0).notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+//----------------------------------------------------------
+//package like table
+export const packageLikes = pgTable(
+  'package_likes',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    
+    // References the 'id' column from your users table
+    userId: uuid('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+      
+    // References the 'id' column from your packages table
+    packageId: uuid('package_id')
+      .references(() => packages.id, { onDelete: 'cascade' })
+      .notNull(),
+
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => ({
+    // Enforces uniqueness: A single user can only like a specific package once
+    userPackageUnique: unique().on(t.userId, t.packageId),
+  }),
+);
+
+
+//-----------------------------------------------------------
 //blog table
 export const blogs = pgTable('blogs', {
   id: uuid('id').defaultRandom().primaryKey(),
