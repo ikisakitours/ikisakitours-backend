@@ -145,7 +145,7 @@ export class CommentsService {
   //Only package reviews
   //Create a package review in the dedicated package_reviews table
   async createPackageReview(
-    dto: CreatePackageReviewDto, 
+    dto: CreatePackageReviewDto,
     images?: Express.Multer.File[]
   ) {
     let imageUrls: string[] = [];
@@ -194,11 +194,61 @@ export class CommentsService {
     return updatedReview;
   }
 
-  // Fetch top 2 highest rating package reviews
-  async getTopPackageReviews() {
-    return await this.db.query.packageReviews.findMany({
-      orderBy: (reviews, { desc }) => [desc(reviews.rating), desc(reviews.createdAt)],
-      limit: 2,
+  // package review summery method
+  async getPackageReviewSummary(packageId: string) {
+    // 1. Fetch all reviews for this specific package
+    const reviews = await this.db.query.packageReviews.findMany({
+      where: eq(schema.packageReviews.packageId, packageId),
+      orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
     });
+
+    if (!reviews || reviews.length === 0) {
+      return {
+        packageId,
+        packageName: '',
+        averageRating: 0,
+        totalReviews: 0,
+        topReviews: [],
+        randomImageSets: [],
+      };
+    }
+
+    const packageName = reviews[0].packageName;
+    const totalReviews = reviews.length;
+
+    // 2. Calculate Average Rating
+    const totalRatingSum = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating = Number((totalRatingSum / totalReviews).toFixed(1));
+
+    // 3. Get Top 2 Highest Rating Reviews
+    const topReviews = reviews.slice(0, 2);
+
+    // 4. Collect and flatten all image URLs, then pick up to 5 random sets/items
+    const allImagesLists: string[][] = reviews
+      .map((r) => (r.imageUrls as string[]) || [])
+      .filter((imgs) => imgs.length > 0);
+
+    // Shuffle and pick 5 random image sets
+    const shuffledImages = [...allImagesLists].sort(() => 0.5 - Math.random());
+    const randomImageSets = shuffledImages.slice(0, 5);
+
+    return {
+      packageId,
+      packageName,
+      averageRating,
+      totalReviews,
+      topReviews,
+      randomImageSets,
+    };
+  }
+
+  // Retrieve all package reviews for a given packageId
+  async getAllReviewsByPackageId(packageId: string) {
+    const reviews = await this.db.query.packageReviews.findMany({
+      where: eq(schema.packageReviews.packageId, packageId),
+      orderBy: (table, { desc }) => [desc(table.createdAt)],
+    });
+
+    return reviews;
   }
 }
