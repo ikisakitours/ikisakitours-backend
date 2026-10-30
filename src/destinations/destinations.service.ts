@@ -156,26 +156,21 @@ export class DestinationsService {
     return records.map((d) => this.mapToDestinationMapResponseDto(d));
   }
 
-  //destination data that need by create package
+  // destination data that need by create package
   async findPackagePreviewsByIds(ids: string[]): Promise<DestinationPackageResponseDto[]> {
-  if (!ids || ids.length === 0) return [];
+    if (!ids || ids.length === 0) return [];
 
-  const destinations = await this.db.query.destinations.findMany({
-    where: inArray(schema.destinations.id, ids),
-  });
+    const destinations = await this.db.query.destinations.findMany({
+      where: inArray(schema.destinations.id, ids),
+      columns: {
+        id: true,
+        slug: true,
+      },
+    });
 
-  return destinations.map((dest: any) => {
-    const imagesArray = (dest.images as string[]) || [];
-    const heroImage = imagesArray.length > 0 ? imagesArray[0] : null;
-
-    return {
+    return destinations.map((dest) => ({
       id: dest.id,
-      title: dest.title,
       slug: dest.slug,
-      summary: dest.summary,
-      heroImage: heroImage,
-      coordinates: dest.coordinates,
-    };
-  });
-}
+    }));
+  }
 }
