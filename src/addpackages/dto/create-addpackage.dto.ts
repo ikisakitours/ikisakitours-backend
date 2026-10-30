@@ -36,7 +36,7 @@ const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] =
     }
   }
   if (!Array.isArray(parsed)) return [];
-  
+
   return parsed.map((item) => Object.assign(new dtoClass(), item));
 };
 
@@ -94,11 +94,13 @@ export class ItineraryItemDto {
   @IsOptional()
   activities?: string[];
 
-  @IsString()
-  meals!: string;
+  @IsArray()
+  @IsString({ each: true })
+  meals!: string[];
 
-  @IsString()
-  accommodation!: string;
+  @IsArray()
+  @IsString({ each: true })
+  accommodation!: string[];
 }
 
 // Coordinate nested DTO for destinations
