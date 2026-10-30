@@ -42,6 +42,8 @@ export const comments = pgTable('comments', {
   }),
 });
 
+
+
 //package reviews table
 export const packageReviews = pgTable('package_reviews', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -56,6 +58,8 @@ export const packageReviews = pgTable('package_reviews', {
     email: string;
     avatarUrl: string | null;
     isVip: boolean;
+    isVerified: boolean;
+    hasAccess: boolean;
   }>().notNull(),
 
   fullName: text('full_name').notNull(),
