@@ -87,10 +87,10 @@ export class CommentsController {
   @Post('package-review')
   @UseInterceptors(FilesInterceptor('images', 5))
   async createPackageReview(
-    @Body() createPackageReviewDto: CreatePackageReviewDto,
+    @Body() dto: CreatePackageReviewDto,
     @UploadedFiles() images?: Express.Multer.File[],
   ) {
-    return await this.commentsService.createPackageReview(createPackageReviewDto, images);
+    return await this.commentsService.createPackageReview(dto, images);
   }
 
   // Admin replies to a package review

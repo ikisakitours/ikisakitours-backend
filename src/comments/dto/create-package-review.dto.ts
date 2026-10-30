@@ -7,6 +7,8 @@ export enum CommentType {
 }
 
 export class CreatePackageReviewDto {
+    userId!: string;
+
     @IsString()
     @IsNotEmpty()
     packageId!: string;
@@ -18,10 +20,6 @@ export class CreatePackageReviewDto {
     @IsEnum(CommentType)
     @IsOptional()
     type: CommentType = CommentType.PACKAGE;
-
-    @IsString()
-    @IsNotEmpty()
-    fullName!: string;
 
     @IsEmail()
     email!: string;
