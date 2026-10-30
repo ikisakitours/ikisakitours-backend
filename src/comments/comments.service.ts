@@ -10,6 +10,7 @@ import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { CreatePackageReviewDto } from './dto/create-package-review.dto';
 import { UploadsService } from '../uploads/uploads.service';
+import { PackageReviewSummaryDto } from './dto/package-review-summary.dto';
 
 @Injectable()
 export class CommentsService {
@@ -227,52 +228,68 @@ export class CommentsService {
   }
 
   // package review summery method
-  async getPackageReviewSummary(packageId: string) {
-    // 1. Fetch all reviews for this specific package
-    const reviews = await this.db.query.packageReviews.findMany({
-      where: eq(schema.packageReviews.packageId, packageId),
-      orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
-    });
+  async getPackageReviewSummary(packageId: string): Promise<PackageReviewSummaryDto> {
+  const reviews = await this.db.query.packageReviews.findMany({
+    where: eq(schema.packageReviews.packageId, packageId),
+    orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
+  });
 
-    if (!reviews || reviews.length === 0) {
-      return {
-        packageId,
-        packageName: '',
-        averageRating: 0,
-        totalReviews: 0,
-        topReviews: [],
-        randomImageSets: [],
-      };
-    }
-
-    const packageName = reviews[0].packageName;
-    const totalReviews = reviews.length;
-
-    // 2. Calculate Average Rating
-    const totalRatingSum = reviews.reduce((sum, r) => sum + r.rating, 0);
-    const averageRating = Number((totalRatingSum / totalReviews).toFixed(1));
-
-    // 3. Get Top 2 Highest Rating Reviews
-    const topReviews = reviews.slice(0, 2);
-
-    // 4. Collect and flatten all image URLs, then pick up to 5 random sets/items
-    const allImagesLists: string[][] = reviews
-      .map((r) => (r.imageUrls as string[]) || [])
-      .filter((imgs) => imgs.length > 0);
-
-    // Shuffle and pick 5 random image sets
-    const shuffledImages = [...allImagesLists].sort(() => 0.5 - Math.random());
-    const randomImageSets = shuffledImages.slice(0, 5);
-
+  if (!reviews || reviews.length === 0) {
     return {
       packageId,
-      packageName,
-      averageRating,
-      totalReviews,
-      topReviews,
-      randomImageSets,
+      packageName: '',
+      averageRating: 0,
+      totalReviews: 0,
+      topReviews: [],
+      randomImageSets: [],
     };
   }
+
+  const packageName = reviews[0].packageName;
+  const totalReviews = reviews.length;
+
+  const totalRatingSum = reviews.reduce((sum, r) => sum + r.rating, 0);
+  const averageRating = Number((totalRatingSum / totalReviews).toFixed(1));
+
+  const topReviews = reviews.slice(0, 2).map((r) => ({
+    id: r.id,
+    userSnapshot: r.userSnapshot,
+    fullName: r.fullName,
+    rating: r.rating,
+    experience: r.experience,
+    imageUrls: (r.imageUrls as string[]) || [],
+    adminReply: r.adminReply ?? null,
+    createdAt: r.createdAt,
+  }));
+
+  // Flatten all image URLs, shuffle, chunk into sets of exactly 5, cap at 5 sets
+  const pool: string[] = [];
+  for (const review of reviews) {
+    for (const url of ((review.imageUrls as string[]) || [])) {
+      if (typeof url === 'string' && url.length > 0) pool.push(url);
+    }
+  }
+
+  const shuffled = [...pool];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+
+  const randomImageSets: string[][] = [];
+  for (let i = 0; i + 5 <= shuffled.length && randomImageSets.length < 5; i += 5) {
+    randomImageSets.push(shuffled.slice(i, i + 5));
+  }
+
+  return {
+    packageId,
+    packageName,
+    averageRating,
+    totalReviews,
+    topReviews,
+    randomImageSets,
+  };
+}
 
   // Retrieve all package reviews for a given packageId
   async getAllReviewsByPackageId(packageId: string) {

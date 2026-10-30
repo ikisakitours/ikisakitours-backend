@@ -5,6 +5,16 @@ export class PackageReviewSummaryDto {
   totalReviews!: number;
   topReviews!: Array<{
     id: string;
+    userSnapshot: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      avatarUrl: string | null;
+      isVip: boolean;
+      isVerified: boolean;
+      hasAccess: boolean;
+    };
     fullName: string;
     rating: number;
     experience: string;
