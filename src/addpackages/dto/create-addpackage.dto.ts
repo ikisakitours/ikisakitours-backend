@@ -103,38 +103,13 @@ export class ItineraryItemDto {
   accommodation!: string[];
 }
 
-// Coordinate nested DTO for destinations
-export class CoordinatesDto {
-  @Type(() => Number)
-  @IsNumber()
-  lat!: number;
-
-  @Type(() => Number)
-  @IsNumber()
-  lng!: number;
-}
-
 // Updated DestinationItemDto matching the database schema JSONB shape
 export class DestinationItemDto {
   @IsUUID()
   id!: string;
 
   @IsString()
-  title!: string;
-
-  @IsString()
   slug!: string;
-
-  @IsString()
-  summary!: string;
-
-  @IsOptional()
-  @IsUrl()
-  heroImage?: string | null;
-
-  @ValidateNested()
-  @Type(() => CoordinatesDto)
-  coordinates!: CoordinatesDto;
 }
 
 // --- MAIN DTO ---
