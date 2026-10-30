@@ -220,6 +220,19 @@ export class AddpackagesService {
     };
   }
 
+  //check the user like already
+  async hasLiked(packageId: string, userId: string): Promise<{ liked: boolean }> {
+  const existing = await this.db.query.packageLikes.findFirst({
+    where: and(
+      eq(schema.packageLikes.packageId, packageId),
+      eq(schema.packageLikes.userId, userId),
+    ),
+    columns: { id: true },
+  });
+
+  return { liked: !!existing };
+}
+
 
   //like button
   async toggleLike(packageId: string, userId: string) {
