@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc, count, sql, and } from 'drizzle-orm';
+import { eq, desc, count, sql, and, inArray } from 'drizzle-orm';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { AddPackageResponseDto } from './dto/addpackage-response.dto'; import { CreateAddPackageDto } from './dto/create-addpackage.dto';
@@ -171,13 +171,36 @@ export class AddpackagesService {
       .offset(offset)
       .orderBy(desc(schema.packages.createdAt));
 
-    // 3. Map records to the summary DTO, including category, duration, and likes
+    const packageIds = records.map((p) => p.id);
+
+    // 3. Fetch average ratings for the current page package IDs
+    const ratingsMap = new Map<string, number>();
+    if (packageIds.length > 0) {
+      const ratingResults = await this.db
+        .select({
+          packageId: schema.packageReviews.packageId,
+          avgRating: sql<number>`avg(${schema.packageReviews.rating})`,
+        })
+        .from(schema.packageReviews)
+        .where(inArray(schema.packageReviews.packageId, packageIds))
+        .groupBy(schema.packageReviews.packageId);
+
+      for (const row of ratingResults) {
+        ratingsMap.set(row.packageId, Number(row.avgRating) || 0);
+      }
+    }
+
+    // 4. Map records to the summary DTO, including averageRating (rounded to 1 decimal place)
     const data: PackageSummaryResponseDto[] = records.map((pkg: any) => {
       const galleryArray = (pkg.gallery as string[]) || [];
       const heroImage = galleryArray.length > 0 ? galleryArray[0] : null;
+      const rawRating = ratingsMap.get(pkg.id) || 0;
 
       return {
         id: pkg.id,
+        title: pkg.title,
+        origin: pkg.origin,
+        price: Number(pkg.price),
         slug: pkg.slug,
         discount: pkg.discount,
         badge: pkg.badge,
@@ -186,6 +209,7 @@ export class AddpackagesService {
         category: pkg.category,
         duration: pkg.duration,
         likes: pkg.likes ?? 0,
+        averageRating: Number(rawRating.toFixed(1)),
       };
     });
 

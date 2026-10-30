@@ -1,5 +1,8 @@
 export class PackageSummaryResponseDto {
   id!: string;
+  title!: string;
+  origin!: string;
+  price!: number;
   slug!: string;
   discount!: string | null;
   badge!: string | null;
@@ -8,4 +11,5 @@ export class PackageSummaryResponseDto {
   category!: string;
   duration!: string;
   likes!: number;
+  averageRating!: number;
 }
