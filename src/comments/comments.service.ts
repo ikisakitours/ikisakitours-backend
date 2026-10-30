@@ -229,67 +229,67 @@ export class CommentsService {
 
   // package review summery method
   async getPackageReviewSummary(packageId: string): Promise<PackageReviewSummaryDto> {
-  const reviews = await this.db.query.packageReviews.findMany({
-    where: eq(schema.packageReviews.packageId, packageId),
-    orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
-  });
+    const reviews = await this.db.query.packageReviews.findMany({
+      where: eq(schema.packageReviews.packageId, packageId),
+      orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
+    });
 
-  if (!reviews || reviews.length === 0) {
+    if (!reviews || reviews.length === 0) {
+      return {
+        packageId,
+        packageName: '',
+        averageRating: 0,
+        totalReviews: 0,
+        topReviews: [],
+        randomImageSets: [],
+      };
+    }
+
+    const packageName = reviews[0].packageName;
+    const totalReviews = reviews.length;
+
+    const totalRatingSum = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating = Number((totalRatingSum / totalReviews).toFixed(1));
+
+    const topReviews = reviews.slice(0, 2).map((r) => ({
+      id: r.id,
+      userSnapshot: r.userSnapshot,
+      fullName: r.fullName,
+      rating: r.rating,
+      experience: r.experience,
+      imageUrls: (r.imageUrls as string[]) || [],
+      adminReply: r.adminReply ?? null,
+      createdAt: r.createdAt,
+    }));
+
+    // Flatten all image URLs, shuffle, chunk into sets of exactly 5, cap at 5 sets
+    const pool: string[] = [];
+    for (const review of reviews) {
+      for (const url of ((review.imageUrls as string[]) || [])) {
+        if (typeof url === 'string' && url.length > 0) pool.push(url);
+      }
+    }
+
+    const shuffled = [...pool];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    const randomImageSets: string[][] = [];
+    if (shuffled.length >= 5) {
+      randomImageSets.push(shuffled.slice(0, 5));
+    }
+
     return {
       packageId,
-      packageName: '',
-      averageRating: 0,
-      totalReviews: 0,
-      topReviews: [],
-      randomImageSets: [],
+      packageName,
+      averageRating,
+      totalReviews,
+      topReviews,
+      randomImageSets,
     };
   }
-
-  const packageName = reviews[0].packageName;
-  const totalReviews = reviews.length;
-
-  const totalRatingSum = reviews.reduce((sum, r) => sum + r.rating, 0);
-  const averageRating = Number((totalRatingSum / totalReviews).toFixed(1));
-
-  const topReviews = reviews.slice(0, 2).map((r) => ({
-    id: r.id,
-    userSnapshot: r.userSnapshot,
-    fullName: r.fullName,
-    rating: r.rating,
-    experience: r.experience,
-    imageUrls: (r.imageUrls as string[]) || [],
-    adminReply: r.adminReply ?? null,
-    createdAt: r.createdAt,
-  }));
-
-  // Flatten all image URLs, shuffle, chunk into sets of exactly 5, cap at 5 sets
-  const pool: string[] = [];
-  for (const review of reviews) {
-    for (const url of ((review.imageUrls as string[]) || [])) {
-      if (typeof url === 'string' && url.length > 0) pool.push(url);
-    }
-  }
-
-  const shuffled = [...pool];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-
-  const randomImageSets: string[][] = [];
-  for (let i = 0; i + 5 <= shuffled.length && randomImageSets.length < 5; i += 5) {
-    randomImageSets.push(shuffled.slice(i, i + 5));
-  }
-
-  return {
-    packageId,
-    packageName,
-    averageRating,
-    totalReviews,
-    topReviews,
-    randomImageSets,
-  };
-}
 
   // Retrieve all package reviews for a given packageId
   async getAllReviewsByPackageId(packageId: string) {
