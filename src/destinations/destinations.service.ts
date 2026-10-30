@@ -156,6 +156,7 @@ export class DestinationsService {
     return records.map((d) => this.mapToDestinationMapResponseDto(d));
   }
 
+  //destination data that need by create package
   async findPackagePreviewsByIds(ids: string[]): Promise<DestinationPackageResponseDto[]> {
   if (!ids || ids.length === 0) return [];
 
