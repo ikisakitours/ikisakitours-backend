@@ -48,6 +48,16 @@ export const packageReviews = pgTable('package_reviews', {
   packageId: text('package_id').notNull(),
   packageName: text('package_name').notNull(),
   type: text('type').notNull().default('PACKAGE'),
+
+  userSnapshot: jsonb('user_snapshot').$type<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    avatarUrl: string | null;
+    isVip: boolean;
+  }>().notNull(),
+
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
   rating: integer('rating').notNull(),

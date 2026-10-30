@@ -143,30 +143,62 @@ export class CommentsService {
   }
 
   //Only package reviews
+  //--------------------------------------------------------------
   //Create a package review in the dedicated package_reviews table
   async createPackageReview(
     dto: CreatePackageReviewDto,
-    images?: Express.Multer.File[]
+    images?: Express.Multer.File[],
   ) {
-    let imageUrls: string[] = [];
+    // 1. Load the user — server-side source of truth for the snapshot
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, dto.userId),
+      columns: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        avatarUrl: true,
+        isVip: true,
+        isVerified: true,
+        hasAccess: true,
+      },
+    });
 
-    // 1. Upload files to Cloudflare R2 if present
-    if (images && images.length > 0) {
-      imageUrls = await this.uploadsService.uploadMultiple(images, 'package-reviews'); // <-- 3. Works now!
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
 
-    // 2. Save into Supabase DB
+    // 2. Upload files
+    let imageUrls: string[] = [];
+    if (images && images.length > 0) {
+      imageUrls = await this.uploadsService.uploadMultiple(images, 'package-reviews');
+    }
+
+    // 3. Snapshot (display-safe fields only)
+    const userSnapshot = {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatarUrl: user.avatarUrl,
+      isVip: user.isVip,
+      isVerified: user.isVerified,
+      hasAccess: user.hasAccess,
+    };
+
+    // 4. Insert
     const [newReview] = await this.db
       .insert(schema.packageReviews)
       .values({
         packageId: dto.packageId,
         packageName: dto.packageName,
         type: 'PACKAGE',
-        fullName: dto.fullName,
-        email: dto.email,
-        rating: Number(dto.rating),
+        userSnapshot,
+        fullName: `${user.firstName} ${user.lastName}`.trim(),
+        email: user.email,
+        rating: dto.rating,
         experience: dto.experience,
-        imageUrls: imageUrls,
+        imageUrls,
       })
       .returning();
 

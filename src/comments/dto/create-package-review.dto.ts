@@ -7,6 +7,8 @@ export enum CommentType {
 }
 
 export class CreatePackageReviewDto {
+    userId!: string;
+    
     @IsString()
     @IsNotEmpty()
     packageId!: string;
