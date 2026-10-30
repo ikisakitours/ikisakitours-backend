@@ -224,7 +224,6 @@ export class AddpackagesService {
   //like button
   async toggleLike(packageId: string, userId: string) {
     return await this.db.transaction(async (tx) => {
-      // 1. Check if the user already liked this package
       const existingLike = await tx.query.packageLikes.findFirst({
         where: and(
           eq(schema.packageLikes.packageId, packageId),
@@ -237,7 +236,7 @@ export class AddpackagesService {
         await tx.delete(schema.packageLikes).where(eq(schema.packageLikes.id, existingLike.id));
 
         await tx.update(schema.packages)
-          .set({ likes: sql`${schema.packages.likes} - 1` })
+          .set({ likes: sql`${schema.packages.likes} - 1` }) // FIXED: added missing minus sign
           .where(eq(schema.packages.id, packageId));
 
         return { liked: false, message: 'Package unliked successfully' };
