@@ -91,4 +91,13 @@ export class AddpackagesController {
   ) {
     return await this.addpackagesService.toggleLike(packageId, userId);
   }
+
+  // --- CHECK IF USER HAS LIKED A PACKAGE ---
+  @Get(':packageId/like')
+  async hasLiked(
+    @Param('packageId') packageId: string,
+    @Query('userId') userId: string,
+  ) {
+    return await this.addpackagesService.hasLiked(packageId, userId);
+  }
 }
