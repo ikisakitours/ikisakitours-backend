@@ -99,7 +99,18 @@ export const packages = pgTable('packages', {
   >().notNull(),
 
   itinerary: jsonb('itinerary').$type<
-    { day: number; title: string; description: string; images?: string[] }[]
+    {
+      day: number;
+      title: string;
+      travelTime: string;
+      locations: string[];
+      route: string[];
+      details: string[];
+      scenicStops?: string[];
+      activities?: string[];
+      meals: string;
+      accommodation: string;
+    }[]
   >().notNull(),
 
   likes: integer('likes').default(0).notNull(),
@@ -114,12 +125,12 @@ export const packageLikes = pgTable(
   'package_likes',
   {
     id: uuid('id').defaultRandom().primaryKey(),
-    
+
     // References the 'id' column from your users table
     userId: uuid('user_id')
       .references(() => users.id, { onDelete: 'cascade' })
       .notNull(),
-      
+
     // References the 'id' column from your packages table
     packageId: uuid('package_id')
       .references(() => packages.id, { onDelete: 'cascade' })
@@ -214,8 +225,8 @@ export const cookieConsents = pgTable('cookie_consents', {
 //service table can be changed in the future
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
-  serviceCategory: text('service_category').notNull(), 
-  transferServiceType: text('transfer_service_type'), 
+  serviceCategory: text('service_category').notNull(),
+  transferServiceType: text('transfer_service_type'),
   // Shared fields
   vehicleType: text('vehicle_type').notNull(),
   tourPackageType: text('tour_package_type'),

@@ -70,13 +70,35 @@ export class ItineraryItemDto {
   title!: string;
 
   @IsString()
-  description!: string;
+  travelTime!: string;
 
-  @IsOptional()
-  @Transform(({ value }) => parseJsonArray(value))
   @IsArray()
-  @IsUrl({}, { each: true })
-  images?: string[];
+  @IsString({ each: true })
+  locations!: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  route!: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  details!: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  scenicStops?: string[];
+
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  activities?: string[];
+
+  @IsString()
+  meals!: string;
+
+  @IsString()
+  accommodation!: string;
 }
 
 // Coordinate nested DTO for destinations

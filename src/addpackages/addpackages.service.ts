@@ -49,10 +49,10 @@ export class AddpackagesService {
         highlights: dto.highlights,
         description: dto.description,
         itinerary: JSON.parse(JSON.stringify(dto.itinerary)),
-        destinations: plainDestinations, // Clean plain object array for JSONB
+        destinations: plainDestinations,
         includes: dto.includes,
         excludes: dto.excludes,
-        likes: 0, // Initialize cached likes count
+        likes: 0,
       })
       .returning();
 
