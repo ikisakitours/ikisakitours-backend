@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail, IsInt, Min, Max, IsOptional, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsInt, Min, Max, IsOptional, IsEnum, IsUUID } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export enum CommentType {
@@ -7,6 +7,7 @@ export enum CommentType {
 }
 
 export class CreatePackageReviewDto {
+    @IsUUID()
     userId!: string;
 
     @IsString()
