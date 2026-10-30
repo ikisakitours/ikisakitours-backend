@@ -26,31 +26,14 @@ export class AddpackagesController {
     return await this.addpackagesService.create(createDto, images);
   }
 
+  // ==========================================
+  // 1. STATIC & GENERAL GET ROUTES (MUST BE FIRST)
+  // ==========================================
+
   // --- GET ALL PACKAGES (For Manage Table) ---
   @Get()
   async findAll(): Promise<PackageListItemDto[]> {
     return await this.addpackagesService.findAll();
-  }
-
-  // --- GET SINGLE PACKAGE BY SLUG ---
-  @Get(':slug')
-  async findOne(@Param('slug') slug: string): Promise<PackageResponseDto> {
-    return await this.addpackagesService.findOne(slug);
-  }
-
-  // --- TEXT-ONLY UPDATE BY SLUG ---
-  @Patch(':slug')
-  async updateTextOnly(
-    @Param('slug') slug: string,
-    @Body() updateDto: Partial<CreateAddPackageDto>,
-  ): Promise<PackageResponseDto> {
-    return await this.addpackagesService.updateTextOnly(slug, updateDto);
-  }
-
-  // --- DELETE PACKAGE BY SLUG ---
-  @Delete(':slug')
-  async remove(@Param('slug') slug: string) {
-    return await this.addpackagesService.remove(slug);
   }
 
   // --- ONE DAY SUMMARIES ROUTE ---
@@ -73,6 +56,31 @@ export class AddpackagesController {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 5);
     return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'multiday');
+  }
+
+  // ==========================================
+  // 2. DYNAMIC PARAMETER ROUTES (MUST BE LAST)
+  // ==========================================
+
+  // --- GET SINGLE PACKAGE BY SLUG ---
+  @Get(':slug')
+  async findOne(@Param('slug') slug: string): Promise<PackageResponseDto> {
+    return await this.addpackagesService.findOne(slug);
+  }
+
+  // --- TEXT-ONLY UPDATE BY SLUG ---
+  @Patch(':slug')
+  async updateTextOnly(
+    @Param('slug') slug: string,
+    @Body() updateDto: Partial<CreateAddPackageDto>,
+  ): Promise<PackageResponseDto> {
+    return await this.addpackagesService.updateTextOnly(slug, updateDto);
+  }
+
+  // --- DELETE PACKAGE BY SLUG ---
+  @Delete(':slug')
+  async remove(@Param('slug') slug: string) {
+    return await this.addpackagesService.remove(slug);
   }
 
   // --- TOGGLE LIKE / UNLIKE ROUTE ---
