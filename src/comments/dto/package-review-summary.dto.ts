@@ -3,6 +3,7 @@ export class PackageReviewSummaryDto {
   packageName!: string;
   averageRating!: number;
   totalReviews!: number;
+  totalImages!: number;
   topReviews!: Array<{
     id: string;
     userSnapshot: {

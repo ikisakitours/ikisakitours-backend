@@ -228,6 +228,7 @@ export class CommentsService {
   }
 
   // package review summery method
+  // package review summery method
   async getPackageReviewSummary(packageId: string): Promise<PackageReviewSummaryDto> {
     const reviews = await this.db.query.packageReviews.findMany({
       where: eq(schema.packageReviews.packageId, packageId),
@@ -240,6 +241,7 @@ export class CommentsService {
         packageName: '',
         averageRating: 0,
         totalReviews: 0,
+        totalImages: 0,
         topReviews: [],
         randomImageSets: [],
       };
@@ -262,13 +264,15 @@ export class CommentsService {
       createdAt: r.createdAt,
     }));
 
-    // Flatten all image URLs, shuffle, chunk into sets of exactly 5, cap at 5 sets
+    // Flatten all image URLs, shuffle, take a single random set of 5
     const pool: string[] = [];
     for (const review of reviews) {
       for (const url of ((review.imageUrls as string[]) || [])) {
         if (typeof url === 'string' && url.length > 0) pool.push(url);
       }
     }
+
+    const totalImages = pool.length;
 
     const shuffled = [...pool];
     for (let i = shuffled.length - 1; i > 0; i--) {
@@ -286,6 +290,7 @@ export class CommentsService {
       packageName,
       averageRating,
       totalReviews,
+      totalImages,
       topReviews,
       randomImageSets,
     };
