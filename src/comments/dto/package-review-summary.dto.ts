@@ -15,6 +15,7 @@ export class PackageReviewSummaryDto {
       isVip: boolean;
       isVerified: boolean;
       hasAccess: boolean;
+      country?: string;
     };
     fullName: string;
     rating: number;
