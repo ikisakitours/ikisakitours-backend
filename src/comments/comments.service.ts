@@ -162,6 +162,7 @@ export class CommentsService {
         isVip: true,
         isVerified: true,
         hasAccess: true,
+        country: true,
       },
     });
 
@@ -185,6 +186,7 @@ export class CommentsService {
       isVip: user.isVip,
       isVerified: user.isVerified,
       hasAccess: user.hasAccess,
+      country: user.country,
     };
 
     // 4. Insert
