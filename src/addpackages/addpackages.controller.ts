@@ -64,9 +64,16 @@ export class AddpackagesController {
 
   // --- GET SINGLE PACKAGE BY SLUG ---
   @Get(':slug')
-  async findOne(@Param('slug') slug: string): Promise<PackageResponseDto> {
-    return await this.addpackagesService.findOne(slug);
+  async findOne(
+    @Param('slug') slug: string,
+    @Query('lang') lang?: string,
+  ): Promise<PackageResponseDto> {
+    // Default to 'en' if lang is not provided or is an unsupported language
+    const requestedLocale = lang === 'ja' ? 'ja' : 'en';
+    
+    return await this.addpackagesService.findOne(slug, requestedLocale);
   }
+
 
   // --- TEXT-ONLY UPDATE BY SLUG ---
   @Patch(':slug')

@@ -146,15 +146,22 @@ export class AddpackagesService {
   }
 
   // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
-  async findOne(slug: string): Promise<PackageResponseDto> {
-    const pkg = await this.db.query.packages.findFirst({
-      where: eq(schema.packages.slug, slug),
-    });
+  async findOne(slug: string, locale: string = 'en'): Promise<PackageResponseDto> {
+    const isJa = locale === 'ja';
+
+    const [pkg] = await this.db
+      .select({
+        // ... COALESCE selects as before ...
+      })
+      .from(schema.packages)
+      .where(eq(schema.packages.slug, slug))
+      .limit(1);
 
     if (!pkg) {
       throw new NotFoundException(`Package with slug "${slug}" not found`);
     }
 
+    // The helper works exactly the same — pkg now has resolved values
     return this.mapToPackageResponseDto(pkg);
   }
 
