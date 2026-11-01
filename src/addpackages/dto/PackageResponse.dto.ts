@@ -100,12 +100,6 @@ export class CreateAddPackageDto {
   @IsString()
   slug!: string;
 
-  @IsString()
-  titleEmphasis!: string;
-
-  @IsString()
-  title!: string;
-
   @IsNumber()
   @Min(0)
   price!: number;
@@ -119,12 +113,6 @@ export class CreateAddPackageDto {
   @IsString()
   provider!: string;
 
-  @IsString()
-  leadTitle!: string;
-
-  @IsString()
-  leadDescription!: string;
-
   @IsArray()
   @IsUrl({}, { each: true })
   gallery!: string[];
@@ -133,13 +121,6 @@ export class CreateAddPackageDto {
   @ValidateNested({ each: true })
   @Type(() => ActivityDetailDto)
   activityDetails!: ActivityDetailDto[];
-
-  @IsArray()
-  @IsString({ each: true })
-  highlights!: string[];
-
-  @IsString()
-  description!: string;
 
   @IsArray()
   @ValidateNested({ each: true })
@@ -151,38 +132,45 @@ export class CreateAddPackageDto {
   @Type(() => DestinationItemDto)
   destinations!: DestinationItemDto[];
 
-  @IsArray()
-  @IsString({ each: true })
-  includes!: string[];
+  // ── Localized English Fields (Required) ──
+  
+  @IsString()
+  titleEn!: string;
+
+  @IsString()
+  titleEmphasisEn!: string;
+
+  @IsString()
+  leadTitleEn!: string;
+
+  @IsString()
+  leadDescriptionEn!: string;
+
+  @IsString()
+  descriptionEn!: string;
 
   @IsArray()
   @IsString({ each: true })
-  excludes!: string[];
+  highlightsEn!: string[];
 
-  // ── ADDED: localized fields (all optional so old clients work) ──
+  @IsArray()
+  @IsString({ each: true })
+  includesEn!: string[];
 
-  @IsOptional() @IsString() titleEn?: string;
+  @IsArray()
+  @IsString({ each: true })
+  excludesEn!: string[];
+
+  // ── Localized Japanese Fields (Optional) ──
+
   @IsOptional() @IsString() titleJa?: string;
-
-  @IsOptional() @IsString() titleEmphasisEn?: string;
   @IsOptional() @IsString() titleEmphasisJa?: string;
-
-  @IsOptional() @IsString() leadTitleEn?: string;
   @IsOptional() @IsString() leadTitleJa?: string;
-
-  @IsOptional() @IsString() leadDescriptionEn?: string;
   @IsOptional() @IsString() leadDescriptionJa?: string;
-
-  @IsOptional() @IsString() descriptionEn?: string;
   @IsOptional() @IsString() descriptionJa?: string;
 
-  @IsOptional() @IsArray() @IsString({ each: true }) highlightsEn?: string[];
   @IsOptional() @IsArray() @IsString({ each: true }) highlightsJa?: string[];
-
-  @IsOptional() @IsArray() @IsString({ each: true }) includesEn?: string[];
   @IsOptional() @IsArray() @IsString({ each: true }) includesJa?: string[];
-
-  @IsOptional() @IsArray() @IsString({ each: true }) excludesEn?: string[];
   @IsOptional() @IsArray() @IsString({ each: true }) excludesJa?: string[];
 }
 

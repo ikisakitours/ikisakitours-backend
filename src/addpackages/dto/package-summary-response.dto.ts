@@ -5,16 +5,13 @@ export class PackageSummaryResponseDto {
   id!: string;
 
   @IsString()
-  title!: string;
+  slug!: string;
 
   @IsString()
   origin!: string;
 
   @IsNumber()
   price!: number;
-
-  @IsString()
-  slug!: string;
 
   @IsOptional()
   @IsString()
@@ -23,9 +20,6 @@ export class PackageSummaryResponseDto {
   @IsOptional()
   @IsString()
   badge!: string | null;
-
-  @IsString()
-  description!: string;
 
   @IsOptional()
   @IsString()
@@ -43,11 +37,19 @@ export class PackageSummaryResponseDto {
   @IsNumber()
   averageRating!: number;
 
-  // ── ADDED ──
-  // Tells the frontend which language this summary is in. 
-  // Useful if you want to show an "EN" tag when a user is on the 
-  // Japanese site but the package hasn't been translated yet.
+  // ── Localized English Fields ──
+  @IsString()
+  titleEn!: string;
+
+  @IsString()
+  descriptionEn!: string;
+
+  // ── Localized Japanese Fields ──
   @IsOptional()
   @IsString()
-  locale?: string;
+  titleJa?: string | null;
+
+  @IsOptional()
+  @IsString()
+  descriptionJa?: string | null;
 }

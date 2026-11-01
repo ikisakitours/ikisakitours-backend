@@ -78,7 +78,6 @@ export const packageReviews = pgTable('package_reviews', {
 
 //--------------------------------------------------------
 //package table
-//package table
 export const packages = pgTable('packages', {
   id: uuid('id').defaultRandom().primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -88,59 +87,40 @@ export const packages = pgTable('packages', {
   duration: text('duration').notNull(),
   badge: text('badge'),
 
-  // ── legacy (kept for backward compat — do NOT remove yet) ──
-  titleEmphasis: text('title_emphasis').notNull(),
-  title: text('title').notNull(),
+  // Localized Text Fields
+  titleEn: text('title_en').notNull(),
+  titleJa: text('title_ja'),
+  
+  titleEmphasisEn: text('title_emphasis_en').notNull(),
+  titleEmphasisJa: text('title_emphasis_ja'),
+  
+  leadTitleEn: text('lead_title_en').notNull(),
+  leadTitleJa: text('lead_title_ja'),
+  
+  leadDescriptionEn: text('lead_description_en').notNull(),
+  leadDescriptionJa: text('lead_description_ja'),
+  
+  descriptionEn: text('description_en').notNull(),
+  descriptionJa: text('description_ja'),
 
+  // Localized Arrays
+  highlightsEn: text('highlights_en').array().notNull(),
+  highlightsJa: text('highlights_ja').array(),
+  
+  includesEn: text('includes_en').array().notNull(),
+  includesJa: text('includes_ja').array(),
+  
+  excludesEn: text('excludes_en').array().notNull(),
+  excludesJa: text('excludes_ja').array(),
+
+  // Shared Fields
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   discount: numeric('discount', { precision: 5, scale: 2 }).default('0'),
   provider: text('provider').notNull(),
-
-  // ── legacy (kept for backward compat — do NOT remove yet) ──
-  leadTitle: text('lead_title').notNull(),
-  leadDescription: text('lead_description').notNull(),
-  description: text('description').notNull(),
-
   gallery: text('gallery').array().notNull(),
+  likes: integer('likes').default(0).notNull(),
 
-  // ── legacy (kept for backward compat — do NOT remove yet) ──
-  highlights: text('highlights').array().notNull(),
-  includes: text('includes').array().notNull(),
-  excludes: text('excludes').array().notNull(),
-
-  // ═══════════════════════════════════════════════════════════
-  // ADDED: localized scalar/array columns (nullable — English
-  // fills on backfill, Japanese is optional and falls back to en)
-  // ═══════════════════════════════════════════════════════════
-  titleEmphasisEn: text('title_emphasis_en'),
-  titleEmphasisJa: text('title_emphasis_ja'),
-
-  titleEn: text('title_en'),
-  titleJa: text('title_ja'),
-
-  leadTitleEn: text('lead_title_en'),
-  leadTitleJa: text('lead_title_ja'),
-
-  leadDescriptionEn: text('lead_description_en'),
-  leadDescriptionJa: text('lead_description_ja'),
-
-  descriptionEn: text('description_en'),
-  descriptionJa: text('description_ja'),
-
-  highlightsEn: text('highlights_en').array(),
-  highlightsJa: text('highlights_ja').array(),
-
-  includesEn: text('includes_en').array(),
-  includesJa: text('includes_ja').array(),
-
-  excludesEn: text('excludes_en').array(),
-  excludesJa: text('excludes_ja').array(),
-  // ═══════════════════════════════════════════════════════════
-
-  // NOTE: jsonb columns below keep their ORIGINAL shape and type.
-  // You can migrate their inner text to { en, ja } later once the
-  // rest of the pipeline is stable. Leaving them untouched now
-  // guarantees nothing that reads/writes them breaks.
+  // JSONB Types
   destinations: jsonb('destinations').$type<
     {
       id: string;
@@ -170,8 +150,6 @@ export const packages = pgTable('packages', {
       accommodation: string;
     }[]
   >().notNull(),
-
-  likes: integer('likes').default(0).notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
