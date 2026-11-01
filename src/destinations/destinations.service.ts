@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc, inArray } from 'drizzle-orm';
+import { eq, desc, inArray, and } from 'drizzle-orm';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateDestinationDto } from './dto/create-destination.dto';
@@ -33,6 +33,7 @@ export class DestinationsService {
       id: dest.id,
       title: dest.title,
       slug: dest.slug,
+      language: dest.language,
       summary: dest.summary,
       description: dest.description,
       province: dest.province,
@@ -56,6 +57,7 @@ export class DestinationsService {
       id: dest.id,
       title: dest.title,
       slug: dest.slug,
+      language: dest.language,
       summary: dest.summary,
       province: dest.province,
       heroImage: dest.images && dest.images.length > 0 ? dest.images[0] : null,
@@ -80,13 +82,14 @@ export class DestinationsService {
 
   // 1. Create Destination
   async create(dto: CreateDestinationDto): Promise<DestinationResponseDto> {
-    const generatedSlug = dto.slug ? this.slugify(dto.slug) : this.slugify(dto.title);
+    const slug = (dto.slug?.trim() || this.slugify(dto.title)) || `blog-${Date.now()}`;
 
     const [newDest] = await this.db
       .insert(schema.destinations)
       .values({
         title: dto.title,
-        slug: generatedSlug,
+        slug: slug,
+        language: dto.language,
         summary: dto.summary,
         description: dto.description,
         province: dto.province,
@@ -104,8 +107,9 @@ export class DestinationsService {
   }
 
   // 2. Fetch small previews for card display on frontend
-  async findPreviews(): Promise<DestinationPreviewResponseDto[]> {
+  async findPreviews(lang?: string): Promise<DestinationPreviewResponseDto[]> {
     const records = await this.db.query.destinations.findMany({
+      where: lang ? eq(schema.destinations.language, lang) : undefined,
       orderBy: [desc(schema.destinations.createdAt)],
     });
 
@@ -126,13 +130,20 @@ export class DestinationsService {
   }
 
   // 4. Fetch single destination by Slug (for public frontend view)
-  async findBySlug(slug: string): Promise<DestinationResponseDto> {
+  async findBySlug(slug: string, lang?: string): Promise<DestinationResponseDto> {
     const dest = await this.db.query.destinations.findFirst({
-      where: eq(schema.destinations.slug, slug),
+      where: lang
+        ? and(
+          eq(schema.destinations.slug, slug),
+          eq(schema.destinations.language, lang)
+        )
+        : eq(schema.destinations.slug, slug),
     });
 
     if (!dest) {
-      throw new NotFoundException(`Destination with slug "${slug}" not found`);
+      throw new NotFoundException(
+        `Destination with slug "${slug}" ${lang ? `for language "${lang}" ` : ''}not found`
+      );
     }
 
     return this.mapToDestinationResponseDto(dest);
