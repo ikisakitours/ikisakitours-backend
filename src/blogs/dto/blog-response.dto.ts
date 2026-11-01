@@ -7,6 +7,7 @@ export class BlogResponseDto {
   readTime!: string;
   content!: string;
   author!: string;
+  language!: string;
   gallery!: string[];
   likes!: number;
   createdAt!: Date;

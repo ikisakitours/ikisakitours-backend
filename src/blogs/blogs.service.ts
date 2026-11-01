@@ -36,6 +36,7 @@ export class BlogsService {
       readTime: blog.readTime,
       content: blog.blog,
       author: blog.author,
+      language: blog.language,
       gallery: blog.images || [],
       likes: blog.likes,
       createdAt: blog.createdAt,
@@ -55,6 +56,7 @@ export class BlogsService {
       category: blog.category,
       readTime: blog.readTime,
       author: blog.author,
+      language: blog.language,
       previewImage:
         blog.images && blog.images.length > 0 ? blog.images[0] : null,
       likes: blog.likes,
@@ -77,6 +79,7 @@ export class BlogsService {
         readTime: dto.readTime,
         blog: dto.blog,
         author: dto.author,
+        language: dto.language,
         images: dto.images ?? [],
         likes: 0,
       })
@@ -86,8 +89,9 @@ export class BlogsService {
   }
 
   // 2. Fetch small previews for card display on frontend
-  async findPreviews(): Promise<BlogPreviewResponseDto[]> {
+  async findPreviews(lang: string = 'en'): Promise<BlogPreviewResponseDto[]> {
     const records = await this.db.query.blogs.findMany({
+      where: eq(schema.blogs.language, lang),
       orderBy: [desc(schema.blogs.createdAt)],
     });
 
@@ -107,14 +111,17 @@ export class BlogsService {
     return this.mapToBlogResponseDto(blog);
   }
 
-  // 4. Fetch single blog post by Slug (for frontend public route)
-  async findBySlug(slug: string): Promise<BlogResponseDto> {
+  // 4. Fetch single destination/blog by Slug and Language (for public frontend view)
+  async findBySlug(slug: string, lang: string = 'en'): Promise<BlogResponseDto> {
     const blog = await this.db.query.blogs.findFirst({
-      where: eq(schema.blogs.slug, slug),
+      where: and(
+        eq(schema.blogs.slug, slug),
+        eq(schema.blogs.language, lang),
+      ),
     });
 
     if (!blog) {
-      throw new NotFoundException(`Blog with slug "${slug}" not found`);
+      throw new NotFoundException(`Blog with slug "${slug}" and language "${lang}" not found`);
     }
 
     return this.mapToBlogResponseDto(blog);
