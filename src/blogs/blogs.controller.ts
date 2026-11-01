@@ -26,7 +26,7 @@ export class BlogsController {
   // 2. Show small preview list for card design in frontend (MUST be above :id)
   @Get('previews')
   async findPreviews(
-    @Query('lang') lang: string = 'en',
+    @Query('lang') lang?: string,
   ): Promise<BlogPreviewResponseDto[]> {
     return await this.blogsService.findPreviews(lang);
   }
