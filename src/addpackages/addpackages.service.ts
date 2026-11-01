@@ -27,6 +27,29 @@ export class AddpackagesService {
     // 2. Ensure JSONB destinations are plain JavaScript objects (stripping class prototypes)
     const plainDestinations = JSON.parse(JSON.stringify(dto.destinations));
 
+    // 2b. Resolve localized English fields.
+    //     New clients send `titleEn` etc.; old clients only send `title`.
+    //     The `??` chain collapses both cases with zero branching downstream.
+    const titleEn = dto.titleEn ?? dto.title;
+    const titleEmphasisEn = dto.titleEmphasisEn ?? dto.titleEmphasis;
+    const leadTitleEn = dto.leadTitleEn ?? dto.leadTitle;
+    const leadDescriptionEn = dto.leadDescriptionEn ?? dto.leadDescription;
+    const descriptionEn = dto.descriptionEn ?? dto.description;
+    const highlightsEn = dto.highlightsEn ?? dto.highlights;
+    const includesEn = dto.includesEn ?? dto.includes;
+    const excludesEn = dto.excludesEn ?? dto.excludes;
+
+    // 2c. Resolve Japanese fields. Absent → null so the DB stays explicit
+    //     and read-time COALESCE(_ja, _en) falls back to English.
+    const titleJa = dto.titleJa ?? null;
+    const titleEmphasisJa = dto.titleEmphasisJa ?? null;
+    const leadTitleJa = dto.leadTitleJa ?? null;
+    const leadDescriptionJa = dto.leadDescriptionJa ?? null;
+    const descriptionJa = dto.descriptionJa ?? null;
+    const highlightsJa = dto.highlightsJa ?? null;
+    const includesJa = dto.includesJa ?? null;
+    const excludesJa = dto.excludesJa ?? null;
+
     // 3. Insert into database
     const [newPackage] = await this.db
       .insert(schema.packages)
@@ -53,10 +76,32 @@ export class AddpackagesService {
         includes: dto.includes,
         excludes: dto.excludes,
         likes: 0,
+
+        // ── localized columns (added — legacy columns above untouched) ──
+        titleEn,
+        titleJa,
+        titleEmphasisEn,
+        titleEmphasisJa,
+        leadTitleEn,
+        leadTitleJa,
+        leadDescriptionEn,
+        leadDescriptionJa,
+        descriptionEn,
+        descriptionJa,
+        highlightsEn,
+        highlightsJa,
+        includesEn,
+        includesJa,
+        excludesEn,
+        excludesJa,
       })
       .returning();
 
-    // 4. Return matching the AddPackageResponseDto structure
+    // 4. Return matching the AddPackageResponseDto structure.
+    //    Kept `...dto` spread and the original overrides so nothing
+    //    the old client reads changed. Localized fields are also
+    //    surfaced explicitly so new clients see the resolved values
+    //    (which may differ from dto if `En` was omitted).
     return {
       ...dto,
       gallery: gallery,
@@ -65,6 +110,24 @@ export class AddpackagesService {
       likes: newPackage.likes,
       createdAt: newPackage.createdAt,
       updatedAt: newPackage.updatedAt,
+
+      // localized echo — resolved from DB-write values
+      titleEn,
+      titleJa: titleJa ?? undefined,
+      titleEmphasisEn,
+      titleEmphasisJa: titleEmphasisJa ?? undefined,
+      leadTitleEn,
+      leadTitleJa: leadTitleJa ?? undefined,
+      leadDescriptionEn,
+      leadDescriptionJa: leadDescriptionJa ?? undefined,
+      descriptionEn,
+      descriptionJa: descriptionJa ?? undefined,
+      highlightsEn,
+      highlightsJa: highlightsJa ?? undefined,
+      includesEn,
+      includesJa: includesJa ?? undefined,
+      excludesEn,
+      excludesJa: excludesJa ?? undefined,
     };
   }
 
@@ -222,16 +285,16 @@ export class AddpackagesService {
 
   //check the user like already
   async hasLiked(packageId: string, userId: string): Promise<{ liked: boolean }> {
-  const existing = await this.db.query.packageLikes.findFirst({
-    where: and(
-      eq(schema.packageLikes.packageId, packageId),
-      eq(schema.packageLikes.userId, userId),
-    ),
-    columns: { id: true },
-  });
+    const existing = await this.db.query.packageLikes.findFirst({
+      where: and(
+        eq(schema.packageLikes.packageId, packageId),
+        eq(schema.packageLikes.userId, userId),
+      ),
+      columns: { id: true },
+    });
 
-  return { liked: !!existing };
-}
+    return { liked: !!existing };
+  }
 
 
   //like button

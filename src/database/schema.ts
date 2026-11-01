@@ -58,6 +58,7 @@ export const packageReviews = pgTable('package_reviews', {
     firstName: string;
     lastName: string;
     email: string;
+    country: string,
     avatarUrl: string | null;
     isVip: boolean;
     isVerified: boolean;
@@ -77,6 +78,7 @@ export const packageReviews = pgTable('package_reviews', {
 
 //--------------------------------------------------------
 //package table
+//package table
 export const packages = pgTable('packages', {
   id: uuid('id').defaultRandom().primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -85,20 +87,60 @@ export const packages = pgTable('packages', {
   origin: text('origin').notNull(),
   duration: text('duration').notNull(),
   badge: text('badge'),
+
+  // ── legacy (kept for backward compat — do NOT remove yet) ──
   titleEmphasis: text('title_emphasis').notNull(),
   title: text('title').notNull(),
+
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
   discount: numeric('discount', { precision: 5, scale: 2 }).default('0'),
   provider: text('provider').notNull(),
+
+  // ── legacy (kept for backward compat — do NOT remove yet) ──
   leadTitle: text('lead_title').notNull(),
   leadDescription: text('lead_description').notNull(),
   description: text('description').notNull(),
 
   gallery: text('gallery').array().notNull(),
+
+  // ── legacy (kept for backward compat — do NOT remove yet) ──
   highlights: text('highlights').array().notNull(),
   includes: text('includes').array().notNull(),
   excludes: text('excludes').array().notNull(),
 
+  // ═══════════════════════════════════════════════════════════
+  // ADDED: localized scalar/array columns (nullable — English
+  // fills on backfill, Japanese is optional and falls back to en)
+  // ═══════════════════════════════════════════════════════════
+  titleEmphasisEn: text('title_emphasis_en'),
+  titleEmphasisJa: text('title_emphasis_ja'),
+
+  titleEn: text('title_en'),
+  titleJa: text('title_ja'),
+
+  leadTitleEn: text('lead_title_en'),
+  leadTitleJa: text('lead_title_ja'),
+
+  leadDescriptionEn: text('lead_description_en'),
+  leadDescriptionJa: text('lead_description_ja'),
+
+  descriptionEn: text('description_en'),
+  descriptionJa: text('description_ja'),
+
+  highlightsEn: text('highlights_en').array(),
+  highlightsJa: text('highlights_ja').array(),
+
+  includesEn: text('includes_en').array(),
+  includesJa: text('includes_ja').array(),
+
+  excludesEn: text('excludes_en').array(),
+  excludesJa: text('excludes_ja').array(),
+  // ═══════════════════════════════════════════════════════════
+
+  // NOTE: jsonb columns below keep their ORIGINAL shape and type.
+  // You can migrate their inner text to { en, ja } later once the
+  // rest of the pipeline is stable. Leaving them untouched now
+  // guarantees nothing that reads/writes them breaks.
   destinations: jsonb('destinations').$type<
     {
       id: string;
@@ -245,6 +287,8 @@ export const cookieConsents = pgTable('cookie_consents', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+
+
 //service table can be changed in the future
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -279,6 +323,8 @@ export const serviceRequests = pgTable('service_requests', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+
+
 //news letter
 export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -287,6 +333,8 @@ export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   subscribedAt: timestamp('subscribed_at').defaultNow().notNull(),
   status: text('status').default('active').notNull(), // 'active', 'unsubscribed'
 });
+
+
 
 //contact table
 export const contacts = pgTable('contacts', {
@@ -302,6 +350,8 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+
+
 //faq table
 export const faqs = pgTable('faqs', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -311,12 +361,16 @@ export const faqs = pgTable('faqs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+
+
 //availability table
 export const availability = pgTable('availability', {
   id: serial('id').primaryKey(),
   apiClosedDates: text('api_closed_dates').array().notNull().default([]),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+
 
 //package booking table ( for adim panel )
 export const packageBookings = pgTable('package_bookings', {
