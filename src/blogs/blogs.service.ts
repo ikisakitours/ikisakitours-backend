@@ -67,13 +67,13 @@ export class BlogsService {
   // 1. Create Blog
   async create(dto: CreateBlogDto): Promise<BlogResponseDto> {
     // Generate slug from custom DTO slug or fallback to title
-    const generatedSlug = dto.slug ? this.slugify(dto.slug) : this.slugify(dto.title);
+    const slug = (dto.slug?.trim() || this.slugify(dto.title)) || `blog-${Date.now()}`;
 
     const [newBlog] = await this.db
       .insert(schema.blogs)
       .values({
         title: dto.title,
-        slug: generatedSlug,
+        slug: slug,
         summary: dto.summary,
         category: dto.category,
         readTime: dto.readTime,
