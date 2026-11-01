@@ -91,7 +91,7 @@ export class BlogsService {
   // 2. Fetch small previews for card display on frontend
   async findPreviews(lang: string = 'en'): Promise<BlogPreviewResponseDto[]> {
     const records = await this.db.query.blogs.findMany({
-      where: eq(schema.blogs.language, lang),
+      where: lang ? eq(schema.blogs.language, lang) : undefined,
       orderBy: [desc(schema.blogs.createdAt)],
     });
 
