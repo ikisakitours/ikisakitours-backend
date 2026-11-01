@@ -23,6 +23,8 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
+
+
 //comments
 export const comments = pgTable('comments', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -133,6 +135,8 @@ export const packages = pgTable('packages', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+
+
 //----------------------------------------------------------
 //package like table
 export const packageLikes = pgTable(
@@ -159,6 +163,7 @@ export const packageLikes = pgTable(
 );
 
 
+
 //-----------------------------------------------------------
 //blog table
 export const blogs = pgTable('blogs', {
@@ -170,6 +175,7 @@ export const blogs = pgTable('blogs', {
   readTime: text('read_time').notNull(),
   blog: text('blog').notNull(),
   author: text('author').notNull(),
+  language: text('language').notNull().default('en'),
   images: text('images').array().notNull(),
   likes: integer('likes').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),

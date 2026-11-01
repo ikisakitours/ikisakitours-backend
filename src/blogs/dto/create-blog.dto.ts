@@ -1,10 +1,17 @@
 import {
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   IsUrl,
 } from 'class-validator';
+
+export enum BlogLanguage {
+  ENGLISH = 'en',
+  JAPANESE = 'ja',
+  FRENCH = 'fr',
+}
 
 export class CreateBlogDto {
   @IsString()
@@ -34,6 +41,10 @@ export class CreateBlogDto {
   @IsString()
   @IsNotEmpty()
   author!: string;
+
+  @IsEnum(BlogLanguage)
+  @IsNotEmpty()
+  language!: BlogLanguage;
 
   @IsOptional()
   @IsArray()

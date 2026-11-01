@@ -6,6 +6,7 @@ import {
   Patch,
   Body,
   Param,
+  Query,
 } from '@nestjs/common';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
@@ -24,14 +25,19 @@ export class BlogsController {
 
   // 2. Show small preview list for card design in frontend (MUST be above :id)
   @Get('previews')
-  async findPreviews(): Promise<BlogPreviewResponseDto[]> {
-    return await this.blogsService.findPreviews();
+  async findPreviews(
+    @Query('lang') lang: string = 'en',
+  ): Promise<BlogPreviewResponseDto[]> {
+    return await this.blogsService.findPreviews(lang);
   }
 
   // 3. Fetch blog post by Slug (for frontend reader page, MUST be above :id)
   @Get('slug/:slug')
-  async findBySlug(@Param('slug') slug: string): Promise<BlogResponseDto> {
-    return await this.blogsService.findBySlug(slug);
+  async findBySlug(
+    @Param('slug') slug: string,
+    @Query('lang') lang: string = 'en',
+  ): Promise<BlogResponseDto> {
+    return await this.blogsService.findBySlug(slug, lang);
   }
 
 
@@ -45,6 +51,7 @@ export class BlogsController {
     return await this.blogsService.findBlogWithUserCheck(body.blogId, body.userId);
   }
 
+
   @Post('like')
   async toggleLikeWithUser(
     @Body() body: { blogId: string; userId: string },
@@ -53,7 +60,6 @@ export class BlogsController {
   }
 
   //------------------------------------------------
-
 
   // 4. Detailed version for reading a single post by ID (Dynamic route MUST be last)
   @Get(':id')
