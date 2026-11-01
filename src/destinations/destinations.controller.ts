@@ -5,6 +5,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
 } from '@nestjs/common';
 import { DestinationsService } from './destinations.service';
 import { CreateDestinationDto } from './dto/create-destination.dto';
@@ -25,14 +26,17 @@ export class DestinationsController {
 
   // 2. Show small preview list for card design in frontend (MUST be above :id)
   @Get('previews')
-  async findPreviews(): Promise<DestinationPreviewResponseDto[]> {
-    return await this.destinationsService.findPreviews();
+  async findPreviews(@Query('lang') lang?: string): Promise<DestinationPreviewResponseDto[]> {
+    return await this.destinationsService.findPreviews(lang);
   }
 
   // 3. Fetch destination by Slug (for frontend reader page, MUST be above :id)
   @Get('slug/:slug')
-  async findBySlug(@Param('slug') slug: string): Promise<DestinationResponseDto> {
-    return await this.destinationsService.findBySlug(slug);
+  async findBySlug(
+    @Param('slug') slug: string,
+    @Query('lang') lang?: string,
+  ): Promise<DestinationResponseDto> {
+    return await this.destinationsService.findBySlug(slug, lang);
   }
 
   @Get('map')

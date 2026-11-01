@@ -2,6 +2,7 @@ export class DestinationResponseDto {
   id!: string;
   title!: string;
   slug!: string;
+  language!: string;
   summary!: string;
   description!: string;
   province!: string;

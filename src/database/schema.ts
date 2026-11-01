@@ -182,11 +182,14 @@ export const blogs = pgTable('blogs', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+
+
 //destination table
 export const destinations = pgTable('destinations', {
   id: uuid('id').defaultRandom().primaryKey(),
   title: text('title').notNull(),
   slug: text('slug').notNull().unique(),
+  language: text('language').notNull().default('en'),
   summary: text('summary').notNull(),
   description: text('description').notNull(),
   province: text('province').notNull(),

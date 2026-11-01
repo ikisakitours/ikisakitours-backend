@@ -1,4 +1,10 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString, IsObject, IsUrl } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsObject, IsUrl, IsEnum } from 'class-validator';
+
+export enum DestinationLanguage {
+  EN = 'en',
+  JA = 'ja',
+  FR = 'fr',
+}
 
 export class CreateDestinationDto {
   @IsString()
@@ -8,6 +14,10 @@ export class CreateDestinationDto {
   @IsOptional()
   @IsString()
   slug?: string;
+
+  @IsEnum(DestinationLanguage)
+  @IsNotEmpty()
+  language!: DestinationLanguage;
 
   @IsString()
   @IsNotEmpty()
