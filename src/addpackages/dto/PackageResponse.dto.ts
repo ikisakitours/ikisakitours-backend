@@ -34,6 +34,15 @@ export class ActivityDetailDto {
 
   @IsString()
   description!: string;
+
+  // ── Localized additions ──
+  @IsOptional()
+  @IsString()
+  titleJa?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionJa?: string;
 }
 
 export class ItineraryItemDto {
@@ -50,6 +59,15 @@ export class ItineraryItemDto {
   @IsArray()
   @IsUrl({}, { each: true })
   images?: string[];
+
+  // ── Localized additions ──
+  @IsOptional()
+  @IsString()
+  titleJa?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionJa?: string;
 }
 
 export class DestinationItemDto {
@@ -58,7 +76,6 @@ export class DestinationItemDto {
 
   @IsString()
   slug!: string;
-
 }
 
 // --- BASE PACKAGE DTO ---
@@ -141,6 +158,32 @@ export class CreateAddPackageDto {
   @IsArray()
   @IsString({ each: true })
   excludes!: string[];
+
+  // ── ADDED: localized fields (all optional so old clients work) ──
+
+  @IsOptional() @IsString() titleEn?: string;
+  @IsOptional() @IsString() titleJa?: string;
+
+  @IsOptional() @IsString() titleEmphasisEn?: string;
+  @IsOptional() @IsString() titleEmphasisJa?: string;
+
+  @IsOptional() @IsString() leadTitleEn?: string;
+  @IsOptional() @IsString() leadTitleJa?: string;
+
+  @IsOptional() @IsString() leadDescriptionEn?: string;
+  @IsOptional() @IsString() leadDescriptionJa?: string;
+
+  @IsOptional() @IsString() descriptionEn?: string;
+  @IsOptional() @IsString() descriptionJa?: string;
+
+  @IsOptional() @IsArray() @IsString({ each: true }) highlightsEn?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) highlightsJa?: string[];
+
+  @IsOptional() @IsArray() @IsString({ each: true }) includesEn?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) includesJa?: string[];
+
+  @IsOptional() @IsArray() @IsString({ each: true }) excludesEn?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) excludesJa?: string[];
 }
 
 // --- ULTIMATE SINGLE PACKAGE RESPONSE DTO ---
