@@ -30,12 +30,11 @@ export enum PackageBadge {
 
 export class ActivityDetailDto {
   @IsString()
-  title!: string;
+  titleEn!: string;
 
   @IsString()
-  description!: string;
+  descriptionEn!: string;
 
-  // ── Localized additions ──
   @IsOptional()
   @IsString()
   titleJa?: string;
@@ -50,17 +49,16 @@ export class ItineraryItemDto {
   day!: number;
 
   @IsString()
-  title!: string;
+  titleEn!: string;
 
   @IsString()
-  description!: string;
+  descriptionEn!: string;
 
   @IsOptional()
   @IsArray()
   @IsUrl({}, { each: true })
   images?: string[];
 
-  // ── Localized additions ──
   @IsOptional()
   @IsString()
   titleJa?: string;
@@ -133,7 +131,6 @@ export class CreateAddPackageDto {
   destinations!: DestinationItemDto[];
 
   // ── Localized English Fields (Required) ──
-  
   @IsString()
   titleEn!: string;
 
@@ -162,7 +159,6 @@ export class CreateAddPackageDto {
   excludesEn!: string[];
 
   // ── Localized Japanese Fields (Optional) ──
-
   @IsOptional() @IsString() titleJa?: string;
   @IsOptional() @IsString() titleEmphasisJa?: string;
   @IsOptional() @IsString() leadTitleJa?: string;

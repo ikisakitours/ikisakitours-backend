@@ -24,35 +24,37 @@ export class AddpackagesService {
     // 1. Upload all images first, get back the array of URLs
     const gallery = await this.uploadsService.uploadMultiple(images, 'package-images');
 
-    // 2. Ensure JSONB destinations are plain JavaScript objects (stripping class prototypes)
+    // 2. Ensure JSONB fields are plain JavaScript objects
     const plainDestinations = JSON.parse(JSON.stringify(dto.destinations));
+    const plainActivityDetails = JSON.parse(JSON.stringify(dto.activityDetails));
+    const plainItinerary = JSON.parse(JSON.stringify(dto.itinerary));
 
     // 3. Resolve the English and Japanese fields directly.
-    //    Since the legacy columns are gone, we strictly map En and Ja.
-    //    We use the nullish coalescing operator (??) to cast undefined to null for the DB.
-    const titleEn = dto.titleEn ?? dto.title; // Fallback to 'title' just in case the old frontend sends it
-    const titleJa = dto.titleJa ?? null;
+    // English is required (guaranteed by DTO validation).
+    // Japanese is optional (nullish coalescing ensures undefined becomes null).
+    const titleEn: string = dto.titleEn;
+    const titleJa: string | null = dto.titleJa ?? null;
 
-    const titleEmphasisEn = dto.titleEmphasisEn ?? dto.titleEmphasis;
-    const titleEmphasisJa = dto.titleEmphasisJa ?? null;
+    const titleEmphasisEn: string = dto.titleEmphasisEn;
+    const titleEmphasisJa: string | null = dto.titleEmphasisJa ?? null;
 
-    const leadTitleEn = dto.leadTitleEn ?? dto.leadTitle;
-    const leadTitleJa = dto.leadTitleJa ?? null;
+    const leadTitleEn: string = dto.leadTitleEn;
+    const leadTitleJa: string | null = dto.leadTitleJa ?? null;
 
-    const leadDescriptionEn = dto.leadDescriptionEn ?? dto.leadDescription;
-    const leadDescriptionJa = dto.leadDescriptionJa ?? null;
+    const leadDescriptionEn: string = dto.leadDescriptionEn;
+    const leadDescriptionJa: string | null = dto.leadDescriptionJa ?? null;
 
-    const descriptionEn = dto.descriptionEn ?? dto.description;
-    const descriptionJa = dto.descriptionJa ?? null;
+    const descriptionEn: string = dto.descriptionEn;
+    const descriptionJa: string | null = dto.descriptionJa ?? null;
 
-    const highlightsEn = dto.highlightsEn ?? dto.highlights ?? [];
-    const highlightsJa = dto.highlightsJa ?? null;
+    const highlightsEn: string[] = dto.highlightsEn;
+    const highlightsJa: string[] | null = dto.highlightsJa ?? null;
 
-    const includesEn = dto.includesEn ?? dto.includes ?? [];
-    const includesJa = dto.includesJa ?? null;
+    const includesEn: string[] = dto.includesEn;
+    const includesJa: string[] | null = dto.includesJa ?? null;
 
-    const excludesEn = dto.excludesEn ?? dto.excludes ?? [];
-    const excludesJa = dto.excludesJa ?? null;
+    const excludesEn: string[] = dto.excludesEn;
+    const excludesJa: string[] | null = dto.excludesJa ?? null;
 
     // 4. Insert into database
     const [newPackage] = await this.db
@@ -72,8 +74,8 @@ export class AddpackagesService {
         likes: 0,
 
         // JSONB Fields
-        activityDetails: JSON.parse(JSON.stringify(dto.activityDetails)),
-        itinerary: JSON.parse(JSON.stringify(dto.itinerary)),
+        activityDetails: plainActivityDetails,
+        itinerary: plainItinerary,
         destinations: plainDestinations,
 
         // Localized Text Fields
@@ -98,9 +100,13 @@ export class AddpackagesService {
       })
       .returning();
 
-    // 5. Return the newly created package mapped through the standard helper.
-    // We can safely use the helper here because newPackage contains all the DB columns.
-    return this.mapToPackageResponseDto(newPackage) as unknown as AddPackageResponseDto;
+    // 5. Return the minimal response for the success message
+    return {
+      id: newPackage.id,
+      slug: newPackage.slug,
+      message: "Package created successfully!",
+      createdAt: newPackage.createdAt,
+    };
   }
 
   // --- GET /addpackages -> Returns minimal admin list (id, slug, title) ---

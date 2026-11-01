@@ -1,20 +1,17 @@
-import { IsString, IsUUID, IsDate, IsNumber, Min } from 'class-validator';
-import { CreateAddPackageDto } from './create-addpackage.dto';
+import { IsUUID, IsString, IsDate } from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class AddPackageResponseDto extends CreateAddPackageDto {
+export class AddPackageResponseDto {
   @IsUUID()
   id!: string;
 
-  @IsNumber()
-  @Min(0)
-  likes!: number;
+  @IsString()
+  slug!: string;
+
+  @IsString()
+  message!: string;
 
   @IsDate()
   @Type(() => Date)
   createdAt!: Date;
-
-  @IsDate()
-  @Type(() => Date)
-  updatedAt!: Date;
 }

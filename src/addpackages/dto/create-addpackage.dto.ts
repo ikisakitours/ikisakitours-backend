@@ -17,7 +17,6 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
-// Badge enum
 export enum PackageBadge {
   NEW_ARRIVAL = 'new_arrival',
   DISCOUNTED = 'discounted',
@@ -25,7 +24,7 @@ export enum PackageBadge {
   FEATURED = 'featured',
 }
 
-// Helper to safely parse JSON strings and preserve plain object properties
+// Helpers
 const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] => {
   let parsed = value;
   if (typeof value === 'string') {
@@ -36,7 +35,6 @@ const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] =
     }
   }
   if (!Array.isArray(parsed)) return [];
-
   return parsed.map((item) => Object.assign(new dtoClass(), item));
 };
 
@@ -55,10 +53,18 @@ const parseJsonArray = (value: any) => {
 
 export class ActivityDetailDto {
   @IsString()
-  title!: string;
+  titleEn!: string;
 
   @IsString()
-  description!: string;
+  descriptionEn!: string;
+
+  @IsOptional()
+  @IsString()
+  titleJa?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionJa?: string;
 }
 
 export class ItineraryItemDto {
@@ -67,43 +73,52 @@ export class ItineraryItemDto {
   day!: number;
 
   @IsString()
-  title!: string;
-
-  @IsString()
   travelTime!: string;
 
-  @IsArray()
-  @IsString({ each: true })
-  locations!: string[];
+  @IsString()
+  titleEn!: string;
 
   @IsArray()
   @IsString({ each: true })
-  route!: string[];
+  locationsEn!: string[];
 
   @IsArray()
   @IsString({ each: true })
-  details!: string[];
+  routeEn!: string[];
 
   @IsArray()
   @IsString({ each: true })
+  detailsEn!: string[];
+
   @IsOptional()
-  scenicStops?: string[];
-
   @IsArray()
   @IsString({ each: true })
+  scenicStopsEn?: string[];
+
   @IsOptional()
-  activities?: string[];
+  @IsArray()
+  @IsString({ each: true })
+  activitiesEn?: string[];
 
   @IsArray()
   @IsString({ each: true })
-  meals!: string[];
+  mealsEn!: string[];
 
   @IsArray()
   @IsString({ each: true })
-  accommodation!: string[];
+  accommodationEn!: string[];
+
+  // ── Japanese additions ──
+  @IsOptional() @IsString() titleJa?: string;
+  @IsOptional() @IsArray() @IsString({ each: true }) locationsJa?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) routeJa?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) detailsJa?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) scenicStopsJa?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) activitiesJa?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) mealsJa?: string[];
+  @IsOptional() @IsArray() @IsString({ each: true }) accommodationJa?: string[];
 }
 
-// Updated DestinationItemDto matching the database schema JSONB shape
 export class DestinationItemDto {
   @IsUUID()
   id!: string;
@@ -134,13 +149,6 @@ export class CreateAddPackageDto {
   @IsString()
   slug!: string;
 
-  // ── legacy (kept — existing clients keep sending these) ──
-  @IsString()
-  titleEmphasis!: string;
-
-  @IsString()
-  title!: string;
-
   @Type(() => Number)
   @IsNumber()
   @Min(0)
@@ -156,12 +164,6 @@ export class CreateAddPackageDto {
   @IsString()
   provider!: string;
 
-  @IsString()
-  leadTitle!: string;
-
-  @IsString()
-  leadDescription!: string;
-
   @IsOptional()
   @Transform(({ value }) => parseJsonArray(value))
   @IsArray()
@@ -173,14 +175,6 @@ export class CreateAddPackageDto {
   @ValidateNested({ each: true })
   @Type(() => ActivityDetailDto)
   activityDetails!: ActivityDetailDto[];
-
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  highlights!: string[];
-
-  @IsString()
-  description!: string;
 
   @Transform(({ value }) => parseAndMap(value, ItineraryItemDto))
   @IsArray()
@@ -194,82 +188,38 @@ export class CreateAddPackageDto {
   @Type(() => DestinationItemDto)
   destinations!: DestinationItemDto[];
 
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  includes!: string[];
-
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  excludes!: string[];
-
   // ═══════════════════════════════════════════════════════════
-  // ADDED: localized fields. ALL optional so old payloads
-  // (which only send the legacy fields above) still validate.
-  // New clients may send `En` + `Ja`; the write path prefers
-  // these when present and falls back to the legacy fields.
+  // Localized Fields
   // ═══════════════════════════════════════════════════════════
 
-  // English (optional — defaults to legacy `title`, etc. if absent)
-  @IsOptional()
-  @IsString()
-  titleEn?: string;
+  // ── English (Required) ──
+  @IsString() titleEn!: string;
+  @IsString() titleEmphasisEn!: string;
+  @IsString() leadTitleEn!: string;
+  @IsString() leadDescriptionEn!: string;
+  @IsString() descriptionEn!: string;
 
-  @IsOptional()
-  @IsString()
-  titleEmphasisEn?: string;
-
-  @IsOptional()
-  @IsString()
-  leadTitleEn?: string;
-
-  @IsOptional()
-  @IsString()
-  leadDescriptionEn?: string;
-
-  @IsOptional()
-  @IsString()
-  descriptionEn?: string;
-
-  @IsOptional()
   @Transform(({ value }) => parseJsonArray(value))
   @IsArray()
   @IsString({ each: true })
-  highlightsEn?: string[];
+  highlightsEn!: string[];
 
-  @IsOptional()
   @Transform(({ value }) => parseJsonArray(value))
   @IsArray()
   @IsString({ each: true })
-  includesEn?: string[];
+  includesEn!: string[];
 
-  @IsOptional()
   @Transform(({ value }) => parseJsonArray(value))
   @IsArray()
   @IsString({ each: true })
-  excludesEn?: string[];
+  excludesEn!: string[];
 
-  // Japanese (optional — null/missing = fall back to English at read)
-  @IsOptional()
-  @IsString()
-  titleJa?: string;
-
-  @IsOptional()
-  @IsString()
-  titleEmphasisJa?: string;
-
-  @IsOptional()
-  @IsString()
-  leadTitleJa?: string;
-
-  @IsOptional()
-  @IsString()
-  leadDescriptionJa?: string;
-
-  @IsOptional()
-  @IsString()
-  descriptionJa?: string;
+  // ── Japanese (Optional) ──
+  @IsOptional() @IsString() titleJa?: string;
+  @IsOptional() @IsString() titleEmphasisJa?: string;
+  @IsOptional() @IsString() leadTitleJa?: string;
+  @IsOptional() @IsString() leadDescriptionJa?: string;
+  @IsOptional() @IsString() descriptionJa?: string;
 
   @IsOptional()
   @Transform(({ value }) => parseJsonArray(value))
