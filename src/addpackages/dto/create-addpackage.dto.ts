@@ -134,6 +134,7 @@ export class CreateAddPackageDto {
   @IsString()
   slug!: string;
 
+  // ── legacy (kept — existing clients keep sending these) ──
   @IsString()
   titleEmphasis!: string;
 
@@ -202,4 +203,89 @@ export class CreateAddPackageDto {
   @IsArray()
   @IsString({ each: true })
   excludes!: string[];
+
+  // ═══════════════════════════════════════════════════════════
+  // ADDED: localized fields. ALL optional so old payloads
+  // (which only send the legacy fields above) still validate.
+  // New clients may send `En` + `Ja`; the write path prefers
+  // these when present and falls back to the legacy fields.
+  // ═══════════════════════════════════════════════════════════
+
+  // English (optional — defaults to legacy `title`, etc. if absent)
+  @IsOptional()
+  @IsString()
+  titleEn?: string;
+
+  @IsOptional()
+  @IsString()
+  titleEmphasisEn?: string;
+
+  @IsOptional()
+  @IsString()
+  leadTitleEn?: string;
+
+  @IsOptional()
+  @IsString()
+  leadDescriptionEn?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionEn?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  highlightsEn?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  includesEn?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  excludesEn?: string[];
+
+  // Japanese (optional — null/missing = fall back to English at read)
+  @IsOptional()
+  @IsString()
+  titleJa?: string;
+
+  @IsOptional()
+  @IsString()
+  titleEmphasisJa?: string;
+
+  @IsOptional()
+  @IsString()
+  leadTitleJa?: string;
+
+  @IsOptional()
+  @IsString()
+  leadDescriptionJa?: string;
+
+  @IsOptional()
+  @IsString()
+  descriptionJa?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  highlightsJa?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  includesJa?: string[];
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  @IsString({ each: true })
+  excludesJa?: string[];
 }
