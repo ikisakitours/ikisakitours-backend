@@ -41,7 +41,7 @@ export class BlogsService {
       title: blog.title?.[targetLang] || '',
       slug: blog.slug,
       summary: blog.summary?.[targetLang] || '',
-      category: blog.category,
+      category: blog.category?.[targetLang] || '',
       readTime: blog.readTime?.[targetLang] || '',
       content: blog.blog?.[targetLang] || '',
       author: blog.author,
@@ -71,7 +71,7 @@ export class BlogsService {
       title: blog.title?.[targetLang] || '',
       slug: blog.slug,
       summary: blog.summary?.[targetLang] || '',
-      category: blog.category,
+      category: blog.category?.[targetLang] || '',
       readTime: blog.readTime?.[targetLang] || '',
       author: blog.author,
       language: targetLang, // Returns the active language code served
