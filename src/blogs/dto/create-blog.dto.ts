@@ -2,6 +2,7 @@ import {
   IsArray,
   IsEnum,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   IsUrl,
@@ -10,41 +11,40 @@ import {
 export enum BlogLanguage {
   ENGLISH = 'en',
   JAPANESE = 'ja',
+  RUSSIAN = 'ru',
   FRENCH = 'fr',
 }
 
 export class CreateBlogDto {
   @IsString()
-  @IsNotEmpty()
-  title!: string;
-
   @IsOptional()
-  @IsString()
   slug?: string;
 
-  @IsString()
+  // Since title, summary, readTime, and blog are now JSONB objects 
+  // (e.g., { en: "Title", ja: "タイトル" }), we validate them as objects/records:
+  @IsObject()
   @IsNotEmpty()
-  summary!: string;
+  title!: Record<string, string>;
+
+  @IsObject()
+  @IsNotEmpty()
+  summary!: Record<string, string>;
 
   @IsString()
   @IsNotEmpty()
   category!: string;
 
-  @IsString()
+  @IsObject()
   @IsNotEmpty()
-  readTime!: string;
+  readTime!: Record<string, string>;
 
-  @IsString()
+  @IsObject()
   @IsNotEmpty()
-  blog!: string;
+  blog!: Record<string, string>;
 
   @IsString()
   @IsNotEmpty()
   author!: string;
-
-  @IsEnum(BlogLanguage)
-  @IsNotEmpty()
-  language!: BlogLanguage;
 
   @IsOptional()
   @IsArray()
