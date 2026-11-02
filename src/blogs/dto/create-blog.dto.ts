@@ -21,7 +21,6 @@ export class CreateBlogDto {
   slug?: string;
 
   // Since title, summary, readTime, and blog are now JSONB objects 
-  // (e.g., { en: "Title", ja: "タイトル" }), we validate them as objects/records:
   @IsObject()
   @IsNotEmpty()
   title!: Record<string, string>;
@@ -30,9 +29,9 @@ export class CreateBlogDto {
   @IsNotEmpty()
   summary!: Record<string, string>;
 
-  @IsString()
+  @IsObject()
   @IsNotEmpty()
-  category!: string;
+  category!: Record<string, string>;
 
   @IsObject()
   @IsNotEmpty()

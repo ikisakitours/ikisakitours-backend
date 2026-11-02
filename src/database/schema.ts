@@ -194,9 +194,9 @@ export const blogs = pgTable('blogs', {
   summary: jsonb('summary').$type<Record<string, string>>().notNull(),
   blog: jsonb('blog').$type<Record<string, string>>().notNull(),
   readTime: jsonb('read_time').$type<Record<string, string>>().notNull(),
+  category: jsonb('category').$type<Record<string, string>>().notNull(),
 
   // Shared metadata across all languages
-  category: text('category').notNull(),
   author: text('author').notNull(),
   images: text('images').array().notNull(),
   likes: integer('likes').notNull().default(0),
