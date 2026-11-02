@@ -11,7 +11,7 @@ import { BlogPreviewResponseDto } from './dto/blog-preview-response.dto';
 export class BlogsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) { }
 
   // Helper method: Generate URL-friendly slug from text
   private slugify(text: string): string {
@@ -23,20 +23,29 @@ export class BlogsService {
       .replace(/^-+|-+$/g, '');
   }
 
-  // Helper method: Map database row -> BlogResponseDto
+  // Helper method: Map database row -> BlogResponseDto with language fallback
   private mapToBlogResponseDto(
     blog: typeof schema.blogs.$inferSelect,
+    lang: string = 'en',
   ): BlogResponseDto {
+    // Determine the best language to serve (requested -> fallback to 'en' -> first available key)
+    const targetLang =
+      blog.title && blog.title[lang]
+        ? lang
+        : (blog.title && blog.title['en']
+          ? 'en'
+          : (blog.title ? Object.keys(blog.title)[0] || 'en' : 'en'));
+
     return {
       id: blog.id,
-      title: blog.title,
+      title: blog.title?.[targetLang] || '',
       slug: blog.slug,
-      summary: blog.summary,
+      summary: blog.summary?.[targetLang] || '',
       category: blog.category,
-      readTime: blog.readTime,
-      content: blog.blog,
+      readTime: blog.readTime?.[targetLang] || '',
+      content: blog.blog?.[targetLang] || '',
       author: blog.author,
-      language: blog.language,
+      language: targetLang, // Tells the frontend which language version was actually served
       gallery: blog.images || [],
       likes: blog.likes,
       createdAt: blog.createdAt,
@@ -44,19 +53,28 @@ export class BlogsService {
     };
   }
 
-  // Helper method: Map database row -> BlogPreviewResponseDto
+  // Helper method: Map database row -> BlogPreviewResponseDto with language fallback
   private mapToBlogPreviewResponseDto(
     blog: typeof schema.blogs.$inferSelect,
+    lang: string = 'en',
   ): BlogPreviewResponseDto {
+    // Determine the best language to serve (requested -> fallback to 'en' -> first available key)
+    const targetLang =
+      blog.title && blog.title[lang]
+        ? lang
+        : (blog.title && blog.title['en']
+          ? 'en'
+          : (blog.title ? Object.keys(blog.title)[0] || 'en' : 'en'));
+
     return {
       id: blog.id,
-      title: blog.title,
+      title: blog.title?.[targetLang] || '',
       slug: blog.slug,
-      summary: blog.summary,
+      summary: blog.summary?.[targetLang] || '',
       category: blog.category,
-      readTime: blog.readTime,
+      readTime: blog.readTime?.[targetLang] || '',
       author: blog.author,
-      language: blog.language,
+      language: targetLang, // Returns the active language code served
       previewImage:
         blog.images && blog.images.length > 0 ? blog.images[0] : null,
       likes: blog.likes,
@@ -66,8 +84,11 @@ export class BlogsService {
 
   // 1. Create Blog
   async create(dto: CreateBlogDto): Promise<BlogResponseDto> {
-    // Generate slug from custom DTO slug or fallback to title
-    const slug = (dto.slug?.trim() || this.slugify(dto.title)) || `blog-${Date.now()}`;
+    // Extract a string from the title object to generate the slug (defaults to English or first available)
+    const titleText = dto.title['en'] || Object.values(dto.title)[0] || '';
+
+    // Generate slug from custom DTO slug or fallback to title text
+    const slug = (dto.slug?.trim() || this.slugify(titleText)) || `blog-${Date.now()}`;
 
     const [newBlog] = await this.db
       .insert(schema.blogs)
@@ -79,23 +100,23 @@ export class BlogsService {
         readTime: dto.readTime,
         blog: dto.blog,
         author: dto.author,
-        language: dto.language,
         images: dto.images ?? [],
         likes: 0,
       })
       .returning();
 
-    return this.mapToBlogResponseDto(newBlog);
+    return this.mapToBlogResponseDto(newBlog, 'en');
   }
 
   // 2. Fetch small previews for card display on frontend
   async findPreviews(lang: string = 'en'): Promise<BlogPreviewResponseDto[]> {
+    // Fetch all records sorted by creation date (no language 'where' filter)
     const records = await this.db.query.blogs.findMany({
-      where: lang ? eq(schema.blogs.language, lang) : undefined,
       orderBy: [desc(schema.blogs.createdAt)],
     });
 
-    return records.map((b) => this.mapToBlogPreviewResponseDto(b));
+    // Pass the requested language down into the mapper for JSONB fallback
+    return records.map((b) => this.mapToBlogPreviewResponseDto(b, lang));
   }
 
   // 3. Fetch single blog post by ID
@@ -111,20 +132,17 @@ export class BlogsService {
     return this.mapToBlogResponseDto(blog);
   }
 
-  // 4. Fetch single destination/blog by Slug and Language (for public frontend view)
+  // 4. Fetch single destination/blog by Slug (for public frontend view)
   async findBySlug(slug: string, lang: string = 'en'): Promise<BlogResponseDto> {
     const blog = await this.db.query.blogs.findFirst({
-      where: and(
-        eq(schema.blogs.slug, slug),
-        eq(schema.blogs.language, lang),
-      ),
+      where: eq(schema.blogs.slug, slug),
     });
 
     if (!blog) {
-      throw new NotFoundException(`Blog with slug "${slug}" and language "${lang}" not found`);
+      throw new NotFoundException(`Blog with slug "${slug}" not found`);
     }
 
-    return this.mapToBlogResponseDto(blog);
+    return this.mapToBlogResponseDto(blog, lang);
   }
 
   // 5. Update likes count
