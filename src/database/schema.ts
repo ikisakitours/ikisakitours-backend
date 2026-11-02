@@ -209,18 +209,21 @@ export const blogs = pgTable('blogs', {
 //destination table
 export const destinations = pgTable('destinations', {
   id: uuid('id').defaultRandom().primaryKey(),
-  title: text('title').notNull(),
   slug: text('slug').notNull().unique(),
-  language: text('language').notNull().default('en'),
-  summary: text('summary').notNull(),
-  description: text('description').notNull(),
-  province: text('province').notNull(),
-  highlights: text('highlights').array().notNull(),
+
+  // Translatable fields stored as localized JSONB objects
+  title: jsonb('title').$type<Record<string, string>>().notNull(),
+  summary: jsonb('summary').$type<Record<string, string>>().notNull(),
+  description: jsonb('description').$type<Record<string, string>>().notNull(),
+  province: jsonb('province').$type<Record<string, string>>().notNull(),
+  highlights: jsonb('highlights').$type<Record<string, string[]>>().notNull(),
+  bestTimeToVisit: jsonb('best_time_to_visit').$type<Record<string, string>>().notNull(),
+  climate: jsonb('climate').$type<Record<string, string>>().notNull(),
+  primaryLanguage: jsonb('primary_language').$type<Record<string, string>>().notNull(),
+  localCurrency: jsonb('local_currency').$type<Record<string, string>>().notNull(),
+
+  // Shared metadata across all languages
   images: text('images').array().notNull(),
-  bestTimeToVisit: text('best_time_to_visit').notNull(),
-  climate: text('climate').notNull(),
-  primaryLanguage: text('primary_language').notNull(),
-  localCurrency: text('local_currency').notNull(),
   coordinates: jsonb('coordinates').$type<{ lat: number; lng: number }>().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
