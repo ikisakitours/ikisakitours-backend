@@ -26,7 +26,9 @@ export class DestinationsController {
 
   // 2. Show small preview list for card design in frontend (MUST be above :id)
   @Get('previews')
-  async findPreviews(@Query('lang') lang?: string): Promise<DestinationPreviewResponseDto[]> {
+  async findPreviews(
+    @Query('lang') lang: string = 'en',
+  ): Promise<DestinationPreviewResponseDto[]> {
     return await this.destinationsService.findPreviews(lang);
   }
 
@@ -40,8 +42,10 @@ export class DestinationsController {
   }
 
   @Get('map')
-  async findForMap(): Promise<DestinationMapResponseDto[]> {
-    return await this.destinationsService.findForMap();
+  async findForMap(
+    @Query('lang') lang: string = 'en',
+  ): Promise<DestinationMapResponseDto[]> {
+    return await this.destinationsService.findForMap(lang);
   }
 
   // 4. Detailed version for reading a single destination by ID (Dynamic route MUST be last)
