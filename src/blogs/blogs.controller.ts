@@ -15,7 +15,7 @@ import { BlogResponseDto } from './dto/blog-response.dto';
 
 @Controller('blogs')
 export class BlogsController {
-  constructor(private readonly blogsService: BlogsService) {}
+  constructor(private readonly blogsService: BlogsService) { }
 
   // 1. Create a blog (Admin) - Receives JSON with R2 image URLs
   @Post()
@@ -45,7 +45,7 @@ export class BlogsController {
   //test rotes for like button
   @Post('view')
   async getBlogWithUserCheck(
-    
+
     @Body() body: { blogId: string; userId?: string },
   ) {
     return await this.blogsService.findBlogWithUserCheck(body.blogId, body.userId);

@@ -7,6 +7,6 @@ export default defineConfig({
   dialect: 'postgresql',
   dbCredentials: {
     // Use DIRECT_URL for migrations (Port 5432)
-    url: process.env.DIRECT_URL || process.env.DATABASE_URL!,
+    url: process.env.DIRECT_URL!,
   },
 });

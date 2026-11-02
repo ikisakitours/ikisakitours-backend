@@ -183,19 +183,21 @@ export const packageLikes = pgTable(
 );
 
 
-
 //-----------------------------------------------------------
 //blog table
 export const blogs = pgTable('blogs', {
   id: uuid('id').defaultRandom().primaryKey(),
-  title: text('title').notNull(),
   slug: text('slug').notNull().unique(),
-  summary: text('summary').notNull(),
+
+  // Translatable fields stored as localized JSONB objects
+  title: jsonb('title').$type<Record<string, string>>().notNull(),
+  summary: jsonb('summary').$type<Record<string, string>>().notNull(),
+  blog: jsonb('blog').$type<Record<string, string>>().notNull(),
+  readTime: jsonb('read_time').$type<Record<string, string>>().notNull(),
+
+  // Shared metadata across all languages
   category: text('category').notNull(),
-  readTime: text('read_time').notNull(),
-  blog: text('blog').notNull(),
   author: text('author').notNull(),
-  language: text('language').notNull().default('en'),
   images: text('images').array().notNull(),
   likes: integer('likes').notNull().default(0),
   createdAt: timestamp('created_at').defaultNow().notNull(),
