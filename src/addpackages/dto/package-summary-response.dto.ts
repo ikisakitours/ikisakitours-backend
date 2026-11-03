@@ -8,7 +8,7 @@ export class PackageSummaryResponseDto {
   slug!: string;
 
   @IsObject()
-  origin!: Record<string, string>;
+  origin!: string;
 
   @IsNumber()
   price!: number;
@@ -26,10 +26,10 @@ export class PackageSummaryResponseDto {
   heroImage!: string | null;
 
   @IsObject()
-  category!: Record<string, string>;
+  category!: string;
 
   @IsObject()
-  duration!: Record<string, string>;
+  duration!: string;
 
   @IsNumber()
   likes!: number;
@@ -39,8 +39,8 @@ export class PackageSummaryResponseDto {
 
   // ── Multilingual JSONB Text Fields ──
   @IsObject()
-  title!: Record<string, string>;
+  title!: string;
 
   @IsObject()
-  description!: Record<string, string>;
+  description!: string;
 }

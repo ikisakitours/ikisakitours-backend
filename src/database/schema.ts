@@ -302,6 +302,24 @@ export const serviceRequests = pgTable('service_requests', {
 });
 
 
+//service notes
+export const serviceNotes = pgTable("service_notes", {
+  id: serial("id").primaryKey(),
+  serviceType: varchar("service_type").notNull(),
+  vehicleType: varchar("vehicle_type").notNull(),
+  startingPrice: varchar("starting_price").notNull(),
+  vehicleCapacity: varchar("vehicle_capacity").notNull(),
+  luggages: varchar("luggages").notNull(),
+  driverOption: varchar("driver_option").notNull(),
+  
+  // Dynamic multilingual notes
+  notes: jsonb("notes").notNull().default({}),
+
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+
 
 //news letter
 export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {

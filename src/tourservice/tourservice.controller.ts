@@ -4,10 +4,12 @@ import { CreateChauffeurServiceDto } from './dto/create-chauffeur-service.dto';
 import { CreateTransferServiceDto } from './dto/create-transfer-service.dto';
 import { ServicesService } from './tourservice.service';
 import { UpdateServiceStatusDto } from './dto/update-service-status.dto';
+import { CreateServiceNotesDto } from './dto/service-notes/create-service-notes.dto';
+import { UpdateServiceNotesDto } from './dto/service-notes/update-service-notes.dto';
 
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) {}
+  constructor(private readonly servicesService: ServicesService) { }
 
   // --- 1. CUSTOM MADE TOURS ---
   @Post('custom')
@@ -41,6 +43,26 @@ export class ServicesController {
   async findAllTransfers() {
     return this.servicesService.findAllByCategory('transfer');
   }
+
+  // --- SERVICE NOTES ENDPOINTS ---
+  @Post('notes')
+  async createServiceNote(@Body() dto: CreateServiceNotesDto) {
+    return this.servicesService.createServiceNote(dto);
+  }
+
+  @Get('notes')
+  async findAllServiceNotes() {
+    return this.servicesService.findAllServiceNotes();
+  }
+
+  @Patch('notes/:id')
+  async updateServiceNote(
+    @Param('id') id: string,
+    @Body() dto: UpdateServiceNotesDto,
+  ) {
+    return this.servicesService.updateServiceNote(id, dto);
+  }
+
 
   // --- 4. UPDATE SERVICE STATUS ---
   @Patch(':id/status')
