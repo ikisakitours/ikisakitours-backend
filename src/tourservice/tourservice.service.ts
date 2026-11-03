@@ -143,24 +143,28 @@ export class ServicesService {
   }
 
   // 7. Find All Service Notes (Optional query filtering by serviceType can be done here or in controller)
-  async findAllServiceNotes(serviceType?: string) {
+  // 7. Find All Service Notes (with language filtering)
+  async findAllServiceNotes(serviceType?: string, lang: string = 'en') {
+    let records;
     if (serviceType) {
-      return await this.db
+      records = await this.db
         .select()
         .from(schema.serviceNotes)
         .where(eq(schema.serviceNotes.serviceType, serviceType))
         .orderBy(desc(schema.serviceNotes.createdAt));
+    } else {
+      records = await this.db
+        .select()
+        .from(schema.serviceNotes)
+        .orderBy(desc(schema.serviceNotes.createdAt));
     }
 
-    return await this.db
-      .select()
-      .from(schema.serviceNotes)
-      .orderBy(desc(schema.serviceNotes.createdAt));
+    // Map each record to flatten 'notes' for the requested language
+    return records.map((record) => this.mapToServiceNoteResponseDto(record, lang));
   }
 
   // 8. Update Service Note
   async updateServiceNote(id: string | number, dto: UpdateServiceNotesDto) {
-    // Handle numeric or uuid string ID depending on your schema setup (serial id is typically number, but casting or handling appropriately)
     const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
 
     const [updatedRecord] = await this.db
@@ -177,5 +181,27 @@ export class ServicesService {
     }
 
     return { message: 'Service note updated successfully', data: updatedRecord };
+  }
+
+  private mapToServiceNoteResponseDto(note: any, lang: string = 'en') {
+    const getLocalizedArray = (fieldObj: Record<string, string[]> | null) => {
+      if (!fieldObj) return [];
+      if (Array.isArray(fieldObj)) return fieldObj; // Fallback if already an array
+      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || [];
+    };
+
+    return {
+      id: note.id,
+      serviceType: note.serviceType,
+      vehicleType: note.vehicleType,
+      startingPrice: note.startingPrice,
+      vehicleCapacity: note.vehicleCapacity,
+      luggages: note.luggages,
+      driverOption: note.driverOption,
+      // Localized notes array based on 'lang' query param
+      notes: getLocalizedArray(note.notes),
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+    };
   }
 }
