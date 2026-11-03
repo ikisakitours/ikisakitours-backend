@@ -143,8 +143,7 @@ export class ServicesService {
   }
 
   // 7. Find All Service Notes (Optional query filtering by serviceType can be done here or in controller)
-  // 7. Find All Service Notes (with language filtering)
-  async findAllServiceNotes(serviceType?: string, lang: string = 'en') {
+  async findAllServiceNotes(serviceType?: string, lang?: string) {
     let records;
     if (serviceType) {
       records = await this.db
@@ -159,8 +158,13 @@ export class ServicesService {
         .orderBy(desc(schema.serviceNotes.createdAt));
     }
 
-    // Map each record to flatten 'notes' for the requested language
-    return records.map((record) => this.mapToServiceNoteResponseDto(record, lang));
+    // ONLY map and flatten if a specific language is requested. 
+    // If no 'lang' query param is passed, return the raw records with the full multi-language dictionary!
+    if (lang) {
+      return records.map((record) => this.mapToServiceNoteResponseDto(record, lang));
+    }
+
+    return records;
   }
 
   // 8. Update Service Note
