@@ -310,8 +310,12 @@ export const serviceNotes = pgTable("service_notes", {
   startingPrice: varchar("starting_price").notNull(),
   vehicleCapacity: varchar("vehicle_capacity").notNull(),
   luggages: varchar("luggages").notNull(),
-  driverOption: varchar("driver_option").notNull(),
-  
+
+  // New pricing columns
+  withDriverPrice: varchar("with_driver_price").notNull(),
+  withGuidePrice: varchar("with_guide_price").notNull(),
+  withDriverAndGuidePrice: varchar("with_driver_and_guide_price").notNull(),
+
   // Dynamic multilingual notes
   notes: jsonb("notes").notNull().default({}),
 

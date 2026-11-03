@@ -23,7 +23,15 @@ export class CreateServiceNotesDto {
 
   @IsString()
   @IsNotEmpty()
-  driverOption!: string;
+  withDriverPrice!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  withGuidePrice!: string;
+
+  @IsString()
+  @IsNotEmpty()
+  withDriverAndGuidePrice!: string;
 
   @IsObject()
   @IsNotEmpty()
