@@ -343,14 +343,41 @@ export class AddpackagesService {
       includes: getLocalizedArray(pkg.includes) as any,
       excludes: getLocalizedArray(pkg.excludes) as any,
 
+      // Localized Nested Arrays & Objects
+      activityDetails: (pkg.activityDetails || []).map((detail: any) => ({
+        title: getLocalizedField(detail.title),
+        description: getLocalizedField(detail.description),
+      })) as any,
+
+      itinerary: (pkg.itinerary || []).map((item: any) => ({
+        day: item.day,
+        title: getLocalizedField(item.title),
+        description: getLocalizedField(item.description),
+        images: item.images || [],
+        travelTime: getLocalizedField(item.travelTime),
+        locations: getLocalizedArray(item.locations),
+        route: getLocalizedArray(item.route),
+        details: getLocalizedArray(item.details),
+        scenicStops: getLocalizedArray(item.scenicStops),
+        activities: getLocalizedArray(item.activities),
+        meals: getLocalizedField(item.meals),
+        accommodation: getLocalizedField(item.accommodation),
+      })) as any,
+
+      destinations: (pkg.destinations || []).map((dest: any) => ({
+        id: dest.id,
+        title: getLocalizedField(dest.title),
+        slug: dest.slug,
+        summary: getLocalizedField(dest.summary),
+        heroImage: dest.heroImage,
+        coordinates: dest.coordinates,
+      })) as any,
+
       // Shared fields & complex jsonb structures
       price: Number(pkg.price),
       discount: pkg.discount ? Number(pkg.discount) : 0,
       provider: pkg.provider,
       gallery: pkg.gallery || [],
-      activityDetails: pkg.activityDetails || [],
-      itinerary: pkg.itinerary || [],
-      destinations: pkg.destinations || [],
       likes: pkg.likes ?? 0,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
