@@ -10,6 +10,7 @@ import {
   ValidateNested,
   IsUUID,
   IsDate,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -29,30 +30,22 @@ export enum PackageBadge {
 // --- SUB DTOs ---
 
 export class ActivityDetailDto {
-  @IsString()
-  titleEn!: string;
+  @IsObject()
+  title!: Record<string, string>;
 
-  @IsString()
-  descriptionEn!: string;
-
-  @IsOptional()
-  @IsString()
-  titleJa?: string;
-
-  @IsOptional()
-  @IsString()
-  descriptionJa?: string;
+  @IsObject()
+  description!: Record<string, string>;
 }
 
 export class ItineraryItemDto {
   @IsNumber()
   day!: number;
 
-  @IsString()
-  titleEn!: string;
+  @IsObject()
+  title!: Record<string, string>;
 
-  @IsString()
-  descriptionEn!: string;
+  @IsObject()
+  description!: Record<string, string>;
 
   @IsOptional()
   @IsArray()
@@ -60,20 +53,58 @@ export class ItineraryItemDto {
   images?: string[];
 
   @IsOptional()
-  @IsString()
-  titleJa?: string;
+  @IsObject()
+  travelTime?: Record<string, string>;
 
   @IsOptional()
-  @IsString()
-  descriptionJa?: string;
+  @IsObject()
+  locations?: Record<string, string[]>;
+
+  @IsOptional()
+  @IsObject()
+  route?: Record<string, string[]>;
+
+  @IsOptional()
+  @IsObject()
+  details?: Record<string, string[]>;
+
+  @IsOptional()
+  @IsObject()
+  scenicStops?: Record<string, string[]>;
+
+  @IsOptional()
+  @IsObject()
+  activities?: Record<string, string[]>;
+
+  @IsOptional()
+  @IsObject()
+  meals?: Record<string, string>;
+
+  @IsOptional()
+  @IsObject()
+  accommodation?: Record<string, string>;
 }
 
 export class DestinationItemDto {
   @IsUUID()
   id!: string;
 
+  @IsObject()
+  title!: Record<string, string>;
+
   @IsString()
   slug!: string;
+
+  @IsObject()
+  summary!: Record<string, string>;
+
+  @IsOptional()
+  @IsUrl()
+  heroImage?: string | null;
+
+  @IsOptional()
+  @IsObject()
+  coordinates?: { lat: number; lng: number };
 }
 
 // --- BASE PACKAGE DTO ---
@@ -82,14 +113,14 @@ export class CreateAddPackageDto {
   @IsEnum(PackageType)
   type!: PackageType;
 
-  @IsString()
-  category!: string;
+  @IsObject()
+  category!: Record<string, string>;
 
-  @IsString()
-  origin!: string;
+  @IsObject()
+  origin!: Record<string, string>;
 
-  @IsString()
-  duration!: string;
+  @IsObject()
+  duration!: Record<string, string>;
 
   @IsOptional()
   @IsEnum(PackageBadge)
@@ -130,44 +161,31 @@ export class CreateAddPackageDto {
   @Type(() => DestinationItemDto)
   destinations!: DestinationItemDto[];
 
-  // ── Localized English Fields (Required) ──
-  @IsString()
-  titleEn!: string;
+  // ── Multilingual JSONB Text Fields ──
+  @IsObject()
+  title!: Record<string, string>;
 
-  @IsString()
-  titleEmphasisEn!: string;
+  @IsObject()
+  titleEmphasis!: Record<string, string>;
 
-  @IsString()
-  leadTitleEn!: string;
+  @IsObject()
+  leadTitle!: Record<string, string>;
 
-  @IsString()
-  leadDescriptionEn!: string;
+  @IsObject()
+  leadDescription!: Record<string, string>;
 
-  @IsString()
-  descriptionEn!: string;
+  @IsObject()
+  description!: Record<string, string>;
 
-  @IsArray()
-  @IsString({ each: true })
-  highlightsEn!: string[];
+  // ── Multilingual JSONB Arrays ──
+  @IsObject()
+  highlights!: Record<string, string[]>;
 
-  @IsArray()
-  @IsString({ each: true })
-  includesEn!: string[];
+  @IsObject()
+  includes!: Record<string, string[]>;
 
-  @IsArray()
-  @IsString({ each: true })
-  excludesEn!: string[];
-
-  // ── Localized Japanese Fields (Optional) ──
-  @IsOptional() @IsString() titleJa?: string;
-  @IsOptional() @IsString() titleEmphasisJa?: string;
-  @IsOptional() @IsString() leadTitleJa?: string;
-  @IsOptional() @IsString() leadDescriptionJa?: string;
-  @IsOptional() @IsString() descriptionJa?: string;
-
-  @IsOptional() @IsArray() @IsString({ each: true }) highlightsJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) includesJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) excludesJa?: string[];
+  @IsObject()
+  excludes!: Record<string, string[]>;
 }
 
 // --- ULTIMATE SINGLE PACKAGE RESPONSE DTO ---

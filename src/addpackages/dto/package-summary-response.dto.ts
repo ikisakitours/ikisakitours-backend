@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { IsString, IsNumber, IsOptional, IsObject } from 'class-validator';
 
 export class PackageSummaryResponseDto {
   @IsString()
@@ -7,8 +7,8 @@ export class PackageSummaryResponseDto {
   @IsString()
   slug!: string;
 
-  @IsString()
-  origin!: string;
+  @IsObject()
+  origin!: Record<string, string>;
 
   @IsNumber()
   price!: number;
@@ -25,11 +25,11 @@ export class PackageSummaryResponseDto {
   @IsString()
   heroImage!: string | null;
 
-  @IsString()
-  category!: string;
+  @IsObject()
+  category!: Record<string, string>;
 
-  @IsString()
-  duration!: string;
+  @IsObject()
+  duration!: Record<string, string>;
 
   @IsNumber()
   likes!: number;
@@ -37,19 +37,10 @@ export class PackageSummaryResponseDto {
   @IsNumber()
   averageRating!: number;
 
-  // ── Localized English Fields ──
-  @IsString()
-  titleEn!: string;
+  // ── Multilingual JSONB Text Fields ──
+  @IsObject()
+  title!: Record<string, string>;
 
-  @IsString()
-  descriptionEn!: string;
-
-  // ── Localized Japanese Fields ──
-  @IsOptional()
-  @IsString()
-  titleJa?: string | null;
-
-  @IsOptional()
-  @IsString()
-  descriptionJa?: string | null;
+  @IsObject()
+  description!: Record<string, string>;
 }

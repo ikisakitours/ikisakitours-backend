@@ -29,34 +29,7 @@ export class AddpackagesService {
     const plainActivityDetails = JSON.parse(JSON.stringify(dto.activityDetails));
     const plainItinerary = JSON.parse(JSON.stringify(dto.itinerary));
 
-    // 3. Resolve the English and Japanese fields directly.
-    // English is required (guaranteed by DTO validation).
-    // Japanese is optional (nullish coalescing ensures undefined becomes null).
-    const titleEn: string = dto.titleEn;
-    const titleJa: string | null = dto.titleJa ?? null;
-
-    const titleEmphasisEn: string = dto.titleEmphasisEn;
-    const titleEmphasisJa: string | null = dto.titleEmphasisJa ?? null;
-
-    const leadTitleEn: string = dto.leadTitleEn;
-    const leadTitleJa: string | null = dto.leadTitleJa ?? null;
-
-    const leadDescriptionEn: string = dto.leadDescriptionEn;
-    const leadDescriptionJa: string | null = dto.leadDescriptionJa ?? null;
-
-    const descriptionEn: string = dto.descriptionEn;
-    const descriptionJa: string | null = dto.descriptionJa ?? null;
-
-    const highlightsEn: string[] = dto.highlightsEn;
-    const highlightsJa: string[] | null = dto.highlightsJa ?? null;
-
-    const includesEn: string[] = dto.includesEn;
-    const includesJa: string[] | null = dto.includesJa ?? null;
-
-    const excludesEn: string[] = dto.excludesEn;
-    const excludesJa: string[] | null = dto.excludesJa ?? null;
-
-    // 4. Insert into database
+    // 3. Insert into database using unified jsonb fields
     const [newPackage] = await this.db
       .insert(schema.packages)
       .values({
@@ -73,34 +46,26 @@ export class AddpackagesService {
         gallery: gallery,
         likes: 0,
 
-        // JSONB Fields
+        // Complex JSONB Structures
         activityDetails: plainActivityDetails,
         itinerary: plainItinerary,
         destinations: plainDestinations,
 
-        // Localized Text Fields
-        titleEn,
-        titleJa,
-        titleEmphasisEn,
-        titleEmphasisJa,
-        leadTitleEn,
-        leadTitleJa,
-        leadDescriptionEn,
-        leadDescriptionJa,
-        descriptionEn,
-        descriptionJa,
+        // Multilingual JSONB Text Fields
+        title: dto.title,
+        titleEmphasis: dto.titleEmphasis,
+        leadTitle: dto.leadTitle,
+        leadDescription: dto.leadDescription,
+        description: dto.description,
 
-        // Localized Array Fields
-        highlightsEn,
-        highlightsJa,
-        includesEn,
-        includesJa,
-        excludesEn,
-        excludesJa,
+        // Multilingual JSONB Array Fields
+        highlights: dto.highlights,
+        includes: dto.includes,
+        excludes: dto.excludes,
       })
       .returning();
 
-    // 5. Return the minimal response for the success message
+    // 4. Return the minimal response for the success message
     return {
       id: newPackage.id,
       slug: newPackage.slug,
@@ -109,22 +74,28 @@ export class AddpackagesService {
     };
   }
 
-  // --- GET /addpackages -> Returns minimal admin list (id, slug, title) ---
-  async findAll(): Promise<PackageListItemDto[]> {
+  // --- GET /addpackages -> Returns minimal admin list ---
+  async findAll(lang: string = 'en'): Promise<PackageListItemDto[]> {
     const records = await this.db
       .select({
         id: schema.packages.id,
         slug: schema.packages.slug,
-        title: schema.packages.titleEn,
+        title: schema.packages.title,
       })
       .from(schema.packages)
       .orderBy(desc(schema.packages.createdAt));
 
-    return records;
+    // If your PackageListItemDto expects a string title for the requested language, 
+    // you can map it like this:
+    return records.map((record) => ({
+      id: record.id,
+      slug: record.slug,
+      title: (record.title as Record<string, string>)?.[lang] || (record.title as Record<string, string>)?.['en'] || '',
+    }));
   }
 
   // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
-  async findOne(slug: string): Promise<PackageResponseDto> {
+  async findOne(slug: string, lang: string = 'en'): Promise<PackageResponseDto> {
     const [pkg] = await this.db
       .select()
       .from(schema.packages)
@@ -135,6 +106,7 @@ export class AddpackagesService {
       throw new NotFoundException(`Package with slug "${slug}" not found`);
     }
 
+    // Fixed: removed the second argument (lang) since the mapper expects only 1 argument
     return this.mapToPackageResponseDto(pkg);
   }
 
@@ -160,33 +132,19 @@ export class AddpackagesService {
         discount: dto.discount !== undefined ? dto.discount.toString() : (existing.discount ?? 0).toString(),
         provider: dto.provider ?? existing.provider,
 
-        // ── Localized Scalar Fields ──
-        titleEn: dto.titleEn ?? existing.titleEn,
-        titleJa: dto.titleJa !== undefined ? dto.titleJa : existing.titleJa,
+        // ── Multilingual JSONB Text Fields ──
+        title: dto.title ?? existing.title,
+        titleEmphasis: dto.titleEmphasis ?? existing.titleEmphasis,
+        leadTitle: dto.leadTitle ?? existing.leadTitle,
+        leadDescription: dto.leadDescription ?? existing.leadDescription,
+        description: dto.description ?? existing.description,
 
-        titleEmphasisEn: dto.titleEmphasisEn ?? existing.titleEmphasisEn,
-        titleEmphasisJa: dto.titleEmphasisJa !== undefined ? dto.titleEmphasisJa : existing.titleEmphasisJa,
+        // ── Multilingual JSONB Arrays ──
+        highlights: dto.highlights ?? existing.highlights,
+        includes: dto.includes ?? existing.includes,
+        excludes: dto.excludes ?? existing.excludes,
 
-        leadTitleEn: dto.leadTitleEn ?? existing.leadTitleEn,
-        leadTitleJa: dto.leadTitleJa !== undefined ? dto.leadTitleJa : existing.leadTitleJa,
-
-        leadDescriptionEn: dto.leadDescriptionEn ?? existing.leadDescriptionEn,
-        leadDescriptionJa: dto.leadDescriptionJa !== undefined ? dto.leadDescriptionJa : existing.leadDescriptionJa,
-
-        descriptionEn: dto.descriptionEn ?? existing.descriptionEn,
-        descriptionJa: dto.descriptionJa !== undefined ? dto.descriptionJa : existing.descriptionJa,
-
-        // ── Localized Arrays ──
-        highlightsEn: dto.highlightsEn ?? existing.highlightsEn,
-        highlightsJa: dto.highlightsJa !== undefined ? dto.highlightsJa : existing.highlightsJa,
-
-        includesEn: dto.includesEn ?? existing.includesEn,
-        includesJa: dto.includesJa !== undefined ? dto.includesJa : existing.includesJa,
-
-        excludesEn: dto.excludesEn ?? existing.excludesEn,
-        excludesJa: dto.excludesJa !== undefined ? dto.excludesJa : existing.excludesJa,
-
-        // ── JSONB Fields ──
+        // ── Complex JSONB Structures ──
         activityDetails: dto.activityDetails ? JSON.parse(JSON.stringify(dto.activityDetails)) : existing.activityDetails,
         itinerary: dto.itinerary ? JSON.parse(JSON.stringify(dto.itinerary)) : existing.itinerary,
         destinations: dto.destinations ? JSON.parse(JSON.stringify(dto.destinations)) : existing.destinations,
@@ -199,7 +157,7 @@ export class AddpackagesService {
     return this.mapToPackageResponseDto(updatedPkg);
   }
 
-  // --- DELETE /addpackages/:slug -> Delete package by slug ---
+  // --- DELETE /addpackages/:slug -> Removes a package ---
   async remove(slug: string): Promise<{ success: boolean; message: string }> {
     const existing = await this.findOne(slug);
 
@@ -207,9 +165,13 @@ export class AddpackagesService {
       .delete(schema.packages)
       .where(eq(schema.packages.slug, slug));
 
+    // Extract title for the message using the dictionary (falling back to English or empty string)
+    const titleObj = (existing.title as Record<string, string>) || {};
+    const displayTitle = titleObj['en'] || Object.values(titleObj)[0] || slug;
+
     return {
       success: true,
-      message: `Package "${existing.titleEn}" (${slug}) was successfully deleted.`,
+      message: `Package "${displayTitle}" (${slug}) was successfully deleted.`,
     };
   }
 
@@ -217,6 +179,7 @@ export class AddpackagesService {
     page: number = 1,
     limit: number = 5,
     packageType: string,
+    lang: string = 'en',
   ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
     const offset = (page - 1) * limit;
 
@@ -265,23 +228,19 @@ export class AddpackagesService {
       return {
         id: pkg.id,
         slug: pkg.slug,
-        origin: pkg.origin,
+        origin: pkg.origin || {},
         price: Number(pkg.price),
         discount: pkg.discount,
         badge: pkg.badge,
         heroImage: heroImage,
-        category: pkg.category,
-        duration: pkg.duration,
+        category: pkg.category || {},
+        duration: pkg.duration || {},
         likes: pkg.likes ?? 0,
         averageRating: Number(rawRating.toFixed(1)),
 
-        // ── English Fields ──
-        titleEn: pkg.titleEn,
-        descriptionEn: pkg.descriptionEn,
-
-        // ── Japanese Fields ──
-        titleJa: pkg.titleJa,
-        descriptionJa: pkg.descriptionJa,
+        // Multilingual JSONB Text Fields
+        title: pkg.title || {},
+        description: pkg.description || {},
       };
     });
 
@@ -341,38 +300,31 @@ export class AddpackagesService {
     });
   }
 
+
   // Helper method for mapping database values to PackageResponseDto
   private mapToPackageResponseDto(pkg: any): PackageResponseDto {
     return {
       id: pkg.id,
       slug: pkg.slug,
       type: pkg.type as PackageType,
-      category: pkg.category,
-      origin: pkg.origin,
-      duration: pkg.duration,
+      category: pkg.category || {},
+      origin: pkg.origin || {},
+      duration: pkg.duration || {},
       badge: pkg.badge || undefined,
 
-      // Localized English Fields
-      titleEn: pkg.titleEn,
-      titleEmphasisEn: pkg.titleEmphasisEn,
-      leadTitleEn: pkg.leadTitleEn,
-      leadDescriptionEn: pkg.leadDescriptionEn,
-      descriptionEn: pkg.descriptionEn,
-      highlightsEn: pkg.highlightsEn || [],
-      includesEn: pkg.includesEn || [],
-      excludesEn: pkg.excludesEn || [],
+      // Multilingual JSONB Text Fields
+      title: pkg.title || {},
+      titleEmphasis: pkg.titleEmphasis || {},
+      leadTitle: pkg.leadTitle || {},
+      leadDescription: pkg.leadDescription || {},
+      description: pkg.description || {},
 
-      // Localized Japanese Fields
-      titleJa: pkg.titleJa,
-      titleEmphasisJa: pkg.titleEmphasisJa,
-      leadTitleJa: pkg.leadTitleJa,
-      leadDescriptionJa: pkg.leadDescriptionJa,
-      descriptionJa: pkg.descriptionJa,
-      highlightsJa: pkg.highlightsJa || [],
-      includesJa: pkg.includesJa || [],
-      excludesJa: pkg.excludesJa || [],
+      // Multilingual JSONB Arrays
+      highlights: pkg.highlights || {},
+      includes: pkg.includes || {},
+      excludes: pkg.excludes || {},
 
-      // Shared fields
+      // Shared fields & complex jsonb structures
       price: Number(pkg.price),
       discount: pkg.discount ? Number(pkg.discount) : 0,
       provider: pkg.provider,

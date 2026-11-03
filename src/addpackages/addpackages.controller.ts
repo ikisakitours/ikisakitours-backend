@@ -30,10 +30,12 @@ export class AddpackagesController {
   // 1. STATIC & GENERAL GET ROUTES (MUST BE FIRST)
   // ==========================================
 
-  // --- GET ALL PACKAGES (For Manage Table) ---
+  // --- FIND ALL PACKAGES ---
   @Get()
-  async findAll(): Promise<PackageListItemDto[]> {
-    return await this.addpackagesService.findAll();
+  async findAll(
+    @Query('lang') lang: string = 'en',
+  ): Promise<PackageListItemDto[]> {
+    return await this.addpackagesService.findAll(lang);
   }
 
   // --- ONE DAY SUMMARIES ROUTE ---
@@ -41,10 +43,11 @@ export class AddpackagesController {
   async findOndayPackageSummaries(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '5',
+    @Query('lang') lang: string = 'en',
   ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 5);
-    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'oneday');
+    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'oneday', lang);
   }
 
   // --- MULTI DAY SUMMARIES ROUTE ---
@@ -52,22 +55,24 @@ export class AddpackagesController {
   async findMultidayPackageSummaries(
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '5',
+    @Query('lang') lang: string = 'en',
   ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 5);
-    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'multiday');
+    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'multiday', lang);
   }
 
   // ==========================================
   // 2. DYNAMIC PARAMETER ROUTES (MUST BE LAST)
   // ==========================================
 
-  // --- GET SINGLE PACKAGE BY SLUG ---
+  // --- FIND ONE PACKAGE BY SLUG ---
   @Get(':slug')
   async findOne(
     @Param('slug') slug: string,
+    @Query('lang') lang: string = 'en',
   ): Promise<PackageResponseDto> {
-    return await this.addpackagesService.findOne(slug);
+    return await this.addpackagesService.findOne(slug, lang);
   }
 
 
