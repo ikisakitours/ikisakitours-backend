@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Param, Patch } from '@nestjs/common';
+import { Controller, Post, Get, Body, Param, Patch, Query } from '@nestjs/common';
 import { CreateCustomServiceDto } from './dto/create-custom-service.dto';
 import { CreateChauffeurServiceDto } from './dto/create-chauffeur-service.dto';
 import { CreateTransferServiceDto } from './dto/create-transfer-service.dto';
@@ -51,8 +51,11 @@ export class ServicesController {
   }
 
   @Get('notes')
-  async findAllServiceNotes() {
-    return this.servicesService.findAllServiceNotes();
+  async findAllServiceNotes(
+    @Query('serviceType') serviceType?: string,
+    @Query('lang') lang?: string,
+  ) {
+    return this.servicesService.findAllServiceNotes(serviceType, lang);
   }
 
   @Patch('notes/:id')
