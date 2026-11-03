@@ -78,40 +78,57 @@ export const packageReviews = pgTable('package_reviews', {
 
 //--------------------------------------------------------
 //package table
+
+// 1. Clean type interfaces defined outside to keep the table clean and error-free
+export interface PackageDestination {
+  id: string;
+  title: Record<string, string>;
+  slug: string;
+  summary: Record<string, string>;
+  heroImage: string | null;
+  coordinates: { lat: number; lng: number };
+}
+
+export interface ActivityDetail {
+  title: Record<string, string>;
+  description: Record<string, string>;
+}
+
+export interface ItineraryItem {
+  day: number;
+  title: Record<string, string>;
+  travelTime: Record<string, string>;
+  locations: Record<string, string[]>;
+  route: Record<string, string[]>;
+  details: Record<string, string[]>;
+  scenicStops?: Record<string, string[]>;
+  activities?: Record<string, string[]>;
+  meals: Record<string, string>;
+  accommodation: Record<string, string>;
+}
+
 export const packages = pgTable('packages', {
   id: uuid('id').defaultRandom().primaryKey(),
   slug: text('slug').notNull().unique(),
+
+  // Multilingual Metadata Fields
   type: text('type').notNull(),
-  category: text('category').notNull(),
-  origin: text('origin').notNull(),
-  duration: text('duration').notNull(),
+  category: jsonb('category').$type<Record<string, string>>().notNull(),
+  origin: jsonb('origin').$type<Record<string, string>>().notNull(),
+  duration: jsonb('duration').$type<Record<string, string>>().notNull(),
   badge: text('badge'),
 
-  // Localized Text Fields
-  titleEn: text('title_en').notNull(),
-  titleJa: text('title_ja'),
-  
-  titleEmphasisEn: text('title_emphasis_en').notNull(),
-  titleEmphasisJa: text('title_emphasis_ja'),
-  
-  leadTitleEn: text('lead_title_en').notNull(),
-  leadTitleJa: text('lead_title_ja'),
-  
-  leadDescriptionEn: text('lead_description_en').notNull(),
-  leadDescriptionJa: text('lead_description_ja'),
-  
-  descriptionEn: text('description_en').notNull(),
-  descriptionJa: text('description_ja'),
+  // Multilingual JSONB Text Fields
+  title: jsonb('title').$type<Record<string, string>>().notNull(),
+  titleEmphasis: jsonb('title_emphasis').$type<Record<string, string>>().notNull(),
+  leadTitle: jsonb('lead_title').$type<Record<string, string>>().notNull(),
+  leadDescription: jsonb('lead_description').$type<Record<string, string>>().notNull(),
+  description: jsonb('description').$type<Record<string, string>>().notNull(),
 
-  // Localized Arrays
-  highlightsEn: text('highlights_en').array().notNull(),
-  highlightsJa: text('highlights_ja').array(),
-  
-  includesEn: text('includes_en').array().notNull(),
-  includesJa: text('includes_ja').array(),
-  
-  excludesEn: text('excludes_en').array().notNull(),
-  excludesJa: text('excludes_ja').array(),
+  // Multilingual JSONB Arrays
+  highlights: jsonb('highlights').$type<Record<string, string[]>>().notNull(),
+  includes: jsonb('includes').$type<Record<string, string[]>>().notNull(),
+  excludes: jsonb('excludes').$type<Record<string, string[]>>().notNull(),
 
   // Shared Fields
   price: numeric('price', { precision: 10, scale: 2 }).notNull(),
@@ -120,36 +137,14 @@ export const packages = pgTable('packages', {
   gallery: text('gallery').array().notNull(),
   likes: integer('likes').default(0).notNull(),
 
-  // JSONB Types
-  destinations: jsonb('destinations').$type<
-    {
-      id: string;
-      title: string;
-      slug: string;
-      summary: string;
-      heroImage: string | null;
-      coordinates: { lat: number; lng: number };
-    }[]
-  >().notNull(),
+  // Multilingual JSONB Destinations Reference Data
+  destinations: jsonb('destinations').$type<PackageDestination[]>().notNull(),
 
-  activityDetails: jsonb('activity_details').$type<
-    { title: string; description: string }[]
-  >().notNull(),
+  // Multilingual Activity Details
+  activityDetails: jsonb('activity_details').$type<ActivityDetail[]>().notNull(),
 
-  itinerary: jsonb('itinerary').$type<
-    {
-      day: number;
-      title: string;
-      travelTime: string;
-      locations: string[];
-      route: string[];
-      details: string[];
-      scenicStops?: string[];
-      activities?: string[];
-      meals: string;
-      accommodation: string;
-    }[]
-  >().notNull(),
+  // Multilingual Itinerary
+  itinerary: jsonb('itinerary').$type<ItineraryItem[]>().notNull(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),

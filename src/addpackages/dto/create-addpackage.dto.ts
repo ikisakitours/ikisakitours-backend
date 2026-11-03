@@ -9,6 +9,7 @@ import {
   Max,
   ValidateNested,
   IsUUID,
+  IsObject,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
 
@@ -24,18 +25,16 @@ export enum PackageBadge {
   FEATURED = 'featured',
 }
 
-// Helpers
-const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] => {
-  let parsed = value;
+// Helpers for parsing form-data strings or JSON objects
+const parseJsonRecord = (value: any): Record<string, any> => {
   if (typeof value === 'string') {
     try {
-      parsed = JSON.parse(value);
+      return JSON.parse(value);
     } catch {
-      return [];
+      return {};
     }
   }
-  if (!Array.isArray(parsed)) return [];
-  return parsed.map((item) => Object.assign(new dtoClass(), item));
+  return typeof value === 'object' && value !== null ? value : {};
 };
 
 const parseJsonArray = (value: any) => {
@@ -49,22 +48,29 @@ const parseJsonArray = (value: any) => {
   return Array.isArray(value) ? value : [];
 };
 
+const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] => {
+  let parsed = value;
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map((item) => Object.assign(new dtoClass(), item));
+};
+
 // --- SUB DTOs ---
 
 export class ActivityDetailDto {
-  @IsString()
-  titleEn!: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  title!: Record<string, string>;
 
-  @IsString()
-  descriptionEn!: string;
-
-  @IsOptional()
-  @IsString()
-  titleJa?: string;
-
-  @IsOptional()
-  @IsString()
-  descriptionJa?: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  description!: Record<string, string>;
 }
 
 export class ItineraryItemDto {
@@ -72,59 +78,67 @@ export class ItineraryItemDto {
   @IsNumber()
   day!: number;
 
-  @IsString()
-  travelTime!: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  travelTime!: Record<string, string>;
 
-  @IsString()
-  titleEn!: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  title!: Record<string, string>;
 
-  @IsArray()
-  @IsString({ each: true })
-  locationsEn!: string[];
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  locations!: Record<string, string[]>;
 
-  @IsArray()
-  @IsString({ each: true })
-  routeEn!: string[];
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  route!: Record<string, string[]>;
 
-  @IsArray()
-  @IsString({ each: true })
-  detailsEn!: string[];
-
-  @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  scenicStopsEn?: string[];
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  details!: Record<string, string[]>;
 
   @IsOptional()
-  @IsArray()
-  @IsString({ each: true })
-  activitiesEn?: string[];
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  scenicStops?: Record<string, string[]>;
 
-  @IsArray()
-  @IsString({ each: true })
-  mealsEn!: string[];
+  @IsOptional()
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  activities?: Record<string, string[]>;
 
-  @IsArray()
-  @IsString({ each: true })
-  accommodationEn!: string[];
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  meals!: Record<string, string>;
 
-  // ── Japanese additions ──
-  @IsOptional() @IsString() titleJa?: string;
-  @IsOptional() @IsArray() @IsString({ each: true }) locationsJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) routeJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) detailsJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) scenicStopsJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) activitiesJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) mealsJa?: string[];
-  @IsOptional() @IsArray() @IsString({ each: true }) accommodationJa?: string[];
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  accommodation!: Record<string, string>;
 }
 
 export class DestinationItemDto {
   @IsUUID()
   id!: string;
 
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  title!: Record<string, string>;
+
   @IsString()
   slug!: string;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  summary!: Record<string, string>;
+
+  @IsOptional()
+  @IsUrl()
+  heroImage?: string | null;
+
+  @IsOptional()
+  @IsObject()
+  coordinates?: { lat: number; lng: number };
 }
 
 // --- MAIN DTO ---
@@ -133,14 +147,17 @@ export class CreateAddPackageDto {
   @IsEnum(PackageType)
   type!: PackageType;
 
-  @IsString()
-  category!: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  category!: Record<string, string>;
 
-  @IsString()
-  origin!: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  origin!: Record<string, string>;
 
-  @IsString()
-  duration!: string;
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  duration!: Record<string, string>;
 
   @IsOptional()
   @IsEnum(PackageBadge)
@@ -170,6 +187,52 @@ export class CreateAddPackageDto {
   @IsUrl({}, { each: true })
   gallery?: string[];
 
+  // ═══════════════════════════════════════════════════════════
+  // Multilingual JSONB Text Fields & Arrays
+  // ═══════════════════════════════════════════════════════════
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  title!: Record<string, string>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  titleEmphasis!: Record<string, string>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  leadTitle!: Record<string, string>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  leadDescription!: Record<string, string>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  description!: Record<string, string>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  highlights!: Record<string, string[]>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  includes!: Record<string, string[]>;
+
+  @Transform(({ value }) => parseJsonRecord(value))
+  @IsObject()
+  excludes!: Record<string, string[]>;
+
+  // ═══════════════════════════════════════════════════════════
+  // Complex Sub-Structures (Destinations, Activities, Itinerary)
+  // ═══════════════════════════════════════════════════════════
+
+  @Transform(({ value }) => parseAndMap(value, DestinationItemDto))
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => DestinationItemDto)
+  destinations!: DestinationItemDto[];
+
   @Transform(({ value }) => parseAndMap(value, ActivityDetailDto))
   @IsArray()
   @ValidateNested({ each: true })
@@ -181,61 +244,4 @@ export class CreateAddPackageDto {
   @ValidateNested({ each: true })
   @Type(() => ItineraryItemDto)
   itinerary!: ItineraryItemDto[];
-
-  @Transform(({ value }) => parseAndMap(value, DestinationItemDto))
-  @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => DestinationItemDto)
-  destinations!: DestinationItemDto[];
-
-  // ═══════════════════════════════════════════════════════════
-  // Localized Fields
-  // ═══════════════════════════════════════════════════════════
-
-  // ── English (Required) ──
-  @IsString() titleEn!: string;
-  @IsString() titleEmphasisEn!: string;
-  @IsString() leadTitleEn!: string;
-  @IsString() leadDescriptionEn!: string;
-  @IsString() descriptionEn!: string;
-
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  highlightsEn!: string[];
-
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  includesEn!: string[];
-
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  excludesEn!: string[];
-
-  // ── Japanese (Optional) ──
-  @IsOptional() @IsString() titleJa?: string;
-  @IsOptional() @IsString() titleEmphasisJa?: string;
-  @IsOptional() @IsString() leadTitleJa?: string;
-  @IsOptional() @IsString() leadDescriptionJa?: string;
-  @IsOptional() @IsString() descriptionJa?: string;
-
-  @IsOptional()
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  highlightsJa?: string[];
-
-  @IsOptional()
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  includesJa?: string[];
-
-  @IsOptional()
-  @Transform(({ value }) => parseJsonArray(value))
-  @IsArray()
-  @IsString({ each: true })
-  excludesJa?: string[];
 }
