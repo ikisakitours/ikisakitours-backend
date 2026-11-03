@@ -106,8 +106,8 @@ export class AddpackagesService {
       throw new NotFoundException(`Package with slug "${slug}" not found`);
     }
 
-    // Fixed: removed the second argument (lang) since the mapper expects only 1 argument
-    return this.mapToPackageResponseDto(pkg);
+    // Pass 'lang' into the mapper so it extracts the correct language
+    return this.mapToPackageResponseDto(pkg, lang);
   }
 
   async updateTextOnly(
@@ -309,27 +309,39 @@ export class AddpackagesService {
 
 
   // Helper method for mapping database values to PackageResponseDto
-  private mapToPackageResponseDto(pkg: any): PackageResponseDto {
+  private mapToPackageResponseDto(pkg: any, lang: string = 'en'): PackageResponseDto {
+    const getLocalizedField = (fieldObj: Record<string, string> | null) => {
+      if (!fieldObj) return '';
+      if (typeof fieldObj === 'string') return fieldObj;
+      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || '';
+    };
+
+    const getLocalizedArray = (fieldObj: Record<string, string[]> | null) => {
+      if (!fieldObj) return [];
+      if (Array.isArray(fieldObj)) return fieldObj;
+      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || [];
+    };
+
     return {
       id: pkg.id,
       slug: pkg.slug,
       type: pkg.type as PackageType,
-      category: pkg.category || {},
-      origin: pkg.origin || {},
-      duration: pkg.duration || {},
-      badge: pkg.badge || undefined,
+      category: getLocalizedField(pkg.category) as any,
+      origin: getLocalizedField(pkg.origin) as any,
+      duration: getLocalizedField(pkg.duration) as any,
+      badge: getLocalizedField(pkg.badge) as any,
 
-      // Multilingual JSONB Text Fields
-      title: pkg.title || {},
-      titleEmphasis: pkg.titleEmphasis || {},
-      leadTitle: pkg.leadTitle || {},
-      leadDescription: pkg.leadDescription || {},
-      description: pkg.description || {},
+      // Localized Multilingual JSONB Text Fields
+      title: getLocalizedField(pkg.title) as any,
+      titleEmphasis: getLocalizedField(pkg.titleEmphasis) as any,
+      leadTitle: getLocalizedField(pkg.leadTitle) as any,
+      leadDescription: getLocalizedField(pkg.leadDescription) as any,
+      description: getLocalizedField(pkg.description) as any,
 
-      // Multilingual JSONB Arrays
-      highlights: pkg.highlights || {},
-      includes: pkg.includes || {},
-      excludes: pkg.excludes || {},
+      // Localized Multilingual JSONB Arrays
+      highlights: getLocalizedArray(pkg.highlights) as any,
+      includes: getLocalizedArray(pkg.includes) as any,
+      excludes: getLocalizedArray(pkg.excludes) as any,
 
       // Shared fields & complex jsonb structures
       price: Number(pkg.price),
@@ -342,6 +354,6 @@ export class AddpackagesService {
       likes: pkg.likes ?? 0,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
-    };
+    } as unknown as PackageResponseDto;
   }
 }
