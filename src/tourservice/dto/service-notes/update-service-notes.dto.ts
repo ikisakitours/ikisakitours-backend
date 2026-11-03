@@ -19,11 +19,19 @@ export class UpdateServiceNotesDto {
 
   @IsString()
   @IsOptional()
-  luggages!: string;
+  luggages?: string;
 
   @IsString()
   @IsOptional()
-  driverOption?: string;
+  withDriverPrice?: string;
+
+  @IsString()
+  @IsOptional()
+  withGuidePrice?: string;
+
+  @IsString()
+  @IsOptional()
+  withDriverAndGuidePrice?: string;
 
   @IsObject()
   @IsOptional()

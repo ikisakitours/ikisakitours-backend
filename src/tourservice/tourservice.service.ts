@@ -133,7 +133,9 @@ export class ServicesService {
         startingPrice: dto.startingPrice,
         vehicleCapacity: dto.vehicleCapacity,
         luggages: dto.luggages,
-        driverOption: dto.driverOption,
+        withDriverPrice: dto.withDriverPrice,
+        withGuidePrice: dto.withGuidePrice,
+        withDriverAndGuidePrice: dto.withDriverAndGuidePrice,
         notes: dto.notes,
         updatedAt: new Date(),
       })
@@ -201,7 +203,9 @@ export class ServicesService {
       startingPrice: note.startingPrice,
       vehicleCapacity: note.vehicleCapacity,
       luggages: note.luggages,
-      driverOption: note.driverOption,
+      withDriverPrice: note.withDriverPrice,
+      withGuidePrice: note.withGuidePrice,
+      withDriverAndGuidePrice: note.withDriverAndGuidePrice,
       // Localized notes array based on 'lang' query param
       notes: getLocalizedArray(note.notes),
       createdAt: note.createdAt,
