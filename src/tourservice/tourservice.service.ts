@@ -6,6 +6,8 @@ import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateCustomServiceDto } from './dto/create-custom-service.dto';
 import { CreateChauffeurServiceDto } from './dto/create-chauffeur-service.dto';
 import { CreateTransferServiceDto } from './dto/create-transfer-service.dto';
+import { UpdateServiceNotesDto } from './dto/service-notes/update-service-notes.dto';
+import { CreateServiceNotesDto } from './dto/service-notes/create-service-notes.dto';
 
 @Injectable()
 export class ServicesService {
@@ -105,8 +107,8 @@ export class ServicesService {
   async updateServiceStatus(id: string, status: string) {
     const [updatedService] = await this.db
       .update(schema.serviceRequests)
-      .set({ 
-        status, 
+      .set({
+        status,
         updatedAt: new Date()
       })
       .where(eq(schema.serviceRequests.id, id))
@@ -117,5 +119,63 @@ export class ServicesService {
     }
 
     return updatedService;
+  }
+
+  // --- SERVICE NOTES METHODS ---
+
+  // 6. Create Service Note
+  async createServiceNote(dto: CreateServiceNotesDto) {
+    const [record] = await this.db
+      .insert(schema.serviceNotes)
+      .values({
+        serviceType: dto.serviceType,
+        vehicleType: dto.vehicleType,
+        startingPrice: dto.startingPrice,
+        vehicleCapacity: dto.vehicleCapacity,
+        luggages: dto.luggages,
+        driverOption: dto.driverOption,
+        notes: dto.notes,
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return { message: 'Service note created successfully', data: record };
+  }
+
+  // 7. Find All Service Notes (Optional query filtering by serviceType can be done here or in controller)
+  async findAllServiceNotes(serviceType?: string) {
+    if (serviceType) {
+      return await this.db
+        .select()
+        .from(schema.serviceNotes)
+        .where(eq(schema.serviceNotes.serviceType, serviceType))
+        .orderBy(desc(schema.serviceNotes.createdAt));
+    }
+
+    return await this.db
+      .select()
+      .from(schema.serviceNotes)
+      .orderBy(desc(schema.serviceNotes.createdAt));
+  }
+
+  // 8. Update Service Note
+  async updateServiceNote(id: string | number, dto: UpdateServiceNotesDto) {
+    // Handle numeric or uuid string ID depending on your schema setup (serial id is typically number, but casting or handling appropriately)
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+    const [updatedRecord] = await this.db
+      .update(schema.serviceNotes)
+      .set({
+        ...dto,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.serviceNotes.id, numericId))
+      .returning();
+
+    if (!updatedRecord) {
+      throw new NotFoundException(`Service note with ID ${id} not found`);
+    }
+
+    return { message: 'Service note updated successfully', data: updatedRecord };
   }
 }

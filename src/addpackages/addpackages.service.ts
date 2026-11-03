@@ -175,6 +175,7 @@ export class AddpackagesService {
     };
   }
 
+  // retrive summery data
   async findSummariesPaginated(
     page: number = 1,
     limit: number = 5,
@@ -219,28 +220,34 @@ export class AddpackagesService {
       }
     }
 
-    // 4. Map records to the summary DTO
+    // 4. Map records and extract text based on the requested 'lang' parameter
     const data: PackageSummaryResponseDto[] = records.map((pkg: any) => {
       const galleryArray = (pkg.gallery as string[]) || [];
       const heroImage = galleryArray.length > 0 ? galleryArray[0] : null;
       const rawRating = ratingsMap.get(pkg.id) || 0;
 
+      // Helper function to extract text for the specific language with fallback to 'en'
+      const getLocalizedField = (fieldObj: Record<string, string> | null) => {
+        if (!fieldObj) return '';
+        return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || '';
+      };
+
       return {
         id: pkg.id,
         slug: pkg.slug,
-        origin: pkg.origin || {},
+        origin: getLocalizedField(pkg.origin),
         price: Number(pkg.price),
         discount: pkg.discount,
         badge: pkg.badge,
         heroImage: heroImage,
-        category: pkg.category || {},
-        duration: pkg.duration || {},
+        category: getLocalizedField(pkg.category),
+        duration: getLocalizedField(pkg.duration),
         likes: pkg.likes ?? 0,
         averageRating: Number(rawRating.toFixed(1)),
 
-        // Multilingual JSONB Text Fields
-        title: pkg.title || {},
-        description: pkg.description || {},
+        // Resolved Multilingual Text Fields for the requested language
+        title: getLocalizedField(pkg.title),
+        description: getLocalizedField(pkg.description),
       };
     });
 
