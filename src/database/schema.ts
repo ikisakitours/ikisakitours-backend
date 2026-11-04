@@ -248,6 +248,7 @@ export const blogLikes = pgTable(
   },
 );
 
+
 //cookie table
 export const cookieConsents = pgTable('cookie_consents', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -290,6 +291,9 @@ export const serviceRequests = pgTable('service_requests', {
   // Custom & Chauffeur specific fields
   tourDuration: text('tour_duration'),
   description: text('description'),
+  // Pricing information
+  startingPrice: text('starting_price'),
+  selectedPrice: text('selected_price'),
   // Contact Info (Shared across all)
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
