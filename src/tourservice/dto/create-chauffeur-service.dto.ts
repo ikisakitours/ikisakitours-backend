@@ -62,4 +62,12 @@ export class CreateChauffeurServiceDto {
   @IsString()
   @IsOptional()
   specialRequests?: string;
+
+  @IsString()
+  @IsOptional()
+  startingPrice?: string;
+
+  @IsString()
+  @IsOptional()
+  selectedPrice?: string;
 }
