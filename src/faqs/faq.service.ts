@@ -33,9 +33,9 @@ export class FaqService {
       const [newFaq] = await this.db
         .insert(schema.faqs)
         .values({
-          category: JSON.parse(JSON.stringify(dto.category)),
-          question: JSON.parse(JSON.stringify(dto.question)),
-          answer: JSON.parse(JSON.stringify(dto.answer)),
+          category: dto.category,
+          question: dto.question,
+          answer: dto.answer,
         })
         .returning();
 
