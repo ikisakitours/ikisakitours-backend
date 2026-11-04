@@ -56,6 +56,8 @@ export class ServicesService {
         travelers: dto.travelers,
         tourDuration: dto.tourDuration,
         description: dto.description,
+        startingPrice: dto.startingPrice,
+        selectedPrice: dto.selectedPrice,
         fullName: dto.fullName,
         email: dto.email,
         phoneNumber: dto.phoneNumber,
@@ -85,6 +87,8 @@ export class ServicesService {
         email: dto.email,
         phoneNumber: dto.phoneNumber,
         specialRequests: dto.specialRequests,
+        startingPrice: dto.startingPrice,
+        selectedPrice: dto.selectedPrice,
         status: 'pending',
       })
       .returning();
