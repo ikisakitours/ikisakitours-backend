@@ -75,23 +75,19 @@ export class AddpackagesService {
   }
 
   // --- GET /addpackages -> Returns minimal admin list ---
-  async findAll(lang: string = 'en'): Promise<PackageListItemDto[]> {
+  async findAllPackages(lang?: string) {
     const records = await this.db
-      .select({
-        id: schema.packages.id,
-        slug: schema.packages.slug,
-        title: schema.packages.title,
-      })
+      .select()
       .from(schema.packages)
       .orderBy(desc(schema.packages.createdAt));
 
-    // If your PackageListItemDto expects a string title for the requested language, 
-    // you can map it like this:
-    return records.map((record) => ({
-      id: record.id,
-      slug: record.slug,
-      title: (record.title as Record<string, string>)?.[lang] || (record.title as Record<string, string>)?.['en'] || '',
-    }));
+    // ONLY map and flatten if a specific language is requested (for public clients).
+    // If no 'lang' query param is passed (admin panel), return raw records with full JSONB dictionaries!
+    if (lang) {
+      return records.map((record) => this.mapToPackageResponseDto(record, lang));
+    }
+
+    return records;
   }
 
   // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
