@@ -355,9 +355,9 @@ export const contacts = pgTable('contacts', {
 //faq table
 export const faqs = pgTable('faqs', {
   id: uuid('id').defaultRandom().primaryKey(),
-  category: text('category').notNull(),
-  question: text('question').notNull(),
-  answer: text('answer').notNull(),
+  category: jsonb('category').$type<Record<string, string>>().notNull(),
+  question: jsonb('question').$type<Record<string, string>>().notNull(),
+  answer: jsonb('answer').$type<Record<string, string>>().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
