@@ -55,4 +55,12 @@ export class CreateCustomServiceDto {
   @IsString()
   @IsOptional()
   specialRequests?: string;
+
+  @IsString()
+  @IsOptional()
+  startingPrice?: string;
+
+  @IsString()
+  @IsOptional()
+  selectedPrice?: string;
 }
