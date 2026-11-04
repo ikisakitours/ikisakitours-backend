@@ -32,10 +32,8 @@ export class AddpackagesController {
 
   // --- FIND ALL PACKAGES ---
   @Get()
-  async findAll(
-    @Query('lang') lang: string = 'en',
-  ): Promise<PackageListItemDto[]> {
-    return await this.addpackagesService.findAll(lang);
+  async findAll(@Query('lang') lang?: string) {
+    return this.addpackagesService.findAllPackages(lang);
   }
 
   // --- ONE DAY SUMMARIES ROUTE ---
