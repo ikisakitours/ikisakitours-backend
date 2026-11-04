@@ -97,6 +97,14 @@ export class UsersService {
     });
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    // ─── NEW ADDITION: Check if user is blocked (hasAccess is false) ───
+    // If the user's account has been blocked or access is revoked, 
+    // reject the login attempt and send an "Access denied" response.
+    if (!user.hasAccess) {
+      throw new UnauthorizedException('Access denied');
+    }
+    
     if (!user.passwordHash) {
       throw new UnauthorizedException('This account uses social login. Please log in with Google or Instagram.');
     }
