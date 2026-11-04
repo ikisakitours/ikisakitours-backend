@@ -10,43 +10,53 @@ import { eq } from 'drizzle-orm';
 export class FaqService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) { }
 
-  private toFaqResponseDto(faq: typeof schema.faqs.$inferSelect): FaqResponseDto {
+  private toFaqResponseDto(faq: typeof schema.faqs.$inferSelect, lang: string = 'en'): FaqResponseDto {
+    const getLocalizedField = (fieldObj: any) => {
+      if (!fieldObj) return '';
+      if (typeof fieldObj === 'string') return fieldObj;
+      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || '';
+    };
+
     return {
       id: faq.id,
-      category: faq.category,
-      question: faq.question,
-      answer: faq.answer,
+      category: getLocalizedField(faq.category) as any,
+      question: getLocalizedField(faq.question) as any,
+      answer: getLocalizedField(faq.answer) as any,
     };
   }
 
-  // ADMIN: Create a new FAQ entry
-  async create(dto: CreateFaqDto): Promise<FaqResponseDto> {
+  // ADMIN: Create a new FAQ entry with multilingual JSONB support
+  async create(dto: CreateFaqDto): Promise<any> {
     try {
       const [newFaq] = await this.db
         .insert(schema.faqs)
         .values({
-          category: dto.category,
-          question: dto.question,
-          answer: dto.answer,
+          category: JSON.parse(JSON.stringify(dto.category)),
+          question: JSON.parse(JSON.stringify(dto.question)),
+          answer: JSON.parse(JSON.stringify(dto.answer)),
         })
         .returning();
 
-      return this.toFaqResponseDto(newFaq);
+      return newFaq;
     } catch (error) {
       console.error('FAQ Creation Error:', error);
       throw new BadRequestException('Failed to create FAQ');
     }
   }
 
-  // PUBLIC/CLIENT: Fetch all FAQs
-  async findAll(): Promise<FaqResponseDto[]> {
+  // PUBLIC/CLIENT vs ADMIN: Fetch all FAQs (flattens if lang is provided, returns raw dictionaries for admin if lang is omitted)
+  async findAll(lang?: string): Promise<any> {
     const faqList = await this.db.query.faqs.findMany({
       orderBy: (faqs, { desc }) => [desc(faqs.createdAt)],
     });
 
-    return faqList.map((faq) => this.toFaqResponseDto(faq));
+    if (lang) {
+      return faqList.map((faq) => this.toFaqResponseDto(faq, lang));
+    }
+
+    return faqList;
   }
 
   // ADMIN: Delete an FAQ entry by ID

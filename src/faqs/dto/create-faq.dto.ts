@@ -1,15 +1,12 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsObject } from 'class-validator';
 
 export class CreateFaqDto {
-  @IsString()
-  @IsNotEmpty({ message: 'Category is required' })
-  category!: string;
+  @IsObject()
+  category!: Record<string, string>;
 
-  @IsString()
-  @IsNotEmpty({ message: 'Question is required' })
-  question!: string;
+  @IsObject()
+  question!: Record<string, string>;
 
-  @IsString()
-  @IsNotEmpty({ message: 'Answer is required' })
-  answer!: string;
+  @IsObject()
+  answer!: Record<string, string>;
 }
