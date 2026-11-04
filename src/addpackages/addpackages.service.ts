@@ -75,23 +75,27 @@ export class AddpackagesService {
   }
 
   // --- GET /addpackages -> Returns minimal admin list ---
-  async findAllPackages(lang?: string) {
+  async findAll(lang: string = 'en'): Promise<PackageListItemDto[]> {
     const records = await this.db
-      .select()
+      .select({
+        id: schema.packages.id,
+        slug: schema.packages.slug,
+        title: schema.packages.title,
+      })
       .from(schema.packages)
       .orderBy(desc(schema.packages.createdAt));
 
-    // ONLY map and flatten if a specific language is requested (for public clients).
-    // If no 'lang' query param is passed (admin panel), return raw records with full JSONB dictionaries!
-    if (lang) {
-      return records.map((record) => this.mapToPackageResponseDto(record, lang));
-    }
-
-    return records;
+    // If your PackageListItemDto expects a string title for the requested language, 
+    // you can map it like this:
+    return records.map((record) => ({
+      id: record.id,
+      slug: record.slug,
+      title: (record.title as Record<string, string>)?.[lang] || (record.title as Record<string, string>)?.['en'] || '',
+    }));
   }
 
   // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
-  async findOne(slug: string, lang: string = 'en'): Promise<PackageResponseDto> {
+  async findOne(slug: string, lang?: string) {
     const [pkg] = await this.db
       .select()
       .from(schema.packages)
@@ -102,10 +106,17 @@ export class AddpackagesService {
       throw new NotFoundException(`Package with slug "${slug}" not found`);
     }
 
-    // Pass 'lang' into the mapper so it extracts the correct language
-    return this.mapToPackageResponseDto(pkg, lang);
+    // ONLY map and flatten if a specific language is requested (public client).
+    // If no 'lang' query param is passed (admin edit form), return raw pkg with full JSONB dictionaries!
+    if (lang) {
+      return this.mapToPackageResponseDto(pkg, lang);
+    }
+
+    return pkg;
   }
 
+
+  //update text only
   async updateTextOnly(
     slug: string,
     dto: Partial<CreateAddPackageDto>,
