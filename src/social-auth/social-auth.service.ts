@@ -1,4 +1,4 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { JwtService } from '@nestjs/jwt';
@@ -12,7 +12,7 @@ export class SocialAuthService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly jwtService: JwtService,
-  ) {}
+  ) { }
 
   private generateToken(user: User): string {
     const payload = { sub: user.id };
@@ -31,6 +31,12 @@ export class SocialAuthService {
     let user = await this.db.query.users.findFirst({
       where: eq(schema.users.email, profile.email),
     });
+
+    // ─── NEW ADDITION: Check if existing user is blocked (hasAccess is false) ───
+    // If the user already exists but their access has been revoked, block them here.
+    if (user && !user.hasAccess) {
+      throw new UnauthorizedException('Access denied');
+    }
 
     // 2. If user doesn't exist, auto-register them
     if (!user) {
