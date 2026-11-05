@@ -81,6 +81,7 @@ export class AddpackagesService {
         id: schema.packages.id,
         slug: schema.packages.slug,
         title: schema.packages.title,
+        type: schema.packages.type,
       })
       .from(schema.packages)
       .orderBy(desc(schema.packages.createdAt));
@@ -90,6 +91,7 @@ export class AddpackagesService {
     return records.map((record) => ({
       id: record.id,
       slug: record.slug,
+      type: record.type,
       title: (record.title as Record<string, string>)?.[lang] || (record.title as Record<string, string>)?.['en'] || '',
     }));
   }
