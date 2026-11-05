@@ -6,25 +6,23 @@ export class EmailService {
     private resend: Resend;
 
     constructor() {
-        // Get API Key from .env file[cite: 3]
+        // Get API Key from .env file
         this.resend = new Resend(process.env.RESEND_API_KEY);
     }
 
-    // 1. Send OTP Email Function[cite: 3]
+    // 1. Send OTP Email Function (Template එක භාවිතා කර)
     async sendOtpEmail(email: string, otpCode: string): Promise<any> {
         try {
             const data = await this.resend.emails.send({
                 from: 'Ikisaki Tours Security <no-reply@ikisakitours.com>',
                 to: email,
-                subject: 'Your OTP Code - Ikisaki Tours',
-                html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #2c3e50; text-align: center;">Welcome to Ikisaki Tours!</h2>
-            <p style="font-size: 16px; color: #555;">Your One-Time Password (OTP) for account verification is:</p>
-            <h1 style="background: #f4f4f4; padding: 15px; text-align: center; letter-spacing: 5px; color: #000; border-radius: 5px;">${otpCode}</h1>
-            <p style="font-size: 14px; color: #777;">This code is valid for 10 minutes. Do not share this code with anyone.</p>
-          </div>
-        `,
+                subject: 'Reset Your Password - Ikisaki Tours',
+                
+                // HTML වෙනුවට Template ID සහ Variables දීම
+                templateId: 'otp-template-1',
+                variables: {
+                    OTP_CODE: otpCode,
+                },
             });
             return data;
         } catch (error) {
@@ -33,31 +31,42 @@ export class EmailService {
         }
     }
 
-    // 2. Payment Receipt Email Function[cite: 4]
+    // 2. Payment Receipt Email Function (Template එක සහ PDF Attachment භාවිතා කර)
     async sendPaymentReceipt(
         email: string,
         customerName: string,
         amount: string,
-        invoiceId: string
+        invoiceId: string,
+        pdfBuffer: Buffer // අලුතින් එකතු කළ PDF Buffer එක
     ): Promise<any> {
         try {
             const data = await this.resend.emails.send({
                 from: 'Ikisaki Tours Billing <billing@ikisakitours.com>',
                 to: email,
                 subject: `Payment Successful - Invoice #${invoiceId}`,
-                html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; padding: 20px; border-radius: 10px;">
-            <h2 style="color: #27ae60;">Payment Successful!</h2>
-            <p>Dear ${customerName},</p>
-            <p>Thank you for your payment to Ikisaki Tours. Here are your transaction details:</p>
-            <ul style="background: #f9f9f9; padding: 15px; border-radius: 5px; list-style: none;">
-              <li><strong>Invoice ID:</strong> ${invoiceId}</li>
-              <li><strong>Amount Paid:</strong> ${amount}</li>
-              <li><strong>Status:</strong> Paid</li>
-            </ul>
-            <p style="font-size: 14px; color: #777;">If you have any questions, please reply to this email.</p>
-          </div>
-        `,
+                
+                // HTML වෙනුවට Template ID සහ Variables දීම
+                templateId: 'advance-payment',
+                variables: {
+                    AMOUNT: amount,
+                    CUSTOMER_NAME: customerName,
+                    CUSTOMER_EMAIL: email,
+                    INVOICE_ID: invoiceId,
+                    SERVICE_TYPE: 'Tour Package', // මේවා පසුව Database එකෙන් එන පරිදි සකසා ගත හැක
+                    SERVICE_NAME: 'Premium Travel Experience',
+                    DATE: new Date().toLocaleDateString(),
+                    PAYMENT_METHOD: 'Online Payment',
+                    BOOKING_REF: 'BK-10293',
+                    TRANSACTION_ID: `txn_${Date.now()}`,
+                },
+                
+                // PDF රිසිට් එක Attach කිරීම
+                attachments: [
+                    {
+                        filename: `Ikisaki-Advance-Receipt-${invoiceId}.pdf`,
+                        content: pdfBuffer,
+                    }
+                ]
             });
             return data;
         } catch (error) {
