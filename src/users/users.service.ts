@@ -16,6 +16,7 @@ import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 type User = typeof schema.users.$inferSelect;
 
@@ -343,5 +344,45 @@ export class UsersService {
       .where(eq(schema.passwordResets.email, email));
 
     return { message: 'Password has been successfully reset. You can now log in.' };
+  }
+
+
+  //password update
+  async updateProfilePassword(dto: UpdatePasswordDto) {
+    const { email, currentPassword, newPassword } = dto;
+
+    // 1. Find the user by email
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
+
+    if (!user || !user.passwordHash) {
+      throw new NotFoundException('User not found or password not set');
+    }
+
+    // 2. Verify that the provided current password matches the database record
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isPasswordValid) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    // 3. Ensure the new password is NOT the same as the current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.passwordHash);
+    if (isSamePassword) {
+      throw new BadRequestException('New password cannot be the same as your current password');
+    }
+
+    // 4. Hash the new password securely
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+
+    // 5. Update the user's password in the database
+    await this.db
+      .update(schema.users)
+      .set({ passwordHash: hashedNewPassword })
+      .where(eq(schema.users.email, email));
+
+    return { message: 'Password updated successfully' };
   }
 }
