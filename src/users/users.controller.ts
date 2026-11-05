@@ -11,6 +11,8 @@ import 'multer';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 
 @Controller('auth')
@@ -27,7 +29,7 @@ export class UsersController {
   @Post('login')
   async login(
     @Body() loginDto: LoginDto,
-    @Res({ passthrough: true }) res: Response, // Added response decorator to attach cookies dynamically
+    @Res({ passthrough: true }) res: Response,
   ) {
     const authResult = await this.usersService.validateUser(loginDto);
 
@@ -125,6 +127,18 @@ export class UsersController {
     });
 
     return result;
+  }
+
+  //---------------------------------------------------
+  //forget password section
+  @Post('forgot-password')
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    return this.usersService.forgotPassword(dto.email);
+  }
+
+  @Post('reset-password')
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    return this.usersService.resetPassword(dto);
   }
 
 }

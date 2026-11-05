@@ -1,4 +1,4 @@
-import { Injectable, Inject, ConflictException, UnauthorizedException, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, ConflictException, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
@@ -14,6 +14,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UploadsService } from '../uploads/uploads.service';
 import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { EmailService } from '../email/email.service';
 
 type User = typeof schema.users.$inferSelect;
 
@@ -29,6 +31,7 @@ export class UsersService {
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly jwtService: JwtService,
     private readonly uploadsService: UploadsService,
+    private readonly emailService: EmailService,
   ) { }
 
   private toUserResponseDto(user: User): UserResponseDto {
@@ -104,7 +107,7 @@ export class UsersService {
     if (!user.hasAccess) {
       throw new UnauthorizedException('Access denied');
     }
-    
+
     if (!user.passwordHash) {
       throw new UnauthorizedException('This account uses social login. Please log in with Google or Instagram.');
     }
@@ -207,7 +210,7 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('User profile not found');
     }
-   
+
     // Verify password using bcrypt (just like login)
     if (payloadDto.deleteMethod === 'password') {
       if (!user.passwordHash) {
@@ -234,28 +237,111 @@ export class UsersService {
 
   //update status of a user
   async updateUserStatus(userId: string, dto: UpdateUserStatusDto) {
-  // 1. Check if user exists
-  const existingUser = await this.db.query.users.findFirst({
-    where: eq(schema.users.id, userId),
-  });
+    // 1. Check if user exists
+    const existingUser = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    });
 
-  if (!existingUser) {
-    throw new NotFoundException(`User with ID ${userId} not found`);
+    if (!existingUser) {
+      throw new NotFoundException(`User with ID ${userId} not found`);
+    }
+
+    // 2. Build dynamic update payload matching your Drizzle schema fields
+    const updateData: Partial<typeof schema.users.$inferInsert> = {};
+    if (dto.isVip !== undefined) updateData.isVip = dto.isVip;
+    if (dto.hasAccess !== undefined) updateData.hasAccess = dto.hasAccess;
+    if (dto.isVerified !== undefined) updateData.isVerified = dto.isVerified;
+
+    // 3. Execute update in PostgreSQL
+    const [updatedUser] = await this.db
+      .update(schema.users)
+      .set(updateData)
+      .where(eq(schema.users.id, userId))
+      .returning();
+
+    return updatedUser;
   }
 
-  // 2. Build dynamic update payload matching your Drizzle schema fields
-  const updateData: Partial<typeof schema.users.$inferInsert> = {};
-  if (dto.isVip !== undefined) updateData.isVip = dto.isVip;
-  if (dto.hasAccess !== undefined) updateData.hasAccess = dto.hasAccess;
-  if (dto.isVerified !== undefined) updateData.isVerified = dto.isVerified;
 
-  // 3. Execute update in PostgreSQL
-  const [updatedUser] = await this.db
-    .update(schema.users)
-    .set(updateData)
-    .where(eq(schema.users.id, userId))
-    .returning();
+  //---------------------
+  //forget password methods
+  // 1. Forgot Password: Generate OTP and send email
+  async forgotPassword(email: string) {
+    // Check if user exists
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, email))
+      .limit(1);
 
-  return updatedUser;
-}
+    // Security practice: Always return success even if email doesn't exist
+    if (!user) {
+      return { message: 'If an account with that email exists, an OTP has been sent.' };
+    }
+
+    // Generate a random 6-digit OTP code
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Set expiration time to 10 minutes from now
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Remove any existing active reset request for this email first
+    await this.db
+      .delete(schema.passwordResets)
+      .where(eq(schema.passwordResets.email, email));
+
+    // Save the new OTP into the permanent password_resets table
+    await this.db.insert(schema.passwordResets).values({
+      email,
+      otp,
+      expiresAt,
+    });
+
+    // Send the email via Resend
+    await this.emailService.sendOtpEmail(email, otp);
+
+    return { message: 'If an account with that email exists, an OTP has been sent.' };
+  }
+
+  // 2. Reset Password: Verify OTP and update password
+  async resetPassword(dto: ResetPasswordDto) {
+    const { email, otp, newPassword } = dto;
+
+    // Find the reset record for this email
+    const [resetRecord] = await this.db
+      .select()
+      .from(schema.passwordResets)
+      .where(eq(schema.passwordResets.email, email))
+      .limit(1);
+
+    if (!resetRecord) {
+      throw new BadRequestException('Invalid or expired OTP request');
+    }
+
+    // Verify OTP code matches
+    if (resetRecord.otp !== otp) {
+      throw new BadRequestException('Incorrect OTP code');
+    }
+
+    // Check if OTP has expired
+    if (new Date() > new Date(resetRecord.expiresAt)) {
+      throw new BadRequestException('OTP code has expired');
+    }
+
+    // Hash the new password securely
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update the user's password in the users table (using 'passwordHash')
+    await this.db
+      .update(schema.users)
+      .set({ passwordHash: hashedPassword })
+      .where(eq(schema.users.email, email));
+
+    // Clean up: Delete the used reset row from the password_resets table
+    await this.db
+      .delete(schema.passwordResets)
+      .where(eq(schema.passwordResets.email, email));
+
+    return { message: 'Password has been successfully reset. You can now log in.' };
+  }
 }
