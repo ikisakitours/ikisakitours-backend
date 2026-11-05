@@ -13,6 +13,7 @@ import { DeleteAccountDto } from './dto/delete-account.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 
 @Controller('auth')
@@ -107,7 +108,7 @@ export class UsersController {
     return await this.usersService.updateUserStatus(userId, updateUserStatusDto);
   }
 
-  
+
   // PROTECTED: Handles DELETE /api/auth/me
   @UseGuards(JwtAuthGuard)
   @Delete('me')
@@ -127,6 +128,13 @@ export class UsersController {
     });
 
     return result;
+  }
+
+  //---------------------------------------------------
+  //profile password update
+  @Post('update-password')
+  async updatePassword(@Body() dto: UpdatePasswordDto) {
+    return this.usersService.updateProfilePassword(dto);
   }
 
   //---------------------------------------------------
