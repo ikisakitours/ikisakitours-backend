@@ -392,6 +392,15 @@ export const packageBookings = pgTable('package_bookings', {
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
+
+//forget password table
+export const passwordResets = pgTable("password_resets", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  email: text("email").notNull(),
+  otp: text("otp").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   // new changes ( like button )
