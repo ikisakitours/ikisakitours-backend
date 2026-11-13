@@ -1,6 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { CommentResponseDto } from './dto/comment-response.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { ReplyCommentDto } from './dto/reply-comment.dto';
@@ -77,7 +77,7 @@ export class CommentsService {
     };
   }
 
-  
+
   // Fetches from the view (automatically filters out isPublic = false)
   async findPublicComments(): Promise<CommentListResponseDto> {
     // Query the VIEW directly, joined with the users table
@@ -287,10 +287,11 @@ export class CommentsService {
   }
 
   // package review summery method
-  // package review summery method
   async getPackageReviewSummary(packageId: string): Promise<PackageReviewSummaryDto> {
     const reviews = await this.db.query.packageReviews.findMany({
-      where: eq(schema.packageReviews.packageId, packageId),
+      where: and(eq(schema.packageReviews.packageId, packageId),
+        eq(schema.packageReviews.isPublic, true),
+      ),
       orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
     });
 
@@ -363,5 +364,26 @@ export class CommentsService {
     });
 
     return reviews;
+  }
+
+  //update visibility on a package
+  async updatePackageReviewVisibility(
+    id: string,
+    updateVisibilityDto: UpdateVisibilityDto,
+  ) {
+    const updatedReview = await this.db
+      .update(schema.packageReviews)
+      .set({ isPublic: updateVisibilityDto.isPubliclyVisible })
+      .where(eq(schema.packageReviews.id, id))
+      .returning();
+
+    if (!updatedReview || updatedReview.length === 0) {
+      throw new NotFoundException(`Package review with ID ${id} not found.`);
+    }
+
+    return {
+      success: true,
+      review: updatedReview[0],
+    };
   }
 }
