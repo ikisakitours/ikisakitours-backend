@@ -383,7 +383,6 @@ export class CommentsService {
 
     return {
       success: true,
-      message: `Package review visibility set to ${updateVisibilityDto.isPubliclyVisible}`,
       review: updatedReview[0],
     };
   }
