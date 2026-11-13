@@ -120,4 +120,13 @@ export class CommentsController {
   async getPackageReviewSummary(@Param('packageId') packageId: string) {
     return await this.commentsService.getPackageReviewSummary(packageId);
   }
+
+  //update the visibility on any package review
+  @Patch('package-reviews/:id/visibility')
+  async updatePackageReviewVisibility(
+    @Param('id') id: string,
+    @Body() updateVisibilityDto: UpdateVisibilityDto,
+  ) {
+    return await this.commentsService.updatePackageReviewVisibility(id, updateVisibilityDto,);
+  }
 }
