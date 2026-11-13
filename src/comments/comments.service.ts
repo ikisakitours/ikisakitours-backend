@@ -359,7 +359,8 @@ export class CommentsService {
   // Retrieve all package reviews for a given packageId
   async getAllReviewsByPackageId(packageId: string) {
     const reviews = await this.db.query.packageReviews.findMany({
-      where: eq(schema.packageReviews.packageId, packageId),
+      where: and(eq(schema.packageReviews.packageId, packageId),
+        eq(schema.packageReviews.isPublic, true),),
       orderBy: (table, { desc }) => [desc(table.createdAt)],
     });
 
