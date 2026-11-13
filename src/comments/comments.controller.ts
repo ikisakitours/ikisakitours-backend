@@ -24,6 +24,13 @@ export class CommentsController {
     return await this.commentsService.findAll();
   }
 
+  // 2. Client App: Fetch ONLY public comments (visibility = true)
+  @Get('client')
+  async findPublicComments() {
+    return await this.commentsService.findPublicComments();
+  }
+
+
   // 2. User creates a new comment (JWT extracted automatically)
   /*
   @Post()
