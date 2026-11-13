@@ -1,5 +1,5 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex, serial, unique } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex, serial, unique, pgView } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -44,6 +44,18 @@ export const comments = pgTable('comments', {
   }),
 });
 
+
+//test comment table for visibility check
+export const publicComments = pgView('public_comments', {
+  id: uuid('id').notNull(),
+  content: text('content').notNull(),
+  type: varchar('type', { length: 50 }).notNull(),
+  isPublic: boolean('is_public').notNull(),
+  adminReply: text('admin_reply'),
+  userId: uuid('user_id').notNull(),
+  rating: integer('rating'),
+  createdAt: timestamp('created_at').notNull(),
+}).as(sql`SELECT * FROM comments WHERE is_public = true`);
 
 
 //package reviews table

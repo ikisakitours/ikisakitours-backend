@@ -77,6 +77,63 @@ export class CommentsService {
     };
   }
 
+  
+  // Fetches from the view (automatically filters out isPublic = false)
+  async findPublicComments(): Promise<CommentListResponseDto> {
+    // Query the VIEW directly, joined with the users table
+    const records = await this.db
+      .select({
+        id: schema.publicComments.id,
+        content: schema.publicComments.content,
+        type: schema.publicComments.type,
+        isPublic: schema.publicComments.isPublic,
+        adminReply: schema.publicComments.adminReply,
+        rating: schema.publicComments.rating,
+        createdAt: schema.publicComments.createdAt,
+        // Map user fields so your helper method's comment.user?.xxx checks work correctly
+        user: {
+          id: schema.users.id,
+          firstName: schema.users.firstName,
+          lastName: schema.users.lastName,
+          country: schema.users.country,
+          avatarUrl: schema.users.avatarUrl,
+          isVerified: schema.users.isVerified,
+          isVip: schema.users.isVip,
+          hasAccess: schema.users.hasAccess,
+        },
+      })
+      .from(schema.publicComments)
+      .leftJoin(schema.users, eq(schema.publicComments.userId, schema.users.id))
+      .orderBy(desc(schema.publicComments.createdAt));
+
+    // 1. Total public comments count
+    const totalComments = records.length;
+
+    // 2. Filter out comments with valid ratings
+    const ratedComments = records.filter(
+      (comment) => comment.rating !== null && comment.rating !== undefined,
+    );
+
+    // 3. Total sum of ratings
+    const totalRatingSum = ratedComments.reduce(
+      (sum, comment) => sum + (comment.rating || 0),
+      0,
+    );
+
+    // 4. Calculate average rating safely
+    const averageRating =
+      ratedComments.length > 0
+        ? Number((totalRatingSum / ratedComments.length).toFixed(1))
+        : 0;
+
+    return {
+      comments: records.map((comment) => this.toCommentResponseDto(comment)),
+      totalComments,
+      averageRating,
+    };
+  }
+
+
   // 2. Create a comment using authenticated userId from JWT
   async createComment(dto: CreateCommentDto, userId: string): Promise<CommentResponseDto> {
     const user = await this.db.query.users.findFirst({
