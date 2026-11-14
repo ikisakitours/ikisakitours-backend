@@ -19,6 +19,7 @@ import { SocialAuthModule } from './social-auth/social-auth.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { PackageBookingModule } from './packagebooking/packagebooking.module';
 import { EmailModule } from './email/email.module';
+import { ServicePricingModule } from './servicepricing/servicepricing.module';
 
 @Module({
   imports: [
@@ -38,7 +39,8 @@ import { EmailModule } from './email/email.module';
     SocialAuthModule,
     AvailabilityModule,
     PackageBookingModule,
-    EmailModule
+    EmailModule,
+    ServicePricingModule
   ],
   controllers: [AppController, CronController],
   providers: [AppService],
