@@ -64,8 +64,8 @@ export class ServicesService {
         email: dto.email,
         phoneNumber: dto.phoneNumber,
         specialRequests: dto.specialRequests,
-        startingPrice: dto.startingPrice,
-        selectedPrice: dto.selectedPrice,
+        // startingPrice: dto.startingPrice,
+        // selectedPrice: dto.selectedPrice,
         status: 'pending',
       })
       .returning();
