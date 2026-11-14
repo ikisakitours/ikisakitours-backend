@@ -389,6 +389,24 @@ export const availability = pgTable('availability', {
 
 
 
+//service pricing table (charter, custom, transfer)
+export const servicePricing = pgTable('service_pricing', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  serviceType: varchar('service_type', { length: 50 }).notNull().unique(), // 'charter' | 'custom' | 'transfer'
+  titleBase: jsonb('title_base').$type<Record<string, string>>().notNull(),
+  titleAccent: jsonb('title_accent').$type<Record<string, string>>().notNull(),
+  subtitleStrong: jsonb('subtitle_strong').$type<Record<string, string>>().notNull(),
+  subtitle: jsonb('subtitle').$type<Record<string, string>>().notNull(),
+  popularBadge: jsonb('popular_badge').$type<Record<string, string>>().notNull(),
+  popularTitle: jsonb('popular_title').$type<Record<string, string>>().notNull(),
+  popularDesc: jsonb('popular_desc').$type<Record<string, string>>().notNull(),
+  notes: jsonb('notes').$type<Record<string, string[]>>().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+
+
 //package booking table ( for adim panel )
 export const packageBookings = pgTable('package_bookings', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
