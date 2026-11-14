@@ -107,8 +107,8 @@ export class LegalDocsService {
 
     return this.mapToClientResponseDto(record, lang);
   }
-
-  // ── 3.1 Fetch All Localized Documents for Client / User UI ──────────────────
+  
+    // ── 3.1 Fetch All Localized Documents for Client / User UI ──────────────────
   async getClientAllDocuments(lang: string = 'en'): Promise<ClientLegalDocResponseDto[]> {
     const records = await this.db.select().from(schema.legalDocs);
     return records.map((rec) => this.mapToClientResponseDto(rec, lang));

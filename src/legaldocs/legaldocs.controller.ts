@@ -30,7 +30,7 @@ export class LegalDocsController {
   ): Promise<ClientLegalDocResponseDto[]> {
     return await this.legalDocsService.getClientAllDocuments(lang);
   }
-
+  
   // GET /legal-docs/client/:id?lang=en (e.g. /api/legal-docs/client/terms?lang=ja)
   @Get('client/:id')
   async getClientDocument(
