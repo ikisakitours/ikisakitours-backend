@@ -5,10 +5,7 @@ import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateServicePricingDto } from './dto/create-service-pricing.dto';
 import { UpdateServicePricingDto } from './dto/update-service-pricing.dto';
-import {
-  ClientServicePricingResponseDto,
-  ClientServicePricingAllResponseDto,
-} from './dto/client-service-pricing-response.dto';
+import { ClientServicePricingResponseDto } from './dto/client-service-pricing-response.dto';
 
 @Injectable()
 export class ServicePricingService {
@@ -74,22 +71,6 @@ export class ServicePricingService {
     }
 
     return this.mapToClientResponseDto(record, lang);
-  }
-
-  // ── 2. Fetch All Pricing for Client / User UI (Single Language) ───────────────
-  async getClientAllPricing(lang: string = 'en'): Promise<ClientServicePricingAllResponseDto> {
-    const records = await this.db.select().from(schema.servicePricing);
-
-    const recordMap: Record<string, ClientServicePricingResponseDto> = {};
-    for (const rec of records) {
-      recordMap[rec.serviceType] = this.mapToClientResponseDto(rec, lang);
-    }
-
-    return {
-      charter: recordMap['charter'] || null,
-      custom: recordMap['custom'] || null,
-      transfer: recordMap['transfer'] || null,
-    };
   }
 
   // ── 3. Fetch All Pricing Configurations (Admin Panel: returns full multilingual dicts) ──
