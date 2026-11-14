@@ -15,27 +15,15 @@ import { CreateServicePricingDto } from './dto/create-service-pricing.dto';
 import { UpdateServicePricingDto } from './dto/update-service-pricing.dto';
 import { ClientServicePricingResponseDto } from './dto/client-service-pricing-response.dto';
 
-@Controller(['service-pricing', 'charter-pricing', 'api/service-pricing', 'api/charter-pricing'])
+@Controller(['service-pricing', 'charter-pricing'])
 export class ServicePricingController {
   constructor(private readonly servicePricingService: ServicePricingService) {}
 
   // =========================================================================
-  // ── USER / CLIENT UI ENDPOINTS (Single requested language returned) ──────
+  // ── USER / CLIENT UI ENDPOINT (Single requested language returned) ───────
   // =========================================================================
 
-  // 1. GET /service-pricing/client?lang=en (or ?serviceType=charter&lang=en)
-  @Get('client')
-  async getClientPricing(
-    @Query('serviceType') serviceType?: string,
-    @Query('lang') lang: string = 'en',
-  ) {
-    if (serviceType) {
-      return await this.servicePricingService.getClientPricingByServiceType(serviceType, lang);
-    }
-    return await this.servicePricingService.getClientAllPricing(lang);
-  }
-
-  // 2. GET /service-pricing/client/:serviceType?lang=en (e.g. /service-pricing/client/charter?lang=ja)
+  // GET /service-pricing/client/:serviceType?lang=en (e.g. /service-pricing/client/charter?lang=ja)
   @Get('client/:serviceType')
   async getClientPricingByType(
     @Param('serviceType') serviceType: string,

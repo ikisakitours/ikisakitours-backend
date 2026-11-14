@@ -13,9 +13,3 @@ export class ClientServicePricingResponseDto {
   createdAt!: Date;
   updatedAt!: Date;
 }
-
-export interface ClientServicePricingAllResponseDto {
-  charter: ClientServicePricingResponseDto | null;
-  custom: ClientServicePricingResponseDto | null;
-  transfer: ClientServicePricingResponseDto | null;
-}
