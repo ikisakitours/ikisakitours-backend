@@ -5,14 +5,94 @@ import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateServicePricingDto } from './dto/create-service-pricing.dto';
 import { UpdateServicePricingDto } from './dto/update-service-pricing.dto';
+import {
+  ClientServicePricingResponseDto,
+  ClientServicePricingAllResponseDto,
+} from './dto/client-service-pricing-response.dto';
 
 @Injectable()
 export class ServicePricingService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) {}
+  ) { }
 
-  // 1. Fetch All Pricing Configurations
+  // ── Helper methods for Client UI language localization (similar to blogs.service.ts) ──
+  private getLocalizedText(field: Record<string, string> | null | undefined, lang: string): string {
+    if (!field) return '';
+    return field[lang] || field['en'] || Object.values(field).find(Boolean) || '';
+  }
+
+  private getLocalizedList(field: Record<string, string[]> | null | undefined, lang: string): string[] {
+    if (!field) return [];
+    const list = field[lang] || field['en'] || Object.values(field)[0];
+    return Array.isArray(list) ? list : [];
+  }
+
+  private mapToClientResponseDto(
+    record: typeof schema.servicePricing.$inferSelect,
+    lang: string = 'en',
+  ): ClientServicePricingResponseDto {
+    const targetLang =
+      record.titleBase && record.titleBase[lang]
+        ? lang
+        : (record.titleBase && record.titleBase['en']
+          ? 'en'
+          : (record.titleBase ? Object.keys(record.titleBase)[0] || 'en' : 'en'));
+
+    return {
+      id: record.id,
+      serviceType: record.serviceType,
+      language: targetLang,
+      titleBase: this.getLocalizedText(record.titleBase, targetLang),
+      titleAccent: this.getLocalizedText(record.titleAccent, targetLang),
+      subtitleStrong: this.getLocalizedText(record.subtitleStrong, targetLang),
+      subtitle: this.getLocalizedText(record.subtitle, targetLang),
+      popularBadge: this.getLocalizedText(record.popularBadge, targetLang),
+      popularTitle: this.getLocalizedText(record.popularTitle, targetLang),
+      popularDesc: this.getLocalizedText(record.popularDesc, targetLang),
+      notes: this.getLocalizedList(record.notes, targetLang),
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+    };
+  }
+
+  // ── 1. Fetch Specific Pricing for Client / User UI (Single Language) ─────────
+  async getClientPricingByServiceType(
+    serviceType: string,
+    lang: string = 'en',
+  ): Promise<ClientServicePricingResponseDto> {
+    const normalizedType = serviceType.toLowerCase().trim();
+
+    const [record] = await this.db
+      .select()
+      .from(schema.servicePricing)
+      .where(eq(schema.servicePricing.serviceType, normalizedType))
+      .limit(1);
+
+    if (!record) {
+      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+    }
+
+    return this.mapToClientResponseDto(record, lang);
+  }
+
+  // ── 2. Fetch All Pricing for Client / User UI (Single Language) ───────────────
+  async getClientAllPricing(lang: string = 'en'): Promise<ClientServicePricingAllResponseDto> {
+    const records = await this.db.select().from(schema.servicePricing);
+
+    const recordMap: Record<string, ClientServicePricingResponseDto> = {};
+    for (const rec of records) {
+      recordMap[rec.serviceType] = this.mapToClientResponseDto(rec, lang);
+    }
+
+    return {
+      charter: recordMap['charter'] || null,
+      custom: recordMap['custom'] || null,
+      transfer: recordMap['transfer'] || null,
+    };
+  }
+
+  // ── 3. Fetch All Pricing Configurations (Admin Panel: returns full multilingual dicts) ──
   async getAllPricing() {
     const records = await this.db.select().from(schema.servicePricing);
 
@@ -31,7 +111,7 @@ export class ServicePricingService {
     };
   }
 
-  // 2. Fetch Pricing by Specific Service Type
+  // ── 4. Fetch Pricing by Specific Service Type (Admin Panel: full multilingual dicts) ────
   async getPricingByServiceType(serviceType: string) {
     const normalizedType = serviceType.toLowerCase().trim();
 
@@ -51,7 +131,7 @@ export class ServicePricingService {
     };
   }
 
-  // 3. Insert / Create (or Upsert) New Pricing Record
+  // ── 5. Insert / Create (or Upsert) New Pricing Record (Admin Panel) ───────────
   async createPricing(dto: CreateServicePricingDto) {
     const normalizedType = dto.serviceType.toLowerCase().trim();
 
@@ -111,7 +191,7 @@ export class ServicePricingService {
     };
   }
 
-  // 4. Update Existing Pricing Record
+  // ── 6. Update Existing Pricing Record (Admin Panel) ───────────────────────────
   async updatePricing(serviceType: string, dto: UpdateServicePricingDto) {
     const normalizedType = serviceType.toLowerCase().trim();
 
@@ -150,7 +230,7 @@ export class ServicePricingService {
     };
   }
 
-  // 5. Delete Pricing Record
+  // ── 7. Delete Pricing Record (Admin Panel) ───────────────────────────────────
   async deletePricing(serviceType: string) {
     const normalizedType = serviceType.toLowerCase().trim();
 
