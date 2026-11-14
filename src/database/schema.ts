@@ -407,6 +407,38 @@ export const servicePricing = pgTable('service_pricing', {
 
 
 
+// ── Legal Documents Types & Table ──────────────────────────
+export interface LegalSubItem {
+  id: string;
+  title?: Record<string, string>;
+  body?: Record<string, string>;
+  icon?: string;
+}
+
+export interface LegalSectionItem {
+  id: string;
+  heading: Record<string, string>;
+  sectionIcon?: string;
+  type: string;
+  content?: Record<string, string>;
+  subItems?: LegalSubItem[];
+  expanded?: boolean;
+}
+
+// legal documents table (terms, privacy, cookie policy, etc.)
+export const legalDocs = pgTable('legal_docs', {
+  id: text('id').primaryKey(), // e.g. 'terms', 'privacy', 'cookie-policy'
+  title: jsonb('title').$type<Record<string, string>>().notNull(),
+  eyebrow: jsonb('eyebrow').$type<Record<string, string>>(),
+  accent: text('accent').default('emerald'),
+  lastUpdated: text('last_updated').notNull(),
+  sections: jsonb('sections').$type<LegalSectionItem[]>().notNull().default([]),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+
+
 //package booking table ( for adim panel )
 export const packageBookings = pgTable('package_bookings', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
