@@ -1,0 +1,175 @@
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
+import { eq } from 'drizzle-orm';
+import * as schema from '../database/schema';
+import { DRIZZLE_DB } from '../database/database.provider';
+import { CreateServicePricingDto } from './dto/create-service-pricing.dto';
+import { UpdateServicePricingDto } from './dto/update-service-pricing.dto';
+
+@Injectable()
+export class ServicePricingService {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+  ) {}
+
+  // 1. Fetch All Pricing Configurations
+  async getAllPricing() {
+    const records = await this.db.select().from(schema.servicePricing);
+
+    const recordMap: Record<string, typeof schema.servicePricing.$inferSelect> = {};
+    for (const rec of records) {
+      recordMap[rec.serviceType] = rec;
+    }
+
+    return {
+      message: 'Service pricing retrieved successfully',
+      data: {
+        charter: recordMap['charter'] || null,
+        custom: recordMap['custom'] || null,
+        transfer: recordMap['transfer'] || null,
+      },
+    };
+  }
+
+  // 2. Fetch Pricing by Specific Service Type
+  async getPricingByServiceType(serviceType: string) {
+    const normalizedType = serviceType.toLowerCase().trim();
+
+    const [record] = await this.db
+      .select()
+      .from(schema.servicePricing)
+      .where(eq(schema.servicePricing.serviceType, normalizedType))
+      .limit(1);
+
+    if (!record) {
+      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+    }
+
+    return {
+      message: `${serviceType} pricing retrieved successfully`,
+      data: record,
+    };
+  }
+
+  // 3. Insert / Create (or Upsert) New Pricing Record
+  async createPricing(dto: CreateServicePricingDto) {
+    const normalizedType = dto.serviceType.toLowerCase().trim();
+
+    if (!['charter', 'custom', 'transfer'].includes(normalizedType)) {
+      throw new BadRequestException(
+        `Invalid serviceType '${dto.serviceType}'. Must be 'charter', 'custom', or 'transfer'`,
+      );
+    }
+
+    const [existing] = await this.db
+      .select()
+      .from(schema.servicePricing)
+      .where(eq(schema.servicePricing.serviceType, normalizedType))
+      .limit(1);
+
+    if (existing) {
+      const [updated] = await this.db
+        .update(schema.servicePricing)
+        .set({
+          titleBase: dto.titleBase,
+          titleAccent: dto.titleAccent,
+          subtitleStrong: dto.subtitleStrong,
+          subtitle: dto.subtitle,
+          popularBadge: dto.popularBadge,
+          popularTitle: dto.popularTitle,
+          popularDesc: dto.popularDesc,
+          notes: dto.notes,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.servicePricing.serviceType, normalizedType))
+        .returning();
+
+      return {
+        message: `${normalizedType} pricing updated successfully`,
+        data: updated,
+      };
+    }
+
+    const [created] = await this.db
+      .insert(schema.servicePricing)
+      .values({
+        serviceType: normalizedType,
+        titleBase: dto.titleBase,
+        titleAccent: dto.titleAccent,
+        subtitleStrong: dto.subtitleStrong,
+        subtitle: dto.subtitle,
+        popularBadge: dto.popularBadge,
+        popularTitle: dto.popularTitle,
+        popularDesc: dto.popularDesc,
+        notes: dto.notes,
+      })
+      .returning();
+
+    return {
+      message: `${normalizedType} pricing created successfully`,
+      data: created,
+    };
+  }
+
+  // 4. Update Existing Pricing Record
+  async updatePricing(serviceType: string, dto: UpdateServicePricingDto) {
+    const normalizedType = serviceType.toLowerCase().trim();
+
+    const [existing] = await this.db
+      .select()
+      .from(schema.servicePricing)
+      .where(eq(schema.servicePricing.serviceType, normalizedType))
+      .limit(1);
+
+    if (!existing) {
+      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+    }
+
+    const updatePayload: Partial<typeof schema.servicePricing.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+
+    if (dto.titleBase !== undefined) updatePayload.titleBase = dto.titleBase;
+    if (dto.titleAccent !== undefined) updatePayload.titleAccent = dto.titleAccent;
+    if (dto.subtitleStrong !== undefined) updatePayload.subtitleStrong = dto.subtitleStrong;
+    if (dto.subtitle !== undefined) updatePayload.subtitle = dto.subtitle;
+    if (dto.popularBadge !== undefined) updatePayload.popularBadge = dto.popularBadge;
+    if (dto.popularTitle !== undefined) updatePayload.popularTitle = dto.popularTitle;
+    if (dto.popularDesc !== undefined) updatePayload.popularDesc = dto.popularDesc;
+    if (dto.notes !== undefined) updatePayload.notes = dto.notes;
+
+    const [updated] = await this.db
+      .update(schema.servicePricing)
+      .set(updatePayload)
+      .where(eq(schema.servicePricing.serviceType, normalizedType))
+      .returning();
+
+    return {
+      message: `${normalizedType} pricing updated successfully`,
+      data: updated,
+    };
+  }
+
+  // 5. Delete Pricing Record
+  async deletePricing(serviceType: string) {
+    const normalizedType = serviceType.toLowerCase().trim();
+
+    const [existing] = await this.db
+      .select()
+      .from(schema.servicePricing)
+      .where(eq(schema.servicePricing.serviceType, normalizedType))
+      .limit(1);
+
+    if (!existing) {
+      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+    }
+
+    await this.db
+      .delete(schema.servicePricing)
+      .where(eq(schema.servicePricing.serviceType, normalizedType));
+
+    return {
+      message: `Service pricing for '${serviceType}' deleted successfully`,
+    };
+  }
+}
