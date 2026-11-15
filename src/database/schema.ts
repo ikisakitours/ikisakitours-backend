@@ -380,10 +380,27 @@ export const faqs = pgTable('faqs', {
 
 
 
+export interface AvailabilityDateDetail {
+  tourType?: string;
+  tourTypes?: string[];
+  color?: string;
+  colors?: string[];
+  hex?: string;
+  hexes?: string[];
+  note?: string;
+  notes?: Record<string, string>;
+}
+
+export interface AvailabilityDateDetailItem extends AvailabilityDateDetail {
+  date: string;
+}
+
 //availability table
 export const availability = pgTable('availability', {
   id: serial('id').primaryKey(),
   apiClosedDates: text('api_closed_dates').array().notNull().default([]),
+  dateDetails: jsonb('date_details').$type<Record<string, AvailabilityDateDetail>>().notNull().default({}),
+  closedDateDetails: jsonb('closed_date_details').$type<AvailabilityDateDetailItem[]>().notNull().default([]),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 

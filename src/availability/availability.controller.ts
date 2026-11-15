@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { AvailabilityService } from './availability.service';
 import { UpdateAvailabilityDto } from './dto/update-availability.dto';
 
@@ -7,12 +7,12 @@ export class AvailabilityController {
   constructor(private readonly availabilityService: AvailabilityService) {}
 
   @Get()
-  async getAvailability() {
-    return this.availabilityService.getAvailability();
+  async getAvailability(@Query('lang') lang?: string) {
+    return this.availabilityService.getAvailability(lang);
   }
 
   @Post()
   async updateAvailability(@Body() dto: UpdateAvailabilityDto) {
-    return this.availabilityService.updateAvailability(dto.apiClosedDates);
+    return this.availabilityService.updateAvailability(dto);
   }
 }
