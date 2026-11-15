@@ -29,21 +29,41 @@ export class AvailabilityService {
     let dateDetails = record.dateDetails || {};
     let closedDateDetails = record.closedDateDetails || [];
 
-    // If client requested a specific language, resolve notes for that language
+    // If client requested a specific language, resolve only that language and strip out multilingual notes dict
     if (lang) {
+      const targetLang = lang.toLowerCase().trim();
       const localizedDateDetails: Record<string, any> = {};
+
       for (const [dateKey, detail] of Object.entries(dateDetails)) {
+        const { notes, ...rest } = detail;
+        const resolvedNote =
+          notes?.[targetLang] ||
+          notes?.['en'] ||
+          (notes ? Object.values(notes)[0] : '') ||
+          detail.note ||
+          '';
+
         localizedDateDetails[dateKey] = {
-          ...detail,
-          note: detail.notes?.[lang] || detail.notes?.['en'] || detail.note || '',
+          ...rest,
+          note: resolvedNote,
         };
       }
       dateDetails = localizedDateDetails;
 
-      closedDateDetails = closedDateDetails.map((item) => ({
-        ...item,
-        note: item.notes?.[lang] || item.notes?.['en'] || item.note || '',
-      }));
+      closedDateDetails = closedDateDetails.map((item) => {
+        const { notes, ...rest } = item;
+        const resolvedNote =
+          notes?.[targetLang] ||
+          notes?.['en'] ||
+          (notes ? Object.values(notes)[0] : '') ||
+          item.note ||
+          '';
+
+        return {
+          ...rest,
+          note: resolvedNote,
+        };
+      });
     }
 
     return {
