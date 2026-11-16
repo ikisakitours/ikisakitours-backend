@@ -6,6 +6,7 @@ import { DRIZZLE_DB } from '../database/database.provider';
 import { CreateBlogDto } from './dto/create-blog.dto';
 import { BlogResponseDto } from './dto/blog-response.dto';
 import { BlogPreviewResponseDto } from './dto/blog-preview-response.dto';
+import { UpdateBlogDto } from './dto/update-blog.dto';
 
 @Injectable()
 export class BlogsService {
@@ -248,5 +249,45 @@ export class BlogsService {
       liked: isLiked,
       likesCount: updatedBlog.likes,
     };
+  }
+
+
+  // ADMIN 1: Fetch all raw multilingual blogs for the admin table
+  async findAllAdmin() {
+    // Adjust 'blogs' to match your actual Drizzle table schema import name
+    return await this.db.select().from(schema.blogs);
+  }
+
+  // ADMIN 2: Fetch a single raw multilingual blog by ID for the edit form
+  async findOneAdmin(id: string) {
+    const [blog] = await this.db
+      .select()
+      .from(schema.blogs)
+      .where(eq(schema.blogs.id, id))
+      .limit(1);
+
+    if (!blog) {
+      throw new NotFoundException(`Blog with ID ${id} not found`);
+    }
+
+    return blog;
+  }
+
+  // ADMIN 3: Update an existing blog post by ID
+  async update(id: string, updateDto: UpdateBlogDto) {
+    // First, verify the blog exists
+    await this.findOneAdmin(id);
+
+    // Perform the update in Drizzle
+    const [updatedBlog] = await this.db
+      .update(schema.blogs)
+      .set({
+        ...updateDto,
+        updatedAt: new Date(), // Optional: if you track update timestamps
+      })
+      .where(eq(schema.blogs.id, id))
+      .returning();
+
+    return updatedBlog;
   }
 }
