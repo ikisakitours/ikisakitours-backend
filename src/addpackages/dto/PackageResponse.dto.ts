@@ -13,6 +13,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import type { PricingConfig } from '../../database/schema';
 
 export enum PackageType {
   ONE_DAY = 'oneday',
@@ -21,10 +22,25 @@ export enum PackageType {
 
 // Badge enum
 export enum PackageBadge {
-  NEW_ARRIVAL = 'new_arrival',
-  DISCOUNTED = 'discounted',
+  BEST_SELLER = 'best_seller',
+  TOP_RATED = 'top_rated',
   POPULAR = 'popular',
   FEATURED = 'featured',
+  NEW_ARRIVAL = 'new_arrival',
+  EXCLUSIVE = 'exclusive',
+  LIMITED_AVAILABILITY = 'limited_availability',
+  LIKELY_TO_SELL_OUT = 'likely_to_sell_out',
+  INSTANT_CONFIRMATION = 'instant_confirmation',
+  BUCKET_LIST = 'bucket_list',
+  ALL_INCLUSIVE = 'all_inclusive',
+  FAMILY_FRIENDLY = 'family_friendly',
+  HONEYMOON_SPECIAL = 'honeymoon_special',
+  UNESCO_HERITAGE = 'unesco_heritage',
+  PRIVATE_TOUR = 'private_tour',
+  SEASONAL = 'seasonal',
+  ECO_FRIENDLY = 'eco_friendly',
+  DISCOUNTED = 'discounted',
+  NONE = 'none',
 }
 
 // --- SUB DTOs ---
@@ -123,8 +139,8 @@ export class CreateAddPackageDto {
   duration!: Record<string, string>;
 
   @IsOptional()
-  @IsEnum(PackageBadge)
-  badge?: PackageBadge;
+  @IsString()
+  badge?: string;
 
   @IsString()
   slug!: string;
@@ -186,6 +202,11 @@ export class CreateAddPackageDto {
 
   @IsObject()
   excludes!: Record<string, string[]>;
+
+  // ── Unified Dynamic Group Pricing & Custom Add-ons ──
+  @IsOptional()
+  @IsObject()
+  pricingConfig?: PricingConfig | null;
 }
 
 // --- ULTIMATE SINGLE PACKAGE RESPONSE DTO ---

@@ -28,6 +28,7 @@ export class AddpackagesService {
     const plainDestinations = JSON.parse(JSON.stringify(dto.destinations));
     const plainActivityDetails = JSON.parse(JSON.stringify(dto.activityDetails));
     const plainItinerary = JSON.parse(JSON.stringify(dto.itinerary));
+    const plainPricingConfig = dto.pricingConfig ? JSON.parse(JSON.stringify(dto.pricingConfig)) : null;
 
     // 3. Insert into database using unified jsonb fields
     const [newPackage] = await this.db
@@ -50,6 +51,7 @@ export class AddpackagesService {
         activityDetails: plainActivityDetails,
         itinerary: plainItinerary,
         destinations: plainDestinations,
+        pricingConfig: plainPricingConfig,
 
         // Multilingual JSONB Text Fields
         title: dto.title,
@@ -157,6 +159,9 @@ export class AddpackagesService {
         activityDetails: dto.activityDetails ? JSON.parse(JSON.stringify(dto.activityDetails)) : existing.activityDetails,
         itinerary: dto.itinerary ? JSON.parse(JSON.stringify(dto.itinerary)) : existing.itinerary,
         destinations: dto.destinations ? JSON.parse(JSON.stringify(dto.destinations)) : existing.destinations,
+        pricingConfig: dto.pricingConfig !== undefined
+          ? (dto.pricingConfig ? JSON.parse(JSON.stringify(dto.pricingConfig)) : null)
+          : existing.pricingConfig,
 
         updatedAt: new Date(),
       })
@@ -387,6 +392,7 @@ export class AddpackagesService {
       discount: pkg.discount ? Number(pkg.discount) : 0,
       provider: pkg.provider,
       gallery: pkg.gallery || [],
+      pricingConfig: pkg.pricingConfig || null,
       likes: pkg.likes ?? 0,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,

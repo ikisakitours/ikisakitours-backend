@@ -120,6 +120,36 @@ export interface ItineraryItem {
   accommodation: Record<string, string>;
 }
 
+// ── Industry-Standard Group Pricing & Options Types ──
+export interface GroupPricingTier {
+  minPax: number;
+  maxPax: number;
+  pricePerPerson: number;
+  label?: string;
+}
+
+export interface PassengerCategoryPricing {
+  couplePricingType?: 'auto_tier' | 'fixed';
+  coupleFixedPrice?: number;
+  childRateType: 'percentage' | 'fixed';
+  childRateValue: number;
+  infantPrice: number;
+}
+
+export interface PackageOptionItem {
+  id: string;
+  name: Record<string, string>;
+  price: number;
+  calculationType: 'per_person' | 'per_room' | 'per_booking';
+  description?: Record<string, string>;
+}
+
+export interface PricingConfig {
+  tiers: GroupPricingTier[];
+  passengerPricing: PassengerCategoryPricing;
+  options: PackageOptionItem[];
+}
+
 export const packages = pgTable('packages', {
   id: uuid('id').defaultRandom().primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -158,6 +188,9 @@ export const packages = pgTable('packages', {
 
   // Multilingual Itinerary
   itinerary: jsonb('itinerary').$type<ItineraryItem[]>().notNull(),
+
+  // Unified Dynamic Group Pricing & Custom Add-ons Configuration
+  pricingConfig: jsonb('pricing_config').$type<PricingConfig>(),
 
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
