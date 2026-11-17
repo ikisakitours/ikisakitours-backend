@@ -93,12 +93,10 @@ export class ItineraryItemDto {
   activities?: Record<string, string[]>;
 
   @IsOptional()
-  @IsObject()
-  meals?: Record<string, string>;
+  meals?: Record<string, string[] | string> | string[];
 
   @IsOptional()
-  @IsObject()
-  accommodation?: Record<string, string>;
+  accommodation?: Record<string, string[] | string> | string[];
 }
 
 export class DestinationItemDto {

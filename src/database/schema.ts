@@ -116,8 +116,8 @@ export interface ItineraryItem {
   details: Record<string, string[]>;
   scenicStops?: Record<string, string[]>;
   activities?: Record<string, string[]>;
-  meals: Record<string, string>;
-  accommodation: Record<string, string>;
+  meals?: Record<string, string[] | string>;
+  accommodation?: Record<string, string[] | string>;
 }
 
 // ── Industry-Standard Group Pricing & Options Types ──
