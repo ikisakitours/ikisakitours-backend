@@ -336,6 +336,14 @@ export class AddpackagesService {
       return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || [];
     };
 
+    const getLocalizedList = (fieldObj: any): string[] => {
+      if (!fieldObj) return [];
+      const val = fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0];
+      if (Array.isArray(val)) return val;
+      if (typeof val === 'string' && val.trim() !== '') return [val];
+      return [];
+    };
+
     return {
       id: pkg.id,
       slug: pkg.slug,
@@ -374,8 +382,8 @@ export class AddpackagesService {
         details: getLocalizedArray(item.details),
         scenicStops: getLocalizedArray(item.scenicStops),
         activities: getLocalizedArray(item.activities),
-        meals: getLocalizedField(item.meals),
-        accommodation: getLocalizedField(item.accommodation),
+        meals: getLocalizedList(item.meals),
+        accommodation: getLocalizedList(item.accommodation),
       })) as any,
 
       destinations: (pkg.destinations || []).map((dest: any) => ({

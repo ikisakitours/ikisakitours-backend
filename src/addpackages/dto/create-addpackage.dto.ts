@@ -126,11 +126,11 @@ export class ItineraryItemDto {
 
   @Transform(({ value }) => parseJsonRecord(value))
   @IsObject()
-  meals!: Record<string, string>;
+  meals!: Record<string, string[] | string>;
 
   @Transform(({ value }) => parseJsonRecord(value))
   @IsObject()
-  accommodation!: Record<string, string>;
+  accommodation!: Record<string, string[] | string>;
 }
 
 export class DestinationItemDto {
