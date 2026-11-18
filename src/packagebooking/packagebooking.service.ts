@@ -99,7 +99,7 @@ export class PackageBookingService {
         journeyDate: createDto.journeyDate,
         travelers: createDto.travelers,
         totalPax,
-        selectedOptions: createDto.selectedOptions || [],
+        selectedOptions: (createDto.selectedOptions as schema.BookingSelectedOption[]) || [],
         basePrice: (createDto.basePrice ?? 0).toString(),
         optionsTotal: (createDto.optionsTotal ?? 0).toString(),
         totalAmount: (createDto.totalAmount ?? verifiedAmount ?? 0).toString(),
@@ -174,14 +174,17 @@ export class PackageBookingService {
         clientOpt.selected === true ||
         (typeof clientOpt.count === 'number' && clientOpt.count > 0) ||
         (typeof clientOpt.quantity === 'number' && clientOpt.quantity > 0) ||
-        (typeof clientOpt.total === 'number' && clientOpt.total > 0);
+        (typeof clientOpt.total === 'number' && clientOpt.total > 0) ||
+        (typeof clientOpt.subtotal === 'number' && clientOpt.subtotal > 0);
 
       if (!isSelected) {
         continue;
       }
 
       const dbOpt = dbOptionsMap.get(clientOpt.id);
-      const optPrice = dbOpt ? Number(dbOpt.price) : Number(clientOpt.price || 0);
+      const optPrice = dbOpt
+        ? Number(dbOpt.price)
+        : Number(clientOpt.unitPrice ?? clientOpt.price ?? 0);
       const calcType = dbOpt ? dbOpt.calculationType : (clientOpt.calculationType || 'per_person');
 
       let count = 1;
