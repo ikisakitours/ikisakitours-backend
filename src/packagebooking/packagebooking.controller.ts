@@ -19,6 +19,12 @@ export class PackageBookingController {
     return await this.packageBookingService.findAll();
   }
 
+  //Get single booking by ID
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return await this.packageBookingService.findOne(id);
+  }
+
   //Update booking status (pending, confirmed, cancelled, completed)
   @Patch(':id/status')
   async updateStatus(

@@ -489,20 +489,86 @@ export const legalDocs = pgTable('legal_docs', {
 
 
 
-//package booking table ( for adim panel )
+// ── Package Booking Types ──
+export interface BookingTravelers {
+  adults: number;
+  couples: number;
+  children: number;
+  infants: number;
+}
+
+export interface BookingSelectedOption {
+  id: string;
+  name: string | Record<string, string>;
+  price: number;
+  calculationType: 'per_person' | 'per_room' | 'per_booking';
+  count?: number;
+  total?: number;
+  [key: string]: any;
+}
+
+export interface BookingPricingSummary {
+  baseCurrency?: string;
+  displayCurrency?: string;
+  appliedTier?: {
+    label?: string;
+    minPax?: number;
+    maxPax?: number;
+    pricePerPerson?: number;
+  } | null;
+  unitPrice?: number;
+  baseTotal?: number;
+  optionsTotal?: number;
+  grandTotal?: number;
+  breakdown?: any;
+  [key: string]: any;
+}
+
+// package booking table (for admin panel, client checkout, and payment gateway readiness)
 export const packageBookings = pgTable('package_bookings', {
   id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  bookingReference: text('booking_reference').$defaultFn(() => 'IK-' + Date.now().toString().slice(-4) + Math.random().toString(36).substring(2, 6).toUpperCase()),
+  
+  // Package details
   packageId: text('package_id').notNull(),
+  packageSlug: text('package_slug'),
   packageName: text('package_name').notNull(),
+  packageType: text('package_type'),
+  type: text('type').notNull(), // "oneday" | "multiday"
+  
+  // Schedule & Travelers
   journeyDate: text('journey_date').notNull(),
-  travelers: jsonb('travelers').notNull(),
+  travelers: jsonb('travelers').$type<BookingTravelers>().notNull(),
+  totalPax: integer('total_pax').default(1),
+
+  // Options & Pricing Breakdown
+  selectedOptions: jsonb('selected_options').$type<BookingSelectedOption[]>().default([]),
+  basePrice: numeric('base_price', { precision: 12, scale: 2 }).default('0'),
+  optionsTotal: numeric('options_total', { precision: 12, scale: 2 }).default('0'),
+  totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).default('0'),
+  currency: text('currency').default('USD'),
+  locale: text('locale').default('en'),
+  pricingSummary: jsonb('pricing_summary').$type<BookingPricingSummary>().default({}),
+
+  // Server-side audit & anti-tampering verification
+  verifiedAmount: numeric('verified_amount', { precision: 12, scale: 2 }),
+  isPriceTampered: boolean('is_price_tampered').default(false),
+
+  // Customer contact details
+  userId: text('user_id'),
   firstname: text('firstname').notNull(),
   lastname: text('lastname').notNull(),
   email: text('email').notNull(),
   country: text('country').notNull(),
-  type: text('type').notNull(),
-  status: text('status').notNull().default('pending'),
+
+  // Lifecycle & Payment Gateway Readiness
+  status: text('status').notNull().default('pending'), // 'pending' | 'confirmed' | 'completed' | 'cancelled'
+  paymentStatus: text('payment_status').notNull().default('unpaid'), // 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded'
+  paymentMethod: text('payment_method'), // 'pay_on_arrival' | 'stripe' | 'card' etc.
+  paymentTransactionId: text('payment_transaction_id'),
+
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 
