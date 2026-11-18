@@ -471,5 +471,9 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 | :--- | :--- |
 | **Client** | [Ikisaki Tours](https://www.ikisakitours.com) |
 | **Powered By** | Aetheria Labs |
-| **Engineered By** | Shehan_W |
-| **License** | Proprietary & Confidential — All Rights Reserved |
+| **Engineered By** | Pramod_Siriwardhana & Shehan_W |
+| **Organization** | Ikisaki Tours (Pvt) Ltd |
+| **License** | All rights reserved © 2026 Ikisaki Tours (Pvt) Ltd |
+
+> [!NOTE]
+> This software, codebase, and associated intellectual property are proprietary and confidential to **Ikisaki Tours (Pvt) Ltd**. Unauthorized copying, reverse engineering, distribution, or commercial deployment of this software, via any medium, is strictly prohibited without prior written permission from the copyright owner.
