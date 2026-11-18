@@ -154,29 +154,48 @@ export class PackageBookingService {
     const adults = Number(dto.travelers?.adults || 0);
     const couples = Number(dto.travelers?.couples || 0);
     const children = Number(dto.travelers?.children || 0);
+    const totalPayingPax = adults + couples * 2 + children;
+    const totalRooms = couples + Math.ceil(adults / 2) || 1;
 
     for (const clientOpt of dto.selectedOptions || []) {
+      // Skip if explicitly unselected or zero count
+      const isExplicitlyUnselected =
+        clientOpt.selected === false ||
+        clientOpt.enabled === false ||
+        clientOpt.count === 0 ||
+        clientOpt.quantity === 0;
+
+      if (isExplicitlyUnselected) {
+        continue;
+      }
+
+      // Only include options that are genuinely selected
+      const isSelected =
+        clientOpt.selected === true ||
+        (typeof clientOpt.count === 'number' && clientOpt.count > 0) ||
+        (typeof clientOpt.quantity === 'number' && clientOpt.quantity > 0) ||
+        (typeof clientOpt.total === 'number' && clientOpt.total > 0);
+
+      if (!isSelected) {
+        continue;
+      }
+
       const dbOpt = dbOptionsMap.get(clientOpt.id);
-      // Take price and calculationType strictly from the DB option definition
       const optPrice = dbOpt ? Number(dbOpt.price) : Number(clientOpt.price || 0);
       const calcType = dbOpt ? dbOpt.calculationType : (clientOpt.calculationType || 'per_person');
 
-      if (calcType === 'per_person') {
-        const count =
-          clientOpt.count !== undefined
-            ? Number(clientOpt.count)
-            : adults + couples * 2 + children;
-        optionsTotal += optPrice * count;
+      let count = 1;
+      if (typeof clientOpt.count === 'number' && clientOpt.count > 0) {
+        count = clientOpt.count;
+      } else if (typeof clientOpt.quantity === 'number' && clientOpt.quantity > 0) {
+        count = clientOpt.quantity;
+      } else if (calcType === 'per_person') {
+        count = totalPayingPax;
       } else if (calcType === 'per_room') {
-        const rooms =
-          clientOpt.count !== undefined
-            ? Number(clientOpt.count)
-            : couples + Math.ceil(adults / 2) || 1;
-        optionsTotal += optPrice * rooms;
-      } else {
-        // per_booking (flat fee)
-        optionsTotal += optPrice;
+        count = totalRooms;
       }
+
+      optionsTotal += optPrice * count;
     }
 
     return Math.round((dynamicResult.totalPrice + optionsTotal) * 100) / 100;
