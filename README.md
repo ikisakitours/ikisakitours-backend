@@ -467,13 +467,25 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 
 ## Credits & License
 
-| Role | Details |
+| Attribute | Details |
 | :--- | :--- |
-| **Client** | [Ikisaki Tours](https://www.ikisakitours.com) |
-| **Powered By** | Aetheria Labs |
-| **Engineered By** | Pramod_Siriwardhana & Shehan_W |
+| **Client & Owner** | **Ikisaki Tours (Pvt) Ltd** — [www.ikisakitours.com](https://www.ikisakitours.com) |
+| **Powered By** | **Aetheria Labs** |
+| **Engineered By** | **Pramod_Siriwardhana** & **Shehan_W** |
+| **License** | All rights reserved © 2026 Ikisaki Tours (Pvt) Ltd |
 | **Organization** | Ikisaki Tours (Pvt) Ltd |
 | **License** | All rights reserved © 2026 Ikisaki Tours (Pvt) Ltd |
 
+> [!IMPORTANT]
+> **Proprietary Software Notice:** This application and its source code are private, proprietary assets built exclusively for the internal operations of **Ikisaki Tours (Pvt) Ltd**. Unauthorized copying, modification, redistribution, or commercial use of any part of this repository without prior written consent is strictly prohibited.
+
 > [!NOTE]
-> This software, codebase, and associated intellectual property are proprietary and confidential to **Ikisaki Tours (Pvt) Ltd**. Unauthorized copying, reverse engineering, distribution, or commercial deployment of this software, via any medium, is strictly prohibited without prior written permission from the copyright owner.
+> **Copyright © 2026 Ikisaki Tours (Pvt) Ltd. All rights reserved.**  
+> This repository and its source code, design assets, and localization dictionaries are proprietary and confidential. Unauthorized copying, redistribution, modification, or commercial use is strictly prohibited without prior written consent from Ikisaki Tours (Pvt) Ltd. See [`LICENSE`](./LICENSE) for full terms.
+---
+
+<div align="center">
+
+**© 2026 Ikisaki Tours (Pvt) Ltd** · Powered by **Aetheria Labs** · Engineered by **Pramod_Siriwardhana** & **Shehan_W**
+
+</div>
