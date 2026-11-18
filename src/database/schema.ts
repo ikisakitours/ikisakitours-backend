@@ -499,11 +499,16 @@ export interface BookingTravelers {
 
 export interface BookingSelectedOption {
   id: string;
-  name: string | Record<string, string>;
-  price: number;
-  calculationType: 'per_person' | 'per_room' | 'per_booking';
+  name?: string | Record<string, string>;
+  nameLocalized?: Record<string, string>;
+  price?: number;
+  unitPrice?: number;
+  calculationType?: 'per_person' | 'per_room' | 'per_booking' | string;
   count?: number;
+  quantity?: number;
   total?: number;
+  subtotal?: number;
+  selected?: boolean;
   [key: string]: any;
 }
 

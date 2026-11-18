@@ -7,9 +7,64 @@ import {
   IsNumber,
   IsArray,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TravelersDto } from './travelers.dto';
+
+export class SelectedOptionDto {
+  @IsString()
+  @IsNotEmpty()
+  id!: string;
+
+  @IsOptional()
+  name?: string | Record<string, string>;
+
+  @IsOptional()
+  nameLocalized?: Record<string, string>;
+
+  @IsOptional()
+  @IsString()
+  calculationType?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  price?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  unitPrice?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  count?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  quantity?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  total?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  subtotal?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  selected?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+}
 
 export class CreatePackageBookingDto {
   @IsString()
@@ -46,7 +101,9 @@ export class CreatePackageBookingDto {
 
   @IsOptional()
   @IsArray()
-  selectedOptions?: any[];
+  @ValidateNested({ each: true })
+  @Type(() => SelectedOptionDto)
+  selectedOptions?: SelectedOptionDto[];
 
   @IsOptional()
   @Type(() => Number)
