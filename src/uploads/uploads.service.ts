@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { R2_CLIENT } from './r2.provider';
+import { deleteR2Asset } from './r2-delete.util';
 
 @Injectable()
 export class UploadsService {
@@ -21,8 +22,8 @@ export class UploadsService {
       new PutObjectCommand({
         Bucket: this.configService.get('R2_BUCKET_NAME'),
         Key: key,
-        Body: file.buffer,
         ContentType: file.mimetype,
+        Body: file.buffer,
       }),
     );
 
@@ -35,5 +36,10 @@ export class UploadsService {
     folder = 'general',
   ): Promise<string[]> {
     return Promise.all(files.map((file) => this.uploadImage(file, folder)));
+  }
+
+  async deleteAsset(fileUrlOrKey?: string | null): Promise<boolean> {
+    const bucketName = this.configService.get<string>('R2_BUCKET_NAME') || '';
+    return deleteR2Asset(this.r2Client, bucketName, fileUrlOrKey);
   }
 }

@@ -5,11 +5,13 @@ import { AdminAuthService } from './admin-auth.service';
 import { AdminAuthGuard } from './admin-auth.guard';
 import { RolesGuard } from './roles.guard';
 import { DatabaseModule } from '../database/database.module';
+import { UploadsModule } from '../uploads/uploads.module';
 
 @Global()
 @Module({
   imports: [
     DatabaseModule,
+    UploadsModule,
     JwtModule.register({
       secret:
         process.env.ADMIN_JWT_SECRET ||

@@ -8,4 +8,8 @@ export class UpdateAdminProfileDto {
   @IsString()
   @IsOptional()
   avatarUrl?: string;
+
+  @IsString()
+  @IsOptional()
+  oldAvatarUrl?: string;
 }

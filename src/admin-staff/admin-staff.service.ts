@@ -1,15 +1,20 @@
 import {
   Injectable,
   Inject,
+  Optional,
   NotFoundException,
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { S3Client } from '@aws-sdk/client-s3';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
+import { R2_CLIENT } from '../uploads/r2.provider';
+import { deleteR2Asset } from '../uploads/r2-delete.util';
 import { CreateStaffDto } from './dto/create-staff.dto';
 import { UpdateStaffRoleDto } from './dto/update-staff-role.dto';
 import { UpdateStaffStatusDto } from './dto/update-staff-status.dto';
@@ -19,7 +24,37 @@ import { ResetStaffPasswordDto } from './dto/reset-staff-password.dto';
 export class AdminStaffService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly configService: ConfigService,
+    @Optional() @Inject(R2_CLIENT) private readonly s3Client?: S3Client,
   ) {}
+
+  private getS3Client(): S3Client | null {
+    if (this.s3Client) return this.s3Client;
+    const accountId =
+      this.configService.get('R2_ACCOUNT_ID') || process.env.R2_ACCOUNT_ID;
+    const accessKeyId =
+      this.configService.get('R2_ACCESS_KEY_ID') ||
+      process.env.R2_ACCESS_KEY_ID;
+    const secretAccessKey =
+      this.configService.get('R2_SECRET_ACCESS_KEY') ||
+      process.env.R2_SECRET_ACCESS_KEY;
+    if (accountId && accessKeyId && secretAccessKey) {
+      return new S3Client({
+        region: 'auto',
+        endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+        credentials: { accessKeyId, secretAccessKey },
+      });
+    }
+    return null;
+  }
+
+  private getBucketName(): string {
+    return (
+      this.configService.get<string>('R2_BUCKET_NAME') ||
+      process.env.R2_BUCKET_NAME ||
+      ''
+    );
+  }
 
   private async logAudit(
     adminId: string,
@@ -287,6 +322,25 @@ export class AdminStaffService {
       throw new NotFoundException('Staff member not found');
     }
 
+    // Automatic Cloudflare R2 Asset Cleanup (Staff Avatar Deletion)
+    if (staff.avatarUrl) {
+      const client = this.getS3Client();
+      const bucket = this.getBucketName();
+      if (client && bucket) {
+        const deleted = await deleteR2Asset(client, bucket, staff.avatarUrl);
+        if (deleted) {
+          await this.logAudit(
+            requesterId,
+            'R2_AVATAR_CLEANUP',
+            'storage',
+            { purgedKeyOrUrl: staff.avatarUrl, targetStaffId: id },
+            clientIp,
+            userAgent,
+          );
+        }
+      }
+    }
+
     // Delete staff member (cascades sessions)
     await this.db
       .delete(schema.adminUsers)
@@ -307,7 +361,7 @@ export class AdminStaffService {
 
     return {
       success: true,
-      message: 'Staff member deleted successfully.',
+      message: 'Staff member and associated assets deleted successfully.',
     };
   }
 }
