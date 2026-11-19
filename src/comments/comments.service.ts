@@ -41,6 +41,8 @@ export class CommentsService {
       isVerified: comment.user?.isVerified ?? false,
       isVip: comment.user?.isVip ?? false,
       hasAccess: comment.user?.hasAccess ?? true,
+      customerReferenceId: comment.user?.customerReferenceId ?? null,
+      referenceId: comment.user?.customerReferenceId ?? null,
       content: comment.content,
       adminReply: comment.adminReply || undefined,
       date: new Date(comment.createdAt).toLocaleDateString('en-US', {
@@ -99,6 +101,7 @@ export class CommentsService {
         // Map user fields so your helper method's comment.user?.xxx checks work correctly
         user: {
           id: schema.users.id,
+          customerReferenceId: schema.users.customerReferenceId,
           firstName: schema.users.firstName,
           lastName: schema.users.lastName,
           country: schema.users.country,
@@ -159,6 +162,7 @@ export class CommentsService {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: user.id,
+          customerReferenceId: user.customerReferenceId,
           email: user.email,
           firstname: user.firstName,
           lastname: user.lastName,
@@ -257,6 +261,7 @@ export class CommentsService {
       where: eq(schema.users.id, dto.userId),
       columns: {
         id: true,
+        customerReferenceId: true,
         firstName: true,
         lastName: true,
         email: true,
@@ -279,6 +284,7 @@ export class CommentsService {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: user.id,
+          customerReferenceId: user.customerReferenceId,
           email: user.email,
           firstname: user.firstName,
           lastname: user.lastName,

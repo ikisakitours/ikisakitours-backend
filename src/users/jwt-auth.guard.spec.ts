@@ -1,7 +1,7 @@
 import { ExecutionContext, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-describe('JwtAuthGuard (Zero-Trust Suspension)', () => {
+describe('JwtAuthGuard (Zero-Trust Suspension & Reference ID)', () => {
   let guard: JwtAuthGuard;
   let mockJwtService: any;
   let mockDb: any;
@@ -49,11 +49,12 @@ describe('JwtAuthGuard (Zero-Trust Suspension)', () => {
     await expect(guard.canActivate(context)).rejects.toThrow(UnauthorizedException);
   });
 
-  it('should throw ForbiddenException (ACCOUNT_SUSPENDED) when user.hasAccess is false', async () => {
+  it('should throw ForbiddenException (ACCOUNT_SUSPENDED) with customerReferenceId when user.hasAccess is false', async () => {
     const context = createMockContext({ authorization: 'Bearer valid-token' });
     mockJwtService.verifyAsync.mockResolvedValue({ sub: 'user-uuid' });
     mockDb.query.users.findFirst.mockResolvedValue({
       id: 'user-uuid',
+      customerReferenceId: 'IKISAKI-8F42M9',
       email: 'suspended@example.com',
       firstName: 'Pramod',
       lastName: 'Siriwardhana',
@@ -72,6 +73,7 @@ describe('JwtAuthGuard (Zero-Trust Suspension)', () => {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: 'user-uuid',
+          customerReferenceId: 'IKISAKI-8F42M9',
           email: 'suspended@example.com',
           firstname: 'Pramod',
           lastname: 'Siriwardhana',
@@ -81,7 +83,7 @@ describe('JwtAuthGuard (Zero-Trust Suspension)', () => {
     }
   });
 
-  it('should allow access and attach user to request when user.hasAccess is true', async () => {
+  it('should allow access and attach user with customerReferenceId & referenceId when user.hasAccess is true', async () => {
     const request: any = { headers: { authorization: 'Bearer valid-token' } };
     const context: any = {
       switchToHttp: () => ({
@@ -91,6 +93,7 @@ describe('JwtAuthGuard (Zero-Trust Suspension)', () => {
     mockJwtService.verifyAsync.mockResolvedValue({ sub: 'user-uuid' });
     mockDb.query.users.findFirst.mockResolvedValue({
       id: 'user-uuid',
+      customerReferenceId: 'IKISAKI-8F42M9',
       email: 'active@example.com',
       firstName: 'Pramod',
       lastName: 'Siriwardhana',
@@ -101,6 +104,8 @@ describe('JwtAuthGuard (Zero-Trust Suspension)', () => {
     expect(result).toBe(true);
     expect(request.user).toEqual({
       id: 'user-uuid',
+      customerReferenceId: 'IKISAKI-8F42M9',
+      referenceId: 'IKISAKI-8F42M9',
       sub: 'user-uuid',
       email: 'active@example.com',
       firstName: 'Pramod',

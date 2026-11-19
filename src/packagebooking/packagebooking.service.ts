@@ -31,6 +31,7 @@ export class PackageBookingService {
           : eq(schema.users.email, createDto.email.toLowerCase().trim()),
         columns: {
           id: true,
+          customerReferenceId: true,
           email: true,
           firstName: true,
           lastName: true,
@@ -45,6 +46,7 @@ export class PackageBookingService {
           message: 'Your account access has been restricted by administration.',
           user: {
             id: user.id,
+            customerReferenceId: user.customerReferenceId,
             email: user.email,
             firstname: user.firstName,
             lastname: user.lastName,
