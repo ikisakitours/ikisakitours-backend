@@ -12,8 +12,12 @@ import { eq, and, sql, desc } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
-import { generateSecret, generateURI, verifySync } from 'otplib';
 import * as QRCode from 'qrcode';
+import {
+  generateTotpSecret,
+  generateOtpauthUri,
+  verifyTotpCode,
+} from './totp.util';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { AdminLoginDto } from './dto/admin-login.dto';
@@ -449,8 +453,8 @@ export class AdminAuthService {
       throw new NotFoundException('Administrator profile not found');
     }
 
-    const secret = generateSecret();
-    const otpauth = generateURI({
+    const secret = generateTotpSecret();
+    const otpauth = generateOtpauthUri({
       issuer: 'Ikisaki Tours',
       label: admin.email,
       secret,
@@ -495,12 +499,9 @@ export class AdminAuthService {
       );
     }
 
-    const verification = verifySync({
-      secret: secretToVerify,
-      token: dto.totpCode.trim(),
-    });
+    const isValid = verifyTotpCode(dto.totpCode, secretToVerify);
 
-    if (!verification || !verification.valid) {
+    if (!isValid) {
       throw new BadRequestException('Invalid 2FA code');
     }
 
