@@ -2,6 +2,7 @@ import {
   Injectable,
   Inject,
   UnauthorizedException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   NotFoundException,
@@ -66,17 +67,32 @@ export class AdminAuthService {
       where: eq(schema.adminUsers.email, dto.email.toLowerCase().trim()),
     });
 
-    // Zero knowledge: Do not reveal if email exists
-    if (!admin || !admin.isActive) {
+    if (!admin) {
       await this.logAudit(
         null,
         'LOGIN_FAILED',
         'auth',
-        { reason: 'Unknown or inactive admin' },
+        { reason: 'Admin user not found' },
         clientIp,
         userAgent,
       );
       throw new UnauthorizedException('Invalid administrative credentials');
+    }
+
+    if (!admin.isActive) {
+      await this.logAudit(
+        admin.id,
+        'LOGIN_BLOCKED_SUSPENDED',
+        'auth',
+        { reason: 'Suspended staff account' },
+        clientIp,
+        userAgent,
+      );
+      throw new ForbiddenException({
+        success: false,
+        message:
+          'Your staff account has been suspended. Please contact your Super Administrator.',
+      });
     }
 
     // Check account lockout

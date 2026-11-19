@@ -23,6 +23,10 @@ import { CommentListResponseDto } from './dto/comment-list-response.dto';
 import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { CreatePackageReviewDto } from './dto/create-package-review.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
+import { RolesGuard } from '../admin-auth/roles.guard';
+import { Roles } from '../admin-auth/roles.decorator';
+import { AdminRole } from '../admin-auth/roles.enum';
 
 @Controller('comments')
 export class CommentsController {
@@ -33,6 +37,8 @@ export class CommentsController {
 
   // 1. Fetch all comments (for Admin Panel view)
   @Get()
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async findAll(): Promise<CommentListResponseDto> {
     return await this.commentsService.findAll();
   }
@@ -78,6 +84,8 @@ export class CommentsController {
 
   // 3. Admin replies to a specific comment card
   @Post(':id/reply')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async reply(
     @Param('id') id: string,
     @Body() replyDto: ReplyCommentDto,
@@ -87,6 +95,8 @@ export class CommentsController {
 
   //change visibility
   @Patch(':id/visibility')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async updateVisibility(
     @Param('id') id: string,
     @Body() updateVisibilityDto: UpdateVisibilityDto,
@@ -96,6 +106,8 @@ export class CommentsController {
 
   // Delete comment
   @Delete(':id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async deleteComment(@Param('id') id: string) {
     return await this.commentsService.deleteComment(id);
   }
@@ -103,6 +115,8 @@ export class CommentsController {
   //--------------package--------
   //only package reviews
   @Get('package-reviews')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async findAllPackageReviews() {
     return await this.commentsService.findAllPackageReviews();
   }
@@ -119,6 +133,8 @@ export class CommentsController {
 
   // Admin replies to a package review
   @Patch('package-review/:id/reply')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async replyToPackageReview(
     @Param('id') id: string,
     @Body('adminReply') adminReply: string,
@@ -140,6 +156,8 @@ export class CommentsController {
 
   //update the visibility on any package review
   @Patch('package-reviews/:id/visibility')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.REVIEW_MODERATOR)
   async updatePackageReviewVisibility(
     @Param('id') id: string,
     @Body() updateVisibilityDto: UpdateVisibilityDto,

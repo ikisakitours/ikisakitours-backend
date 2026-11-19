@@ -9,6 +9,7 @@ import {
   Query,
   Headers,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { BlogsService } from './blogs.service';
@@ -16,6 +17,10 @@ import { CreateBlogDto } from './dto/create-blog.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
 import { BlogPreviewResponseDto } from './dto/blog-preview-response.dto';
 import { BlogResponseDto } from './dto/blog-response.dto';
+import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
+import { RolesGuard } from '../admin-auth/roles.guard';
+import { Roles } from '../admin-auth/roles.decorator';
+import { AdminRole } from '../admin-auth/roles.enum';
 
 @Controller('blogs')
 export class BlogsController {
@@ -23,18 +28,36 @@ export class BlogsController {
 
   // 1. Create a blog (Admin) - Receives JSON with R2 image URLs
   @Post()
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.CONTENT_EDITOR,
+  )
   async create(@Body() createDto: CreateBlogDto): Promise<BlogResponseDto> {
     return await this.blogsService.create(createDto);
   }
 
   // ADMIN 1: Fetch all raw multilingual blogs for the admin list view (MUST be above :id)
   @Get('admin')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.CONTENT_EDITOR,
+  )
   async findAllAdmin() {
     return await this.blogsService.findAllAdmin();
   }
 
   // ADMIN 2: Fetch a single raw multilingual blog by ID to pre-fill the edit form (MUST be above :id)
   @Get('admin/:id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.CONTENT_EDITOR,
+  )
   async findOneAdmin(@Param('id') id: string) {
     return await this.blogsService.findOneAdmin(id);
   }
@@ -126,6 +149,12 @@ export class BlogsController {
 
   // ADMIN 3: Update an existing blog post by ID
   @Patch(':id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.CONTENT_EDITOR,
+  )
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateBlogDto,
@@ -144,6 +173,12 @@ export class BlogsController {
 
   // 6. Delete route
   @Delete(':id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.CONTENT_EDITOR,
+  )
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return await this.blogsService.remove(id);
   }
