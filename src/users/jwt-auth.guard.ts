@@ -46,6 +46,7 @@ export class JwtAuthGuard implements CanActivate {
       where: eq(schema.users.id, payload.sub),
       columns: {
         id: true,
+        customerReferenceId: true,
         email: true,
         firstName: true,
         lastName: true,
@@ -64,6 +65,7 @@ export class JwtAuthGuard implements CanActivate {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: user.id,
+          customerReferenceId: user.customerReferenceId,
           email: user.email,
           firstname: user.firstName,
           lastname: user.lastName,
@@ -76,6 +78,7 @@ export class JwtAuthGuard implements CanActivate {
     request['user'] = {
       ...user,
       sub: user.id,
+      referenceId: user.customerReferenceId,
     };
 
     return true;

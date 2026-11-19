@@ -25,6 +25,7 @@ import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { generateCustomerReferenceId } from '../common/utils/reference-id.util';
 
 type User = typeof schema.users.$inferSelect;
 
@@ -43,9 +44,25 @@ export class UsersService {
     private readonly emailService: EmailService,
   ) {}
 
+  private async ensureCustomerReferenceId(user: User): Promise<User> {
+    if (user.customerReferenceId) {
+      return user;
+    }
+    const customerReferenceId = generateCustomerReferenceId();
+    const [updated] = await this.db
+      .update(schema.users)
+      .set({ customerReferenceId })
+      .where(eq(schema.users.id, user.id))
+      .returning();
+    return updated || { ...user, customerReferenceId };
+  }
+
   private toUserResponseDto(user: User): UserResponseDto {
+    const refId = user.customerReferenceId ?? null;
     return {
       id: user.id,
+      customerReferenceId: refId,
+      referenceId: refId,
       firstname: user.firstName,
       lastname: user.lastName,
       email: user.email,
@@ -80,6 +97,7 @@ export class UsersService {
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    const customerReferenceId = generateCustomerReferenceId();
 
     const [newUser] = await this.db
       .insert(schema.users)
@@ -91,6 +109,7 @@ export class UsersService {
         terms: createUserDto.terms,
         passwordHash: hashedPassword,
         avatarUrl: null,
+        customerReferenceId,
         isVerified: createUserDto.isVerified ?? true,
         isVip: createUserDto.isVip ?? true,
         hasAccess: createUserDto.hasAccess ?? true,
@@ -104,11 +123,16 @@ export class UsersService {
   }
 
   async validateUser(loginDto: LoginDto): Promise<AuthResponse> {
-    const user = await this.db.query.users.findFirst({
+    let user = await this.db.query.users.findFirst({
       where: eq(schema.users.email, loginDto.email),
     });
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
+
+    // Backfill customerReferenceId if missing
+    if (!user.customerReferenceId) {
+      user = await this.ensureCustomerReferenceId(user);
+    }
 
     // ─── Zero-Trust Account Suspension Check ───
     if (!user.hasAccess) {
@@ -118,6 +142,7 @@ export class UsersService {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: user.id,
+          customerReferenceId: user.customerReferenceId,
           email: user.email,
           firstname: user.firstName,
           lastname: user.lastName,
@@ -163,12 +188,17 @@ export class UsersService {
   }
 
   async findMe(userId: string): Promise<UserResponseDto> {
-    const user = await this.db.query.users.findFirst({
+    let user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
     });
 
     if (!user) {
       throw new NotFoundException('User profile not found');
+    }
+
+    // Backfill customerReferenceId if missing
+    if (!user.customerReferenceId) {
+      user = await this.ensureCustomerReferenceId(user);
     }
 
     if (!user.hasAccess) {
@@ -178,6 +208,7 @@ export class UsersService {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: user.id,
+          customerReferenceId: user.customerReferenceId,
           email: user.email,
           firstname: user.firstName,
           lastname: user.lastName,

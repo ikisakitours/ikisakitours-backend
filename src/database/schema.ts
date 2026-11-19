@@ -29,6 +29,7 @@ export const users = pgTable('users', {
   providerId: varchar('provider_id', { length: 255 }),
 
   avatarUrl: text('avatar_url'),
+  customerReferenceId: varchar('customer_reference_id', { length: 50 }).unique(),
   isVerified: boolean('is_verified').notNull().default(false),
   isVip: boolean('is_vip').notNull().default(false),
   hasAccess: boolean('has_access').notNull().default(true),

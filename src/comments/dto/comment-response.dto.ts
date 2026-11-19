@@ -42,6 +42,14 @@ export class CommentResponseDto {
   @IsBoolean()
   hasAccess!: boolean;
 
+  @IsOptional()
+  @IsString()
+  customerReferenceId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  referenceId?: string | null;
+
   @IsString()
   content!: string;
 

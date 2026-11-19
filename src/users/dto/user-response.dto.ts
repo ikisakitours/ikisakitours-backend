@@ -26,6 +26,14 @@ export class UserResponseDto {
   @IsString()
   avatarUrl!: string | null;
 
+  @IsOptional()
+  @IsString()
+  customerReferenceId?: string | null;
+
+  @IsOptional()
+  @IsString()
+  referenceId?: string | null;
+
   @IsBoolean()
   isVerified!: boolean;
 

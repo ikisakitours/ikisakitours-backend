@@ -26,6 +26,7 @@ export class ServicesService {
       where: eq(schema.users.email, email.toLowerCase().trim()),
       columns: {
         id: true,
+        customerReferenceId: true,
         email: true,
         firstName: true,
         lastName: true,
@@ -40,6 +41,7 @@ export class ServicesService {
         message: 'Your account access has been restricted by administration.',
         user: {
           id: user.id,
+          customerReferenceId: user.customerReferenceId,
           email: user.email,
           firstname: user.firstName,
           lastname: user.lastName,
