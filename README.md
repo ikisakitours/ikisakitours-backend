@@ -4,7 +4,7 @@
 
 # Ikisaki Tours — Enterprise Backend Engine
 
-**Centralized Multilingual RESTful API Engine, Dynamic Pricing & Operations Service for [www.ikisakitours.com](https://www.ikisakitours.com)**
+**Centralized Multilingual RESTful API Engine, Dynamic Pricing, 10-Role RBAC & Operations Service for [www.ikisakitours.com](https://www.ikisakitours.com)**
 
 [![NestJS](https://img.shields.io/badge/NestJS-11.x-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -24,15 +24,31 @@
 
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
-- [Module Directory (All 17 Domains)](#module-directory-all-17-domains)
+- [Module Directory (All 19 Domains)](#module-directory-all-19-domains)
 - [Core Engineering Highlights](#core-engineering-highlights)
   - [1. Unified Dynamic Group Pricing (`pricingConfig`)](#1-unified-dynamic-group-pricing-pricingconfig)
   - [2. Dual-Persona Multilingual `JSONB` Content Resolution](#2-dual-persona-multilingual-jsonb-content-resolution)
   - [3. Availability Calendar, Color-Coded Blackouts & Multi-Tour Closures](#3-availability-calendar-color-coded-blackouts--multi-tour-closures)
   - [4. Resilient Serverless Pipeline, Cloudflare R2 & Keep-Alive Cron](#4-resilient-serverless-pipeline-cloudflare-r2--keep-alive-cron)
   - [5. Enterprise Admin Security Engine, Dual Bearer/Cookie Auth & Native 2FA (TOTP)](#5-enterprise-admin-security-engine-dual-bearercookie-auth--native-2fa-totp)
-  - [6. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)](#6-private-tour-services-chauffeur-hire--airport-transfer-engine-services)
+  - [6. 10-Role Staff Management & Granular Access Control Engine (RBAC)](#6-10-role-staff-management--granular-access-control-engine-rbac)
+  - [7. Automated Cloudflare R2 Asset Lifecycle & Orphaned Avatar Deletion](#7-automated-cloudflare-r2-asset-lifecycle--orphaned-avatar-deletion)
+  - [8. Zero-Trust Customer Account Suspension & Branded Customer Reference IDs](#8-zero-trust-customer-account-suspension--branded-customer-reference-ids)
+  - [9. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)](#9-private-tour-services-chauffeur-hire--airport-transfer-engine-services)
 - [API Service Layer Reference](#api-service-layer-reference)
+  - [Staff & Team RBAC Management (`/api/admin/staff`)](#staff--team-rbac-management-apiadminstaff)
+  - [Admin Authentication, Profile & 2FA (`/api/admin/auth`)](#admin-authentication-profile--2fa-apiadminauth)
+  - [Customer Authentication, Security & Accounts (`/api/auth`)](#customer-authentication-security--accounts-apiauth)
+  - [Tour Services & Transportation Requests (`/api/services`)](#tour-services--transportation-requests-apiservices)
+  - [Tour Packages & Catalog (`/api/addpackages`)](#tour-packages--catalog-apiaddpackages)
+  - [Availability Calendar (`/api/availability`)](#availability-calendar-apiavailability)
+  - [Destinations Guide (`/api/destinations`)](#destinations-guide-apidestinations)
+  - [Tour Bookings (`/api/package-bookings`)](#tour-bookings-apipackage-bookings)
+  - [Travel Blogs (`/api/blogs`)](#travel-blogs-apiblogs)
+  - [Comments & Reviews (`/api/comments` & `/api/package-reviews`)](#comments--reviews-apicomments--apipackage-reviews)
+  - [Legal Documents (`/api/legaldocs`)](#legal-documents-apilegaldocs)
+  - [Media Uploads & Storage (`/api/uploads`)](#media-uploads--storage-apiuploads)
+  - [Inquiries, Feedback & System](#inquiries-feedback--system)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
@@ -52,7 +68,7 @@ The backend acts as the single source of truth for both the customer-facing book
 Engineered on **NestJS 11** and **TypeScript**, the platform utilizes **Drizzle ORM** with **PostgreSQL (Supabase)**, native `jsonb` schema structures, **Cloudflare R2** S3-compatible media distribution, and serverless edge functions on **Vercel**.
 
 > [!TIP]
-> **API Base Routing & Security:** All routes are prefixed with `/api`. Administrative mutation endpoints (POST, PATCH, DELETE) require the `x-admin-key` header matching `ADMIN_API_KEY`. Public GET endpoints automatically negotiate and return clean localized data when given `?lang=en` or `?lang=ja`.
+> **API Base Routing & Security:** All routes are prefixed with `/api`. Administrative mutation endpoints (POST, PATCH, DELETE) require either a verified Bearer token/HttpOnly session cookie or the `x-admin-key` header matching `ADMIN_API_KEY`. Public GET endpoints automatically negotiate and return clean localized data when given `?lang=en` or `?lang=ja`.
 
 > [!IMPORTANT]
 > **Supabase Connection Pooling:** High-concurrency operations connect through the Supabase Transaction Pooler (`aws-0-ap-northeast-2.pooler.supabase.com:5432`) using `sslmode=require`. An automated 3-day serverless cron ping (`/api/cron/keep-alive`) prevents database sleep cycles.
@@ -63,13 +79,13 @@ Engineered on **NestJS 11** and **TypeScript**, the platform utilizes **Drizzle 
 
 ```mermaid
 flowchart LR
-  ClientWeb["Customer Website\n(www.ikisakitours.com)\n[?lang=en / ?lang=ja]"] -->|"Public HTTPS REST"| NestAPI
-  AdminPanel["Admin Dashboard\n(Next.js 16 + React 19)\n[Bearer Token / Cookie / x-admin-key]" ] -->|"Admin Operations & Auth"| NestAPI
+  ClientWeb["Customer Website\n(www.ikisakitours.com)\n[?lang=en / ?lang=ja]"] -->|"Public HTTPS REST / Auth"| NestAPI
+  AdminPanel["Admin Dashboard\n(Next.js 16 + React 19)\n[Bearer JWT / Cookie / RBAC]" ] -->|"Admin Operations & Staff RBAC"| NestAPI
   
   NestAPI["Ikisaki Backend API Engine\nNestJS 11 + Drizzle ORM\n(Global Prefix: /api)"]
   
-  NestAPI --> Postgres[("PostgreSQL 16 (Supabase)\nMultilingual JSONB + PricingConfig\n+ Admin Users & Audit Logs")]
-  NestAPI --> R2Storage["Cloudflare R2 Bucket\n(S3 WebP Image CDN)"]
+  NestAPI --> Postgres[("PostgreSQL 16 (Supabase)\nMultilingual JSONB + PricingConfig\n+ Admin Users, Staff RBAC & Audit Logs")]
+  NestAPI --> R2Storage["Cloudflare R2 Bucket\n(S3 WebP Image CDN & Auto-Purge)"]
   NestAPI --> ResendMail["Resend Mailer API\n(Booking & Contact Alerts)"]
   
   VercelCron["Vercel Scheduled Cron\n(Every 3 Days)"] -->|"Keep-Alive Ping\n/api/cron/keep-alive"| NestAPI
@@ -77,16 +93,18 @@ flowchart LR
 
 ---
 
-## Module Directory (All 17 Domains)
+## Module Directory (All 19 Domains)
 
 | Domain | Route Mount | Operational & Business Capabilities |
 | :--- | :--- | :--- |
+| **Staff & Team RBAC** | `/api/admin/staff` | 10-role enterprise staff directory, role assignments, account suspension/activation, session revocation, credential reset & audit logging |
 | **Admin Auth & Security** | `/api/admin/auth` | Enterprise authentication: Bearer JWT + HttpOnly cookies, session rotation, account lockouts, self-service profile, password change, and native RFC 6238 TOTP 2FA with QR codes |
+| **Customer Accounts & Security** | `/api/auth` | Customer registration, login, profile management, Zero-Trust real-time suspension enforcement, and branded reference ID (`IKISAKI-XXXXXX`) issuance |
 | **Tour Services & Transfers** | `/api/services` | Private chauffeur hire, airport & intercity transfers, and custom tailor-made tour requests with passenger breakdowns, language preference, and dynamic quotes |
 | **Tour Packages** | `/api/addpackages` | One-day & multi-day packages, 18 badge categories, dynamic group pricing tiers, passenger rules, custom add-ons, dynamic meals/hotels, and like counters |
 | **Availability Calendar** | `/api/availability` | Central booking calendar, blackout dates, multi-color hex coding, tour-type closures, and bilingual client closure notes |
 | **Destinations** | `/api/destinations` | Sri Lanka travel hubs, geographic coordinates (`lat`, `lng`), interactive map markers, photo galleries, and slug lookup |
-| **Bookings & Orders** | `/api/package-bookings` | Customer tour reservations, adult/child/infant breakdown, calculated totals, and status lifecycle (`pending`, `confirmed`, `completed`, `cancelled`) |
+| **Bookings & Orders** | `/api/package-bookings` | Customer tour reservations, anti-tampering price recalculation, adult/child/infant breakdown, and status lifecycle (`pending`, `confirmed`, `completed`, `cancelled`) |
 | **Service Pricing** | `/api/service-pricing` | Supplementary service tariffs: Private Chauffeur, Airport Transfers, and Custom Tailor-Made tour rate cards |
 | **Service Guidelines** | `/api/services/notes` & `/api/tourservice` | Vehicle specifications, luggage/pax limits, fuel/toll policies, and bilingual Japanese/English service guidelines |
 | **Travel Blog CMS** | `/api/blogs` | Multilingual travel articles, auto-slugification, tag taxonomies, reader card previews, and persistent user like tracking |
@@ -96,7 +114,7 @@ flowchart LR
 | **Cookie Consent** | `/api/cookies` | GDPR & ePrivacy compliance tracking recording visitor consent choices per user identifier |
 | **Customer Support** | `/api/faqs` | Categorized multilingual support Q&A pairs with admin management |
 | **Newsletter Leads** | `/api/newsletter` | Email marketing lead capture with duplicate prevention and unsubscribe handling |
-| **Media & Asset CDN** | `/api/uploads` | High-speed single and batch `.webp` uploads to Cloudflare R2 bucket with automated folder tagging |
+| **Media & Asset CDN** | `/api/uploads` | High-speed single and batch `.webp` uploads to Cloudflare R2 bucket with automated folder tagging and orphan asset cleanup |
 | **System & Crons** | `/api/cron` | Automated Supabase pooler warmth maintenance ping avoiding free-tier inactivity timeouts |
 
 ---
@@ -201,11 +219,75 @@ The administrative control plane (`/api/admin/auth`) is engineered with zero-com
 - **Zero-Dependency Native RFC 6238 TOTP Engine**: Custom-built on Node.js `crypto` with zero external ESM dependencies, completely eliminating serverless `ERR_REQUIRE_ESM` runtime incompatibilities. 100% compliant with Google Authenticator, Microsoft Authenticator, Authy, and 1Password with QR code data URLs via `qrcode`.
 - **Brute-Force & Account Lockout Defense**: Enforces consecutive failed login tracking with automatic 30-minute account locks upon 5 consecutive failures.
 - **Token Rotation & Session Reuse Attack Detection**: Issues rotating 7-day refresh tokens. If a previously revoked refresh token is presented, all active sessions for that admin user are instantly invalidated.
-- **Enterprise Security Audit Logging**: Every critical security action (`LOGIN_SUCCESS`, `LOGIN_FAILED`, `PROFILE_UPDATED`, `PASSWORD_CHANGED`, `2FA_ENABLED`, `2FA_DISABLED`, `TOKEN_REFRESH`) is immutably logged in `admin_audit_logs` with client IP and User-Agent.
+- **Enterprise Security Audit Logging**: Every critical security action (`LOGIN_SUCCESS`, `LOGIN_FAILED`, `PROFILE_UPDATED`, `PASSWORD_CHANGED`, `2FA_ENABLED`, `2FA_DISABLED`, `TOKEN_REFRESH`, `R2_AVATAR_CLEANUP`) is immutably logged in `admin_audit_logs` with client IP and User-Agent.
 
 ---
 
-### 6. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)
+### 6. 10-Role Staff Management & Granular Access Control Engine (RBAC)
+
+The Staff Management Engine (`/api/admin/staff`) enforces strict Role-Based Access Control (RBAC) across all administrative functions using NestJS metadata decorators (`@Roles()`) and the `RolesGuard`:
+
+| Specialized Role | System Scope & Permissions |
+| :--- | :--- |
+| **`SUPER_ADMIN`** | Unrestricted master access across all platform modules, system secrets, staff management, and audit logs |
+| **`OPERATIONS_MANAGER`** | Tour management, reservation approvals, booking status changes, driver assignments, and calendar availability |
+| **`TOUR_EXECUTIVE`** | Tour package content creation, pricing tiers, badges, itinerary editing, and destination hubs |
+| **`BOOKING_AGENT`** | Customer booking oversight, booking inquiry responses, and customer communication |
+| **`CONTENT_CREATOR`** | Travel blog posts, destination guides, FAQ entries, and multimedia uploads |
+| **`CUSTOMER_SUPPORT`** | Contact inquiry handling, user reviews, customer feedback, and moderation replies |
+| **`FINANCE_OFFICER`** | Pricing tariffs, group rate cards, payment verification, and revenue audit tracking |
+| **`TRANSPORT_COORDINATOR`** | Vehicle fleet specifications, chauffeur hire requests, airport transfer bookings, and transport guidelines |
+| **`ANALYST`** | Read-only analytics, visitor engagement tracking, and system performance telemetry |
+| **`AUDITOR`** | Read-only access to immutable audit logs (`admin_audit_logs`) and system compliance |
+
+- **Self-Protection Guardrails**: Built-in rules prevent administrators from suspending or deleting their own accounts (`Cannot suspend/delete your own administrator account`).
+- **Immediate Session Revocation**: Suspending a staff member or resetting their password instantly revokes all active refresh tokens in `admin_sessions`.
+
+---
+
+### 7. Automated Cloudflare R2 Asset Lifecycle & Orphaned Avatar Deletion
+
+To prevent accumulation of orphaned files and control storage costs, the backend implements automated Cloudflare R2 cleanup:
+- **`extractR2KeyFromUrl` Utility**: Intelligently extracts relative R2 object keys from public development domains (`*.r2.dev`), custom production CDNs (`assets.ikisakitours.com`), or relative paths, while strictly ignoring base64 data URIs and external Google/Facebook profile photos.
+- **Automatic Profile Avatar Purge**: When an admin or staff member uploads a new profile picture (`PATCH /api/admin/auth/profile`), the previous image file is automatically purged from the Cloudflare R2 bucket.
+- **Cascade Deletion on Staff Account Removal**: Deleting a staff account (`DELETE /api/admin/staff/:id`) automatically inspects and purges their avatar image from R2 before deleting the database record.
+- **Non-Blocking Resilience**: Asset cleanup errors are safely caught, logged to console, and recorded as `R2_AVATAR_CLEANUP` in `admin_audit_logs` without failing primary database operations.
+
+---
+
+### 8. Zero-Trust Customer Account Suspension & Branded Customer Reference IDs
+
+A robust, real-time protection layer aligns the Admin Panel's `hasAccess` toggle with the Customer Website to enforce instantaneous account suspension:
+
+#### Zero-Trust `JwtAuthGuard`
+- On **every** authenticated customer request, `JwtAuthGuard` queries PostgreSQL in real-time.
+- If `hasAccess === false`, the request is immediately terminated with a structured `403 ForbiddenException`:
+  ```json
+  {
+    "statusCode": 403,
+    "error": "ACCOUNT_SUSPENDED",
+    "message": "Your account access has been restricted by administration.",
+    "user": {
+      "id": "uuid",
+      "customerReferenceId": "IKISAKI-8F42M9",
+      "email": "customer@example.com",
+      "firstname": "Pramod",
+      "lastname": "Siriwardhana",
+      "hasAccess": false
+    }
+  }
+  ```
+- **Login Defense**: Suspended customers attempting to log in via standard credentials (`POST /api/auth/login`) or Social OAuth (Google, Instagram, Facebook) receive the structured 403 response, allowing the frontend to render the `<AccessRestricted />` screen.
+- **Mutation Guard**: Submitting comments (`/api/comments`), tour reviews (`/api/package-reviews`), service bookings (`/api/services/*`), or package bookings (`/api/package-bookings`) verifies caller status and rejects suspended users while **public guest bookings and inquiries remain 100% functional**.
+
+#### Branded Customer Reference ID (`customerReferenceId`)
+- Every customer is automatically assigned a clean 6-character alphanumeric reference code (e.g. `IKISAKI-8F42M9`).
+- **Clean Character Set**: Built via `generateCustomerReferenceId()`, strictly excluding confusing characters (`0`, `O`, `1`, `I`).
+- **Automatic Backfill**: Existing customer records lacking a reference ID are seamlessly backfilled upon their next login or `/api/auth/me` request.
+
+---
+
+### 9. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)
 
 Unified management for private bespoke travel experiences:
 - **Airport & Intercity Transfers (`transfer`)**: Starting base rates mapped from vehicle class specifications with distance-based dynamic quotations issued via email.
@@ -218,103 +300,173 @@ Unified management for private bespoke travel experiences:
 
 ## API Service Layer Reference
 
+### Staff & Team RBAC Management (`/api/admin/staff`)
+All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropriate role permissions.
+
+| Method | Endpoint | Allowed Roles | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/admin/staff` | `SUPER_ADMIN`, `OPERATIONS_MANAGER`, `AUDITOR` | List all internal staff members sorted by creation date |
+| `POST` | `/api/admin/staff` | `SUPER_ADMIN` | Provision a new staff account with initial role and credentials |
+| `PATCH` | `/api/admin/staff/:id/role` | `SUPER_ADMIN` | Update staff member's administrative role |
+| `PATCH` | `/api/admin/staff/:id/status` | `SUPER_ADMIN`, `OPERATIONS_MANAGER` | Toggle account status (Active / Suspended); revokes sessions if suspended |
+| `POST` | `/api/admin/staff/:id/reset-password` | `SUPER_ADMIN` | Administrative password reset; invalidates active sessions |
+| `DELETE` | `/api/admin/staff/:id` | `SUPER_ADMIN` | Permanently delete staff member and purge their avatar from Cloudflare R2 |
+
+---
+
 ### Admin Authentication, Profile & 2FA (`/api/admin/auth`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `POST` | `/api/admin/auth/login` | Public | Admin login with bcrypt (12 rounds), returns `token`, `accessToken`, and `user` payload, sets 15-min session & 7-day refresh cookies |
 | `POST` | `/api/admin/auth/logout` | Session / JWT | Revokes current refresh token session and clears authentication cookies |
 | `GET` | `/api/admin/auth/me` | Bearer / Cookie | Fetch profile of currently authenticated admin (`id`, `email`, `fullName`, `role`, `avatarUrl`, `isTwoFactorEnabled`) |
 | `POST` | `/api/admin/auth/refresh` | Cookie | Session refresh with token rotation & reuse detection |
-| `PATCH` | `/api/admin/auth/profile` | Bearer / Cookie | Self-service update for administrator display name (`fullName`) and WebP avatar image URL (`avatarUrl`) |
+| `PATCH` | `/api/admin/auth/profile` | Bearer / Cookie | Self-service update for display name (`fullName`), WebP avatar (`avatarUrl`), and auto-purges previous avatar (`oldAvatarUrl`) from R2 |
 | `PATCH` | `/api/admin/auth/change-password` | Bearer / Cookie | Self-service password change; validates `currentPassword`, enforces $\ge 8$ chars, hashes with bcrypt factor 12 |
 | `POST` | `/api/admin/auth/2fa/generate` | Bearer / Cookie | Generates Base32 TOTP secret, `otpauth://` URI, and QR Code Data URL for Google Authenticator |
 | `POST` | `/api/admin/auth/2fa/enable` | Bearer / Cookie | Verifies 6-digit TOTP code and activates Two-Factor Authentication |
 | `POST` | `/api/admin/auth/2fa/disable` | Bearer / Cookie | Confirms current password and deactivates Two-Factor Authentication |
 
-### Tour Services & Transportation Requests (`/api/services`)
-| Method | Endpoint | Auth | Description |
-| :--- | :--- | :---: | :--- |
-| `GET` | `/api/services` | `x-admin-key` / Guard | List all tour service requests sorted by `createdAt DESC` |
-| `GET` | `/api/services/:id` | `x-admin-key` / Guard | Retrieve specific custom tour, chauffeur, or transfer booking details |
-| `POST` | `/api/services` | Public | Submit new service booking (custom tour, chauffeur charter, or transfer) |
-| `PATCH` | `/api/services/:id/status` | `x-admin-key` / Guard | Update service status (`pending`, `approved`, `active`, `completed`, `cancelled`) |
-| `DELETE` | `/api/services/:id` | `x-admin-key` / Guard | Delete a service request record |
+---
 
-### Vehicle Guidelines & Specifications (`/api/services/notes` & `/api/tourservice`)
+### Customer Authentication, Security & Accounts (`/api/auth`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
+| `POST` | `/api/auth/signup` | Public | Customer registration with auto-generated `customerReferenceId` (`IKISAKI-XXXXXX`) |
+| `POST` | `/api/auth/login` | Public | Customer login; returns JWT & user object; returns structured 403 `ACCOUNT_SUSPENDED` if `hasAccess: false` |
+| `POST` | `/api/auth/logout` | Passthrough | Clears customer `token` cookie |
+| `GET` | `/api/auth/me` | `JwtAuthGuard` | Real-time verified customer profile retrieval with auto-backfill of `customerReferenceId` |
+| `PATCH` | `/api/auth/me` | `JwtAuthGuard` | Update customer name, email, or country |
+| `PATCH` | `/api/auth/me/avatar` | `JwtAuthGuard` | Upload customer profile avatar to Cloudflare R2 |
+| `DELETE` | `/api/auth/me` | `JwtAuthGuard` | Secure account deletion confirming password or text |
+| `GET` | `/api/auth/users` | `AdminAuthGuard` | Administrator customer directory with status flags (`hasAccess`, `isVip`, `isVerified`, `customerReferenceId`) |
+| `PATCH` | `/api/auth/users/:id/status` | `AdminApiKeyGuard` | Administrator toggle for customer status (`hasAccess`, `isVip`, `isVerified`) |
+| `POST` | `/api/auth/forgot-password` | Public | Dispatch password reset OTP email |
+| `POST` | `/api/auth/reset-password` | Public | Reset customer password using verified OTP |
+| `POST` | `/api/auth/update-password` | Public | Update password validating old credentials |
+
+---
+
+### Tour Services & Transportation Requests (`/api/services`)
+
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/services` | `AdminAuthGuard` | List all tour service requests sorted by `createdAt DESC` |
+| `GET` | `/api/services/:id` | `AdminAuthGuard` | Retrieve specific custom tour, chauffeur, or transfer booking details |
+| `POST` | `/api/services/custom` | Public / Susp. Guard | Submit custom tour request (validates caller suspension status) |
+| `POST` | `/api/services/chauffeur` | Public / Susp. Guard | Submit private chauffeur request (validates caller suspension status) |
+| `POST` | `/api/services/transfer` | Public / Susp. Guard | Submit transfer request (validates caller suspension status) |
+| `PATCH` | `/api/services/:id/status` | `AdminAuthGuard` | Update service status (`pending`, `approved`, `active`, `completed`, `cancelled`) |
+| `DELETE` | `/api/services/:id` | `AdminAuthGuard` | Delete a service request record |
 | `GET` | `/api/services/notes` | Public | Fetch vehicle category guidelines (Sedan, KDH Van, High Roof, Mini Coach) with pax/luggage capacities |
-| `POST` | `/api/services/notes` | `x-admin-key` | Create or update vehicle guideline notes |
-| `GET` | `/api/tourservice` | Public | Retrieve supplementary service rules and bilingual guidelines |
+| `POST` | `/api/services/notes` | `AdminAuthGuard` | Create or update vehicle guideline notes |
+
+---
 
 ### Tour Packages & Catalog (`/api/addpackages`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
-| `POST` | `/api/addpackages` | `x-admin-key` | Create a new tour package with multipart image upload & pricing config |
+| `POST` | `/api/addpackages` | `AdminAuthGuard` | Create a new tour package with multipart image upload & pricing config |
 | `GET` | `/api/addpackages` | Public | List all package items (localized title with `?lang=`) |
 | `GET` | `/api/addpackages/oneday` | Public | Paginated list of one-day tour summaries (`?page=1&limit=5&lang=en`) |
 | `GET` | `/api/addpackages/multiday`| Public | Paginated list of multi-day tour summaries (`?page=1&limit=5&lang=en`) |
 | `GET` | `/api/addpackages/:slug` | Public / Admin | Fetch package by slug (returns localized if `?lang=` supplied, raw if omitted) |
-| `PATCH` | `/api/addpackages/:slug` | `x-admin-key` | Text-only & pricing update without re-uploading images |
-| `DELETE` | `/api/addpackages/:slug`| `x-admin-key` | Delete a tour package by slug |
+| `PATCH` | `/api/addpackages/:slug` | `AdminAuthGuard` | Text-only & pricing update without re-uploading images |
+| `DELETE` | `/api/addpackages/:slug`| `AdminAuthGuard` | Delete a tour package by slug |
 | `POST` | `/api/addpackages/:packageId/like` | User | Toggle like / unlike for a user on a tour package |
 
+---
+
 ### Availability Calendar (`/api/availability`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `GET` | `/api/availability` | Public / Admin | Fetch availability (raw for admin, localized with `?lang=en`) |
 | `GET` | `/api/availability/client` | Public | Explicit client UI endpoint with single-language resolution |
 | `POST` | `/api/availability` | `x-admin-key` | Update blackout dates, color tags, and closure notes |
 
+---
+
 ### Destinations Guide (`/api/destinations`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `GET` | `/api/destinations/previews` | Public | Fetch lightweight destination cards for UI carousels |
 | `GET` | `/api/destinations/map` | Public | Fetch coordinate points (`lat`, `lng`) for interactive maps |
 | `GET` | `/api/destinations/slug/:slug` | Public | Fetch full destination detail by slug |
-| `POST` | `/api/destinations` | `x-admin-key` | Create a new destination entry |
-| `DELETE` | `/api/destinations/:id` | `x-admin-key` | Remove a destination entry |
+| `POST` | `/api/destinations` | `AdminAuthGuard` | Create a new destination entry |
+| `DELETE` | `/api/destinations/:id` | `AdminAuthGuard` | Remove a destination entry |
+
+---
 
 ### Tour Bookings (`/api/package-bookings`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
-| `POST` | `/api/package-bookings` | Public | Submit customer tour booking reservation |
-| `GET` | `/api/package-bookings` | `x-admin-key` | Retrieve all customer bookings |
-| `PATCH` | `/api/package-bookings/:id/status` | `x-admin-key` | Update booking status (`pending`, `confirmed`, `completed`, `cancelled`) |
-| `DELETE` | `/api/package-bookings/:id` | `x-admin-key` | Remove a booking record |
+| `POST` | `/api/package-bookings` | Public / Susp. Guard | Submit tour reservation (anti-tamper price check; rejects suspended customers; supports guest bookings) |
+| `GET` | `/api/package-bookings` | `AdminAuthGuard` | Retrieve all customer bookings |
+| `PATCH` | `/api/package-bookings/:id/status` | `AdminAuthGuard` | Update booking status (`pending`, `confirmed`, `completed`, `cancelled`) |
+| `DELETE` | `/api/package-bookings/:id` | `AdminAuthGuard` | Remove a booking record |
+
+---
 
 ### Travel Blogs (`/api/blogs`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `GET` | `/api/blogs/previews` | Public | Fetch blog card previews with localized titles and summaries |
 | `GET` | `/api/blogs/slug/:slug` | Public | Fetch full blog post by slug |
-| `POST` | `/api/blogs` | `x-admin-key` | Publish a new blog post |
-| `PATCH` | `/api/blogs/:id` | `x-admin-key` | Update an existing blog post |
-| `DELETE` | `/api/blogs/:id` | `x-admin-key` | Delete a blog post |
+| `POST` | `/api/blogs` | `AdminAuthGuard` | Publish a new blog post |
+| `PATCH` | `/api/blogs/:id` | `AdminAuthGuard` | Update an existing blog post |
+| `DELETE` | `/api/blogs/:id` | `AdminAuthGuard` | Delete a blog post |
 | `POST` | `/api/blogs/view` | User | Check user like status and fetch blog detail |
 
-### Legal Documents (`/api/legaldocs` & `/api/legal-docs`)
+---
+
+### Comments & Reviews (`/api/comments` & `/api/package-reviews`)
+
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/comments` | Public | Fetch approved comments & rating statistics |
+| `POST` | `/api/comments` | `JwtAuthGuard` | Post user review/feedback (verifies caller suspension status) |
+| `PATCH` | `/api/comments/:id/reply` | `AdminAuthGuard` | Admin reply to customer feedback |
+| `DELETE` | `/api/comments/:id` | `AdminAuthGuard` | Delete a comment card |
+| `GET` | `/api/package-reviews` | Public | List all package reviews |
+| `POST` | `/api/package-reviews` | Public / Susp. Guard | Post package review with multi-image upload (checks caller suspension status) |
+
+---
+
+### Legal Documents (`/api/legaldocs`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `GET` | `/api/legaldocs/client` | Public | Fetch all legal docs resolved to requested language |
 | `GET` | `/api/legaldocs/client/:id` | Public | Fetch single legal doc (e.g. `terms`, `privacy`) by language |
-| `GET` | `/api/legaldocs` | `x-admin-key` | Fetch raw multilingual legal docs for admin editing |
-| `GET` | `/api/legaldocs/:id` | `x-admin-key` | Fetch raw legal doc by ID |
-| `POST` | `/api/legaldocs` | `x-admin-key` | Create or upsert legal doc |
-| `PATCH` | `/api/legaldocs/:id` | `x-admin-key` | Update legal doc contents |
-| `DELETE` | `/api/legaldocs/:id` | `x-admin-key` | Delete a legal doc |
+| `GET` | `/api/legaldocs` | `AdminAuthGuard` | Fetch raw multilingual legal docs for admin editing |
+| `POST` | `/api/legaldocs` | `AdminAuthGuard` | Create or upsert legal doc |
+| `PATCH` | `/api/legaldocs/:id` | `AdminAuthGuard` | Update legal doc contents |
+| `DELETE` | `/api/legaldocs/:id` | `AdminAuthGuard` | Delete a legal doc |
 
-### Media Uploads (`/api/uploads`)
+---
+
+### Media Uploads & Storage (`/api/uploads`)
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
-| `POST` | `/api/uploads/single` | `x-admin-key` | Upload single image to Cloudflare R2 |
-| `POST` | `/api/uploads/batch` | `x-admin-key` | Batch upload up to 10 images with optional folder tag |
+| `POST` | `/api/uploads/single` | `x-admin-key` / Guard | Upload single image to Cloudflare R2 |
+| `POST` | `/api/uploads/batch` | `x-admin-key` / Guard | Batch upload up to 10 images with optional folder tag |
+
+---
 
 ### Inquiries, Feedback & System
+
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `POST` | `/api/contacts` | Public | Submit contact / inquiry form |
-| `GET` | `/api/contacts` | `x-admin-key` | List all inquiries |
+| `GET` | `/api/contacts` | `AdminAuthGuard` | List all inquiries |
 | `POST` | `/api/cookies/consent` | Public | Record visitor cookie preference choices |
 | `POST` | `/api/newsletter` | Public | Subscribe email address to tour updates |
 | `GET` | `/api/faqs` | Public | Retrieve categorized FAQs |
@@ -331,10 +483,13 @@ Unified management for private bespoke travel experiences:
 | **Runtime & Language** | Node.js `>= 18.x / 20.x`, TypeScript `5.7+` |
 | **Database** | PostgreSQL 16 (Supabase Transaction Pooler) |
 | **ORM & Migrations** | Drizzle ORM `0.45.2`, Drizzle Kit `0.31.10`, `postgres` (Postgres.js) |
-| **Object Storage** | Cloudflare R2 (AWS S3 SDK `@aws-sdk/client-s3`) |
+| **Object Storage** | Cloudflare R2 (AWS S3 SDK `@aws-sdk/client-s3`) + Automatic Asset Cleanup |
 | **Authentication & 2FA** | Dual Bearer Header + HttpOnly Cookie JWT, Bcrypt (factor 12), Native RFC 6238 TOTP Engine (Node `crypto`), `qrcode` |
+| **Access Control (RBAC)** | 10 Specialized Roles, NestJS Reflector Guards (`@Roles()`, `RolesGuard`) |
+| **Customer Security** | Zero-Trust Database Suspension Validation & Branded 6-char Reference IDs |
 | **Mailer** | Resend API Client (`resend`) |
 | **Validation** | `class-validator` `0.15.1`, `class-transformer` `0.5.1` |
+| **Testing** | Jest unit test suites for guards, utilities, and controllers |
 | **Deployment** | Vercel Serverless (`@vercel/node`) + Vercel Scheduled Crons |
 
 ---
@@ -363,16 +518,24 @@ ikisakitours-backend/
     │   ├── admin-auth.controller.ts       # Self-service endpoints & session routes
     │   ├── admin-auth.guard.ts            # Dual Bearer / HttpOnly cookie guard
     │   ├── admin-auth.module.ts
-    │   ├── admin-auth.service.ts          # Lockout logic, token rotation, bcrypt hashing
+    │   ├── admin-auth.service.ts          # Lockout logic, token rotation, R2 avatar cleanup
+    │   ├── roles.decorator.ts             # @Roles() metadata decorator
+    │   ├── roles.enum.ts                  # 10 Specialized Admin Roles definition
+    │   ├── roles.guard.ts                 # RBAC enforcement guard
     │   └── totp.util.ts                   # Zero-dependency native RFC 6238 TOTP engine
+    ├── admin-staff/                       # 10-Role Staff & Team Management Engine
+    │   ├── dto/                           # Create, Role, Status & Password DTOs
+    │   ├── admin-staff.controller.ts      # Staff CRUD endpoints protected by RBAC
+    │   ├── admin-staff.module.ts
+    │   └── admin-staff.service.ts         # Staff provisioning, session revocation, R2 purge
     ├── addpackages/                       # Tour packages, pricing tiers & itineraries
-    │   ├── dto/                           # Create, Response, Summary & Update DTOs
-    │   ├── addpackages.controller.ts
-    │   ├── addpackages.module.ts
-    │   └── addpackages.service.ts
     ├── availability/                      # Booking calendar & blackout date management
     ├── blogs/                             # Multilingual blog engine & likes
     ├── comments/                          # Feedback, reviews & admin replies
+    ├── common/                            # Shared utilities and helpers
+    │   └── utils/
+    │       ├── reference-id.util.ts       # Clean 6-char customer reference ID generator
+    │       └── reference-id.util.spec.ts  # Reference ID test suite
     ├── contacts/                          # Inquiry inbox & lead capture
     ├── cookies/                           # GDPR/ePrivacy cookie consent audit
     ├── cron/                              # Automated keep-alive maintenance controller
@@ -385,16 +548,28 @@ ikisakitours-backend/
     ├── faqs/                              # Categorized multilingual FAQ repository
     ├── legaldocs/                         # Dynamic legal CMS (Terms, Privacy, Policies)
     ├── newsletter/                        # Subscriber lead management
-    ├── packagebooking/                    # Reservation checkout & status lifecycle
+    ├── packagebooking/                    # Reservation checkout, anti-tamper price check
     ├── scripts/                           # Administrative provisioning scripts
     │   └── seed-admin.ts                  # Super Admin provisioning script
     ├── services/                          # Chauffeur hire, transfers & custom tour requests
     ├── servicepricing/                    # Charters, custom tours & transfer rate cards
-    ├── social-auth/                       # OAuth2 social sign-in providers
+    ├── social-auth/                       # OAuth2 social sign-in providers (Google, FB, IG)
     ├── tours/                             # Core tour catalog management
     ├── tourservice/                       # Supplementary travel service guidelines
     ├── uploads/                           # Cloudflare R2 media upload service
-    └── users/                             # Customer authentication, roles & profiles
+    │   ├── r2.provider.ts                 # S3Client dependency injection provider
+    │   ├── r2-delete.util.ts              # Resilient Cloudflare R2 asset purge utility
+    │   ├── uploads.controller.ts
+    │   ├── uploads.module.ts
+    │   └── uploads.service.ts
+    └── users/                             # Customer authentication, Zero-Trust suspension & profiles
+        ├── dto/                           # Customer registration, login & profile DTOs
+        ├── jwt-auth.guard.ts              # Real-time DB zero-trust suspension guard
+        ├── jwt-auth.guard.spec.ts         # Zero-trust suspension test suite
+        ├── admin-api-key.guard.ts         # Service key guard for admin customer updates
+        ├── users.controller.ts
+        ├── users.module.ts
+        └── users.service.ts               # Reference ID backfill & authentication handler
 ```
 
 </details>
@@ -427,7 +602,8 @@ Create `.env` in the root directory:
 | `DATABASE_URL` | Yes | PostgreSQL connection string (Supabase Transaction Pooler, port `5432` or `6543`) |
 | `DIRECT_URL` | Yes | Direct PostgreSQL connection string for Drizzle migrations |
 | `ADMIN_API_KEY` | Yes | Secret key required in the `x-admin-key` header for administrative endpoints |
-| `JWT_SECRET` | Yes | Secret key used to sign and verify JSON Web Tokens |
+| `ADMIN_JWT_SECRET` | Optional | Dedicated signing secret for admin authentication JWT tokens |
+| `JWT_SECRET` | Yes | Secret key used to sign and verify customer JSON Web Tokens |
 | `R2_ACCOUNT_ID` | Yes | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | Yes | Cloudflare R2 S3 Access Key ID |
 | `R2_SECRET_ACCESS_KEY`| Yes | Cloudflare R2 S3 Secret Access Key |
@@ -446,6 +622,7 @@ PORT=4000
 NODE_ENV=development
 
 ADMIN_API_KEY="your_secure_admin_api_key_here"
+ADMIN_JWT_SECRET="your_admin_jwt_secret_here"
 JWT_SECRET="your_jwt_secret_key_here"
 
 R2_ACCOUNT_ID="your_cloudflare_account_id"
@@ -474,6 +651,9 @@ npm run start:dev
 # Run strict TypeScript build
 npm run build
 
+# Run unit tests
+npm test
+
 # Start production server
 npm run start:prod
 ```
@@ -495,27 +675,38 @@ npx drizzle-kit push
 If your Supabase connection times out over the pooler, execute column and table updates directly in the **Supabase SQL Editor**:
 
 ```sql
--- 1. Admin Security & Audit Tables
+-- 1. Admin Users & 10-Role RBAC Columns
 CREATE TABLE IF NOT EXISTS "admin_users" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "email" varchar(255) NOT NULL UNIQUE,
   "password_hash" varchar(255) NOT NULL,
   "full_name" varchar(100) NOT NULL,
-  "role" varchar(50) DEFAULT 'ADMIN' NOT NULL,
+  "role" varchar(50) DEFAULT 'SUPER_ADMIN' NOT NULL,
   "avatar_url" text,
   "two_factor_secret" varchar(255),
   "is_two_factor_enabled" boolean DEFAULT false NOT NULL,
   "failed_login_attempts" integer DEFAULT 0 NOT NULL,
   "locked_until" timestamp,
-  "last_login_at" timestamp,
-  "last_login_ip" varchar(45),
+  "last_login_at" timestamp with time zone,
+  "last_login_ip" varchar(100),
   "is_active" boolean DEFAULT true NOT NULL,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL,
   "updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 
-ALTER TABLE "admin_users" ADD COLUMN IF NOT EXISTS "avatar_url" text;
+-- Ensure Staff RBAC columns exist
+ALTER TABLE public.admin_users
+  ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'SUPER_ADMIN' NOT NULL,
+  ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE NOT NULL,
+  ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS last_login_ip VARCHAR(100),
+  ADD COLUMN IF NOT EXISTS avatar_url text;
 
+-- 2. Customer Reference ID Column
+ALTER TABLE public.users
+  ADD COLUMN IF NOT EXISTS customer_reference_id VARCHAR(50) UNIQUE;
+
+-- 3. Sessions & Audit Logs
 CREATE TABLE IF NOT EXISTS "admin_sessions" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   "admin_id" uuid NOT NULL REFERENCES "admin_users"("id") ON DELETE CASCADE,
@@ -537,27 +728,6 @@ CREATE TABLE IF NOT EXISTS "admin_audit_logs" (
   "user_agent" text,
   "created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
-
--- 2. Tour Services (Chauffeur Hire, Airport Transfers & Custom Tours)
-CREATE TABLE IF NOT EXISTS "services" (
-  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  "service_type" varchar(50) NOT NULL,
-  "starting_price" numeric(10, 2),
-  "selected_price" numeric(10, 2),
-  "language" varchar(50) DEFAULT 'English',
-  "travelers" jsonb NOT NULL,
-  "customer_details" jsonb NOT NULL,
-  "status" varchar(50) DEFAULT 'pending' NOT NULL,
-  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-  "updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
-
--- 3. Pricing Configuration & Availability
-ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "pricing_config" jsonb;
-
-ALTER TABLE "availability" 
-ADD COLUMN IF NOT EXISTS "date_details" jsonb DEFAULT '{}'::jsonb NOT NULL,
-ADD COLUMN IF NOT EXISTS "closed_date_details" jsonb DEFAULT '[]'::jsonb NOT NULL;
 ```
 
 ### Provision Initial Super Admin Account
@@ -584,8 +754,12 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 ## Production Readiness Checklist
 
 - [x] NestJS `11.0.1` + TypeScript `5.7+` compilation verified with `0` errors (`npm run build`)
+- [x] 10-Role Staff Management & RBAC Access Control Engine (`/api/admin/staff`) live
 - [x] Enterprise Admin Security Engine: Bearer JWT + HttpOnly Cookies + Session Rotation live
 - [x] Zero-Dependency Native RFC 6238 TOTP 2FA Engine (100% immune to serverless ESM crashes)
+- [x] Automatic Cloudflare R2 Asset Lifecycle & Orphaned Avatar Purge live
+- [x] Zero-Trust Customer Account Suspension (`hasAccess`) with structured 403 `ACCOUNT_SUSPENDED` response
+- [x] Branded Customer Reference ID Generator (`IKISAKI-XXXXXX`) with auto-backfill live
 - [x] Admin self-service profile update (`fullName`, `avatarUrl`) and password change live
 - [x] Immutable security audit logging (`admin_audit_logs`) tracking all critical admin actions
 - [x] Private tour services engine for chauffeur charter, airport transfer, and custom tours live
@@ -596,6 +770,7 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 - [x] Cloudflare R2 S3-compatible single and batch image upload pipeline
 - [x] Dynamic CORS whitelist (`*.ikisakitours.com`, `*.vercel.app`, `localhost:3000`, `localhost:3001`)
 - [x] Automated 3-day keep-alive cron job configured to prevent Supabase pooler inactivity sleep
+- [x] All automated test suites passing (`npm test`)
 
 ---
 
@@ -608,14 +783,10 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 | **Engineered By** | **Pramod_Siriwardhana** & **Shehan_W** |
 | **License** | All rights reserved © 2026 Ikisaki Tours (Pvt) Ltd |
 | **Organization** | Ikisaki Tours (Pvt) Ltd |
-| **License** | All rights reserved © 2026 Ikisaki Tours (Pvt) Ltd |
 
 > [!IMPORTANT]
 > **Proprietary Software Notice:** This application and its source code are private, proprietary assets built exclusively for the internal operations of **Ikisaki Tours (Pvt) Ltd**. Unauthorized copying, modification, redistribution, or commercial use of any part of this repository without prior written consent is strictly prohibited.
 
-> [!NOTE]
-> **Copyright © 2026 Ikisaki Tours (Pvt) Ltd. All rights reserved.**  
-> This repository and its source code, design assets, and localization dictionaries are proprietary and confidential. Unauthorized copying, redistribution, modification, or commercial use is strictly prohibited without prior written consent from Ikisaki Tours (Pvt) Ltd. See [`LICENSE`](./LICENSE) for full terms.
 ---
 
 <div align="center">
