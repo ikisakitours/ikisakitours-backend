@@ -8,6 +8,7 @@ import { DestinationResponseDto } from './dto/destination-response.dto';
 import { DestinationPreviewResponseDto } from './dto/destination-preview-response.dto';
 import { DestinationMapResponseDto } from './dto/destination-map-response.dto';
 import { DestinationPackageResponseDto } from './dto/destination-package-response.dto';
+import { UpdateDestinationDto } from './dto/update-destination.dto';
 
 @Injectable()
 export class DestinationsService {
@@ -254,5 +255,38 @@ export class DestinationsService {
       id: dest.id,
       slug: dest.slug,
     }));
+  }
+
+  // ADMIN 2: Fetch a single raw multilingual destination by ID for the edit form
+  async findOneAdmin(id: string) {
+    const [destination] = await this.db
+      .select()
+      .from(schema.destinations)
+      .where(eq(schema.destinations.id, id))
+      .limit(1);
+
+    if (!destination) {
+      throw new NotFoundException(`Destination with ID ${id} not found`);
+    }
+
+    return destination;
+  }
+
+  // ADMIN 3: Update an existing destination by ID
+  async update(id: string, updateDto: UpdateDestinationDto) {
+    // First, verify the destination exists
+    await this.findOneAdmin(id);
+
+    // Perform the update in Drizzle
+    const [updatedDestination] = await this.db
+      .update(schema.destinations)
+      .set({
+        ...updateDto,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.destinations.id, id))
+      .returning();
+
+    return updatedDestination;
   }
 }

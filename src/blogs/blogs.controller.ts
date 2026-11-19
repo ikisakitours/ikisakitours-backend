@@ -13,6 +13,7 @@ import {
 import type { Request } from 'express';
 import { BlogsService } from './blogs.service';
 import { CreateBlogDto } from './dto/create-blog.dto';
+import { UpdateBlogDto } from './dto/update-blog.dto';
 import { BlogPreviewResponseDto } from './dto/blog-preview-response.dto';
 import { BlogResponseDto } from './dto/blog-response.dto';
 
@@ -26,10 +27,16 @@ export class BlogsController {
     return await this.blogsService.create(createDto);
   }
 
-  // --- ADMIN FETCH ALL BLOGS (Live + Hidden) ---
+  // ADMIN 1: Fetch all raw multilingual blogs for the admin list view (MUST be above :id)
   @Get('admin')
   async findAllAdmin() {
     return await this.blogsService.findAllAdmin();
+  }
+
+  // ADMIN 2: Fetch a single raw multilingual blog by ID to pre-fill the edit form (MUST be above :id)
+  @Get('admin/:id')
+  async findOneAdmin(@Param('id') id: string) {
+    return await this.blogsService.findOneAdmin(id);
   }
 
   // 2. Show small preview list for card design in frontend (Live only)
@@ -75,7 +82,7 @@ export class BlogsController {
   }
 
   //-----------------------------------------------
-  //test rotes for like button
+  // test routes for like button
   @Post('view')
   async getBlogWithUserCheck(
     @Body() body: { blogId: string; userId?: string },
@@ -90,10 +97,9 @@ export class BlogsController {
   async toggleLikeWithUser(@Body() body: { blogId: string; userId: string }) {
     return await this.blogsService.toggleLike(body.blogId, body.userId);
   }
-
   //------------------------------------------------
 
-  // 4. Detailed version for reading a single post by ID or Slug (Dynamic route MUST be last)
+  // 4. Detailed version for reading a single post by ID or Slug (Dynamic route MUST be last among GETs)
   @Get(':id')
   async findOne(
     @Param('id') id: string,
@@ -116,6 +122,15 @@ export class BlogsController {
       return await this.blogsService.findBySlug(id, lang, isAdmin);
     }
     return await this.blogsService.findOne(id);
+  }
+
+  // ADMIN 3: Update an existing blog post by ID
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateDto: UpdateBlogDto,
+  ) {
+    return await this.blogsService.update(id, updateDto);
   }
 
   // 5. Update likes count based on user action ('like' or 'unlike')

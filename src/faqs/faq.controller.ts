@@ -14,6 +14,7 @@ import {
 import { FaqService } from './faq.service';
 import { CreateFaqDto } from './dto/create-faq.dto';
 import { FaqResponseDto } from './dto/faq-response.dto';
+import { UpdateFaqDto } from './dto/update-faq.dto';
 
 @Controller('faqs')
 export class FaqController {
@@ -23,6 +24,12 @@ export class FaqController {
   @Get('admin')
   async findAllAdmin() {
     return await this.faqService.findAllAdmin();
+  }
+
+  // ADMIN: Get a single FAQ by ID with full raw multilingual objects
+  @Get('admin/:id')
+  async findOneAdmin(@Param('id') id: string) {
+    return await this.faqService.findOneRaw(id);
   }
 
   // PUBLIC: Get all live FAQs for the client-side app (WHERE isLive = true)
@@ -44,6 +51,14 @@ export class FaqController {
     @Body('isLive') isLive: boolean,
   ) {
     return await this.faqService.updateVisibility(id, isLive);
+  }
+
+  @Patch(':id')
+  async update(
+    @Param('id') id: string,
+    @Body() updateFaqDto: UpdateFaqDto,
+  ) {
+    return await this.faqService.update(id, updateFaqDto);
   }
 
   @Delete(':id')
