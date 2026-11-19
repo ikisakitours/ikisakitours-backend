@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -13,7 +18,9 @@ export class ContactsService {
   ) {}
 
   // Helper formatter to transform database row into your Response DTO structure
-  private toContactResponseDto(contact: typeof schema.contacts.$inferSelect): ContactResponseDto {
+  private toContactResponseDto(
+    contact: typeof schema.contacts.$inferSelect,
+  ): ContactResponseDto {
     return {
       id: contact.id,
       inquiryType: contact.inquiryType,
@@ -77,5 +84,37 @@ export class ContactsService {
     }
 
     return this.toContactResponseDto(contact);
+  }
+
+  // Update status (e.g. pending -> contacted -> completed)
+  async updateStatus(id: string, status: string): Promise<ContactResponseDto> {
+    const [updated] = await this.db
+      .update(schema.contacts)
+      .set({ status })
+      .where(eq(schema.contacts.id, id))
+      .returning();
+
+    if (!updated) {
+      throw new NotFoundException(`Contact inquiry with ID "${id}" not found`);
+    }
+
+    return this.toContactResponseDto(updated);
+  }
+
+  // Delete contact inquiry
+  async remove(id: string): Promise<{ success: boolean; message: string }> {
+    const [deleted] = await this.db
+      .delete(schema.contacts)
+      .where(eq(schema.contacts.id, id))
+      .returning();
+
+    if (!deleted) {
+      throw new NotFoundException(`Contact inquiry with ID "${id}" not found`);
+    }
+
+    return {
+      success: true,
+      message: `Contact inquiry with ID "${id}" deleted.`,
+    };
   }
 }

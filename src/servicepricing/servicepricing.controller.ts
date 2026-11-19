@@ -29,7 +29,10 @@ export class ServicePricingController {
     @Param('serviceType') serviceType: string,
     @Query('lang') lang: string = 'en',
   ): Promise<ClientServicePricingResponseDto> {
-    return await this.servicePricingService.getClientPricingByServiceType(serviceType, lang);
+    return await this.servicePricingService.getClientPricingByServiceType(
+      serviceType,
+      lang,
+    );
   }
 
   // =========================================================================
@@ -45,7 +48,9 @@ export class ServicePricingController {
   // 4. GET /service-pricing/:serviceType - Fetch specific pricing by service type
   @Get(':serviceType')
   async getPricingByServiceType(@Param('serviceType') serviceType: string) {
-    return await this.servicePricingService.getPricingByServiceType(serviceType);
+    return await this.servicePricingService.getPricingByServiceType(
+      serviceType,
+    );
   }
 
   // 5. POST /service-pricing - Create or upsert pricing record

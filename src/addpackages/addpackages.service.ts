@@ -3,7 +3,8 @@ import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, count, sql, and, inArray } from 'drizzle-orm';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
-import { AddPackageResponseDto } from './dto/addpackage-response.dto'; import { CreateAddPackageDto } from './dto/create-addpackage.dto';
+import { AddPackageResponseDto } from './dto/addpackage-response.dto';
+import { CreateAddPackageDto } from './dto/create-addpackage.dto';
 import { PackageResponseDto, PackageType } from './dto/PackageResponse.dto';
 import { UploadsService } from '../uploads/uploads.service';
 import { PackageSummaryResponseDto } from './dto/package-summary-response.dto';
@@ -14,7 +15,7 @@ export class AddpackagesService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly uploadsService: UploadsService,
-  ) { }
+  ) {}
 
   // --- POST /addpackages -> Returns AddPackageResponseDto ---
   async create(
@@ -22,13 +23,20 @@ export class AddpackagesService {
     images: Express.Multer.File[],
   ): Promise<AddPackageResponseDto> {
     // 1. Upload all images first, get back the array of URLs
-    const gallery = await this.uploadsService.uploadMultiple(images, 'package-images');
+    const gallery = await this.uploadsService.uploadMultiple(
+      images,
+      'package-images',
+    );
 
     // 2. Ensure JSONB fields are plain JavaScript objects
     const plainDestinations = JSON.parse(JSON.stringify(dto.destinations));
-    const plainActivityDetails = JSON.parse(JSON.stringify(dto.activityDetails));
+    const plainActivityDetails = JSON.parse(
+      JSON.stringify(dto.activityDetails),
+    );
     const plainItinerary = JSON.parse(JSON.stringify(dto.itinerary));
-    const plainPricingConfig = dto.pricingConfig ? JSON.parse(JSON.stringify(dto.pricingConfig)) : null;
+    const plainPricingConfig = dto.pricingConfig
+      ? JSON.parse(JSON.stringify(dto.pricingConfig))
+      : null;
 
     // 3. Insert into database using unified jsonb fields
     const [newPackage] = await this.db
@@ -71,35 +79,43 @@ export class AddpackagesService {
     return {
       id: newPackage.id,
       slug: newPackage.slug,
-      message: "Package created successfully!",
+      message: 'Package created successfully!',
       createdAt: newPackage.createdAt,
     };
   }
 
   // --- GET /addpackages -> Returns minimal admin list ---
-  async findAll(lang: string = 'en'): Promise<PackageListItemDto[]> {
-    const records = await this.db
+  async findAll(
+    lang: string = 'en',
+    onlyLive: boolean = false,
+  ): Promise<PackageListItemDto[]> {
+    const query = this.db
       .select({
         id: schema.packages.id,
         slug: schema.packages.slug,
         title: schema.packages.title,
         type: schema.packages.type,
+        isLive: schema.packages.isLive,
       })
-      .from(schema.packages)
-      .orderBy(desc(schema.packages.createdAt));
+      .from(schema.packages);
 
-    // If your PackageListItemDto expects a string title for the requested language, 
-    // you can map it like this:
+    const records = onlyLive
+      ? await query
+          .where(eq(schema.packages.isLive, true))
+          .orderBy(desc(schema.packages.createdAt))
+      : await query.orderBy(desc(schema.packages.createdAt));
+
     return records.map((record) => ({
       id: record.id,
       slug: record.slug,
       type: record.type,
-      title: (record.title as Record<string, string>)?.[lang] || (record.title as Record<string, string>)?.['en'] || '',
+      isLive: record.isLive,
+      title: record.title?.[lang] || record.title?.['en'] || '',
     }));
   }
 
   // --- GET /addpackages/:slug -> Returns PackageResponseDto ---
-  async findOne(slug: string, lang?: string) {
+  async findOne(slug: string, lang?: string, isAdmin: boolean = false) {
     const [pkg] = await this.db
       .select()
       .from(schema.packages)
@@ -107,6 +123,10 @@ export class AddpackagesService {
       .limit(1);
 
     if (!pkg) {
+      throw new NotFoundException(`Package with slug "${slug}" not found`);
+    }
+
+    if (!isAdmin && pkg.isLive === false) {
       throw new NotFoundException(`Package with slug "${slug}" not found`);
     }
 
@@ -119,6 +139,20 @@ export class AddpackagesService {
     return pkg;
   }
 
+  // --- TOGGLE VISIBILITY ---
+  async updateVisibility(slug: string, isLive: boolean) {
+    const [updated] = await this.db
+      .update(schema.packages)
+      .set({ isLive, updatedAt: new Date() })
+      .where(eq(schema.packages.slug, slug))
+      .returning();
+
+    if (!updated) {
+      throw new NotFoundException(`Package with slug "${slug}" not found`);
+    }
+
+    return updated;
+  }
 
   //update text only
   async updateTextOnly(
@@ -139,8 +173,14 @@ export class AddpackagesService {
         duration: dto.duration ?? existing.duration,
         badge: dto.badge ?? existing.badge,
         slug: dto.slug ?? existing.slug,
-        price: dto.price !== undefined ? dto.price.toString() : existing.price.toString(),
-        discount: dto.discount !== undefined ? dto.discount.toString() : (existing.discount ?? 0).toString(),
+        price:
+          dto.price !== undefined
+            ? dto.price.toString()
+            : existing.price.toString(),
+        discount:
+          dto.discount !== undefined
+            ? dto.discount.toString()
+            : (existing.discount ?? 0).toString(),
         provider: dto.provider ?? existing.provider,
 
         // ── Multilingual JSONB Text Fields ──
@@ -156,12 +196,21 @@ export class AddpackagesService {
         excludes: dto.excludes ?? existing.excludes,
 
         // ── Complex JSONB Structures ──
-        activityDetails: dto.activityDetails ? JSON.parse(JSON.stringify(dto.activityDetails)) : existing.activityDetails,
-        itinerary: dto.itinerary ? JSON.parse(JSON.stringify(dto.itinerary)) : existing.itinerary,
-        destinations: dto.destinations ? JSON.parse(JSON.stringify(dto.destinations)) : existing.destinations,
-        pricingConfig: dto.pricingConfig !== undefined
-          ? (dto.pricingConfig ? JSON.parse(JSON.stringify(dto.pricingConfig)) : null)
-          : existing.pricingConfig,
+        activityDetails: dto.activityDetails
+          ? JSON.parse(JSON.stringify(dto.activityDetails))
+          : existing.activityDetails,
+        itinerary: dto.itinerary
+          ? JSON.parse(JSON.stringify(dto.itinerary))
+          : existing.itinerary,
+        destinations: dto.destinations
+          ? JSON.parse(JSON.stringify(dto.destinations))
+          : existing.destinations,
+        pricingConfig:
+          dto.pricingConfig !== undefined
+            ? dto.pricingConfig
+              ? JSON.parse(JSON.stringify(dto.pricingConfig))
+              : null
+            : existing.pricingConfig,
 
         updatedAt: new Date(),
       })
@@ -175,12 +224,10 @@ export class AddpackagesService {
   async remove(slug: string): Promise<{ success: boolean; message: string }> {
     const existing = await this.findOne(slug);
 
-    await this.db
-      .delete(schema.packages)
-      .where(eq(schema.packages.slug, slug));
+    await this.db.delete(schema.packages).where(eq(schema.packages.slug, slug));
 
     // Extract title for the message using the dictionary (falling back to English or empty string)
-    const titleObj = (existing.title as Record<string, string>) || {};
+    const titleObj = existing.title || {};
     const displayTitle = titleObj['en'] || Object.values(titleObj)[0] || slug;
 
     return {
@@ -195,14 +242,23 @@ export class AddpackagesService {
     limit: number = 5,
     packageType: string,
     lang: string = 'en',
-  ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
+  ): Promise<{
+    data: PackageSummaryResponseDto[];
+    totalCount: number;
+    hasMore: boolean;
+  }> {
     const offset = (page - 1) * limit;
 
     // 1. Fetch total count of packages for this specific type
     const [{ total }] = await this.db
       .select({ total: count() })
       .from(schema.packages)
-      .where(eq(schema.packages.type, packageType));
+      .where(
+        and(
+          eq(schema.packages.type, packageType),
+          eq(schema.packages.isLive, true),
+        ),
+      );
 
     const totalCount = Number(total);
 
@@ -210,7 +266,12 @@ export class AddpackagesService {
     const records = await this.db
       .select()
       .from(schema.packages)
-      .where(eq(schema.packages.type, packageType))
+      .where(
+        and(
+          eq(schema.packages.type, packageType),
+          eq(schema.packages.isLive, true),
+        ),
+      )
       .limit(limit)
       .offset(offset)
       .orderBy(desc(schema.packages.createdAt));
@@ -243,7 +304,9 @@ export class AddpackagesService {
       // Helper function to extract text for the specific language with fallback to 'en'
       const getLocalizedField = (fieldObj: Record<string, string> | null) => {
         if (!fieldObj) return '';
-        return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || '';
+        return (
+          fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || ''
+        );
       };
 
       return {
@@ -273,7 +336,10 @@ export class AddpackagesService {
   }
 
   //check the user like already
-  async hasLiked(packageId: string, userId: string): Promise<{ liked: boolean }> {
+  async hasLiked(
+    packageId: string,
+    userId: string,
+  ): Promise<{ liked: boolean }> {
     const existing = await this.db.query.packageLikes.findFirst({
       where: and(
         eq(schema.packageLikes.packageId, packageId),
@@ -284,7 +350,6 @@ export class AddpackagesService {
 
     return { liked: !!existing };
   }
-
 
   //like button
   async toggleLike(packageId: string, userId: string) {
@@ -298,9 +363,12 @@ export class AddpackagesService {
 
       if (existingLike) {
         // --- UNLIKE: Remove the record and decrement likes count ---
-        await tx.delete(schema.packageLikes).where(eq(schema.packageLikes.id, existingLike.id));
+        await tx
+          .delete(schema.packageLikes)
+          .where(eq(schema.packageLikes.id, existingLike.id));
 
-        await tx.update(schema.packages)
+        await tx
+          .update(schema.packages)
           .set({ likes: sql`${schema.packages.likes} - 1` }) // FIXED: added missing minus sign
           .where(eq(schema.packages.id, packageId));
 
@@ -312,7 +380,8 @@ export class AddpackagesService {
           userId,
         });
 
-        await tx.update(schema.packages)
+        await tx
+          .update(schema.packages)
           .set({ likes: sql`${schema.packages.likes} + 1` })
           .where(eq(schema.packages.id, packageId));
 
@@ -321,24 +390,31 @@ export class AddpackagesService {
     });
   }
 
-
   // Helper method for mapping database values to PackageResponseDto
-  private mapToPackageResponseDto(pkg: any, lang: string = 'en'): PackageResponseDto {
+  private mapToPackageResponseDto(
+    pkg: any,
+    lang: string = 'en',
+  ): PackageResponseDto {
     const getLocalizedField = (fieldObj: Record<string, string> | null) => {
       if (!fieldObj) return '';
       if (typeof fieldObj === 'string') return fieldObj;
-      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || '';
+      return (
+        fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || ''
+      );
     };
 
     const getLocalizedArray = (fieldObj: Record<string, string[]> | null) => {
       if (!fieldObj) return [];
       if (Array.isArray(fieldObj)) return fieldObj;
-      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || [];
+      return (
+        fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || []
+      );
     };
 
     const getLocalizedList = (fieldObj: any): string[] => {
       if (!fieldObj) return [];
-      const val = fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0];
+      const val =
+        fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0];
       if (Array.isArray(val)) return val;
       if (typeof val === 'string' && val.trim() !== '') return [val];
       return [];
@@ -351,7 +427,7 @@ export class AddpackagesService {
       category: getLocalizedField(pkg.category) as any,
       origin: getLocalizedField(pkg.origin) as any,
       duration: getLocalizedField(pkg.duration) as any,
-      badge: getLocalizedField(pkg.badge) as any,
+      badge: getLocalizedField(pkg.badge),
 
       // Localized Multilingual JSONB Text Fields
       title: getLocalizedField(pkg.title) as any,
@@ -369,7 +445,7 @@ export class AddpackagesService {
       activityDetails: (pkg.activityDetails || []).map((detail: any) => ({
         title: getLocalizedField(detail.title),
         description: getLocalizedField(detail.description),
-      })) as any,
+      })),
 
       itinerary: (pkg.itinerary || []).map((item: any) => ({
         day: item.day,
@@ -384,7 +460,7 @@ export class AddpackagesService {
         activities: getLocalizedArray(item.activities),
         meals: getLocalizedList(item.meals),
         accommodation: getLocalizedList(item.accommodation),
-      })) as any,
+      })),
 
       destinations: (pkg.destinations || []).map((dest: any) => ({
         id: dest.id,
@@ -393,7 +469,7 @@ export class AddpackagesService {
         summary: getLocalizedField(dest.summary),
         heroImage: dest.heroImage,
         coordinates: dest.coordinates,
-      })) as any,
+      })),
 
       // Shared fields & complex jsonb structures
       price: Number(pkg.price),
@@ -404,6 +480,6 @@ export class AddpackagesService {
       likes: pkg.likes ?? 0,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
-    } as unknown as PackageResponseDto;
+    };
   }
 }

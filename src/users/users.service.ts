@@ -1,4 +1,11 @@
-import { Injectable, Inject, ConflictException, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  ConflictException,
+  UnauthorizedException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
@@ -33,7 +40,7 @@ export class UsersService {
     private readonly jwtService: JwtService,
     private readonly uploadsService: UploadsService,
     private readonly emailService: EmailService,
-  ) { }
+  ) {}
 
   private toUserResponseDto(user: User): UserResponseDto {
     return {
@@ -103,17 +110,23 @@ export class UsersService {
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
     // ─── NEW ADDITION: Check if user is blocked (hasAccess is false) ───
-    // If the user's account has been blocked or access is revoked, 
+    // If the user's account has been blocked or access is revoked,
     // reject the login attempt and send an "Access denied" response.
     if (!user.hasAccess) {
       throw new UnauthorizedException('Access denied');
     }
 
     if (!user.passwordHash) {
-      throw new UnauthorizedException('This account uses social login. Please log in with Google or Instagram.');
+      throw new UnauthorizedException(
+        'This account uses social login. Please log in with Google or Instagram.',
+      );
     }
-    const isPasswordValid = await bcrypt.compare(loginDto.password, user.passwordHash);
-    if (!isPasswordValid) throw new UnauthorizedException('Invalid credentials');
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid)
+      throw new UnauthorizedException('Invalid credentials');
 
     const isLongSession = Boolean(loginDto.staySignedIn);
 
@@ -215,23 +228,30 @@ export class UsersService {
     // Verify password using bcrypt (just like login)
     if (payloadDto.deleteMethod === 'password') {
       if (!user.passwordHash) {
-        throw new UnauthorizedException('Social login accounts do not have a password. Please use the text confirmation method instead.');
+        throw new UnauthorizedException(
+          'Social login accounts do not have a password. Please use the text confirmation method instead.',
+        );
       }
 
-      const isPasswordValid = await bcrypt.compare(payloadDto.value, user.passwordHash);
+      const isPasswordValid = await bcrypt.compare(
+        payloadDto.value,
+        user.passwordHash,
+      );
       if (!isPasswordValid) {
-        throw new UnauthorizedException('Incorrect password. Account deletion failed.');
+        throw new UnauthorizedException(
+          'Incorrect password. Account deletion failed.',
+        );
       }
     } else if (payloadDto.deleteMethod === 'text') {
       if (payloadDto.value !== 'DELETE') {
-        throw new UnauthorizedException('Confirmation text does not match. Type DELETE to confirm.');
+        throw new UnauthorizedException(
+          'Confirmation text does not match. Type DELETE to confirm.',
+        );
       }
     }
 
     // Delete user from database
-    await this.db
-      .delete(schema.users)
-      .where(eq(schema.users.id, userId));
+    await this.db.delete(schema.users).where(eq(schema.users.id, userId));
 
     return { message: 'Account deleted successfully' };
   }
@@ -263,7 +283,6 @@ export class UsersService {
     return updatedUser;
   }
 
-
   //---------------------
   //forget password methods
   // 1. Forgot Password: Generate OTP and send email
@@ -277,7 +296,9 @@ export class UsersService {
 
     // Security practice: Always return success even if email doesn't exist
     if (!user) {
-      return { message: 'If an account with that email exists, an OTP has been sent.' };
+      return {
+        message: 'If an account with that email exists, an OTP has been sent.',
+      };
     }
 
     // Generate a random 6-digit OTP code
@@ -301,7 +322,9 @@ export class UsersService {
     // Send the email via Resend
     await this.emailService.sendOtpEmail(email, otp);
 
-    return { message: 'If an account with that email exists, an OTP has been sent.' };
+    return {
+      message: 'If an account with that email exists, an OTP has been sent.',
+    };
   }
 
   // 2. Reset Password: Verify OTP and update password
@@ -343,9 +366,10 @@ export class UsersService {
       .delete(schema.passwordResets)
       .where(eq(schema.passwordResets.email, email));
 
-    return { message: 'Password has been successfully reset. You can now log in.' };
+    return {
+      message: 'Password has been successfully reset. You can now log in.',
+    };
   }
-
 
   //password update
   async updateProfilePassword(dto: UpdatePasswordDto) {
@@ -363,7 +387,10 @@ export class UsersService {
     }
 
     // 2. Verify that the provided current password matches the database record
-    const isPasswordValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    const isPasswordValid = await bcrypt.compare(
+      currentPassword,
+      user.passwordHash,
+    );
     if (!isPasswordValid) {
       throw new BadRequestException('Incorrect current password');
     }
@@ -371,7 +398,9 @@ export class UsersService {
     // 3. Ensure the new password is NOT the same as the current password
     const isSamePassword = await bcrypt.compare(newPassword, user.passwordHash);
     if (isSamePassword) {
-      throw new BadRequestException('New password cannot be the same as your current password');
+      throw new BadRequestException(
+        'New password cannot be the same as your current password',
+      );
     }
 
     // 4. Hash the new password securely

@@ -21,12 +21,13 @@ import { PackageBookingModule } from './packagebooking/packagebooking.module';
 import { EmailModule } from './email/email.module';
 import { ServicePricingModule } from './servicepricing/servicepricing.module';
 import { LegalDocsModule } from './legaldocs/legaldocs.module';
+import { AdminAuthModule } from './admin-auth/admin-auth.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    UsersModule, 
-    ToursModule, 
+    UsersModule,
+    ToursModule,
     CommentsModule,
     ContactsModule,
     AddpackagesModule,
@@ -42,7 +43,8 @@ import { LegalDocsModule } from './legaldocs/legaldocs.module';
     PackageBookingModule,
     EmailModule,
     ServicePricingModule,
-    LegalDocsModule
+    LegalDocsModule,
+    AdminAuthModule,
   ],
   controllers: [AppController, CronController],
   providers: [AppService],

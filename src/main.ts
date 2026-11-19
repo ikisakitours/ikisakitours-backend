@@ -27,16 +27,24 @@ async function bootstrap() {
         process.env.ADMINPANEL_URL,
       ].filter(Boolean) as string[];
 
-      if (allowedOrigins.includes(origin) || 
+      if (
+        allowedOrigins.includes(origin) ||
         origin.endsWith('.ikisakitours.com') ||
-        origin.endsWith('.vercel.app')) {
+        origin.endsWith('.vercel.app')
+      ) {
         return callback(null, true);
       }
 
       return callback(new Error('Blocked by CORS policy'));
     },
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'X-Requested-With', 'x-admin-key',],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-Requested-With',
+      'x-admin-key',
+    ],
     credentials: true,
     preflightContinue: false,
     optionsSuccessStatus: 204,

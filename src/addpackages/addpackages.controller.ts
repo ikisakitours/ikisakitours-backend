@@ -1,4 +1,18 @@
-import { Controller, Post, Patch, Delete, Body, Get, Param, Query, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Patch,
+  Delete,
+  Body,
+  Get,
+  Param,
+  Query,
+  UseInterceptors,
+  UploadedFiles,
+  Headers,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
 import { AddpackagesService } from './addpackages.service';
 import { CreateAddPackageDto } from './dto/create-addpackage.dto';
 import { AddPackageResponseDto } from './dto/addpackage-response.dto';
@@ -12,9 +26,9 @@ export enum PackageType {
   MULTI_DAY = 'multiday',
 }
 
-@Controller('addpackages')
+@Controller(['packages', 'addpackages'])
 export class AddpackagesController {
-  constructor(private readonly addpackagesService: AddpackagesService) { }
+  constructor(private readonly addpackagesService: AddpackagesService) {}
 
   @Post()
   @UseInterceptors(FilesInterceptor('images', 10))
@@ -30,12 +44,37 @@ export class AddpackagesController {
   // 1. STATIC & GENERAL GET ROUTES (MUST BE FIRST)
   // ==========================================
 
-  // --- FIND ALL PACKAGES ---
+  // --- ADMIN FETCH ALL PACKAGES (Live + Hidden) ---
+  @Get('admin')
+  async findAllAdmin(
+    @Query('lang') lang: string = 'en',
+  ): Promise<PackageListItemDto[]> {
+    return await this.addpackagesService.findAll(lang, false);
+  }
+
+  // --- FIND PACKAGES (Public filters WHERE isLive = true, Admin sees all) ---
   @Get()
   async findAll(
     @Query('lang') lang: string = 'en',
+    @Headers('x-admin-key') adminKey?: string,
+    @Req() req?: Request,
   ): Promise<PackageListItemDto[]> {
-    return await this.addpackagesService.findAll(lang);
+    const isAdmin = Boolean(
+      (adminKey &&
+        process.env.ADMIN_API_KEY &&
+        adminKey === process.env.ADMIN_API_KEY) ||
+      req?.cookies?.['admin_session'] ||
+      req?.originalUrl?.includes('/addpackages'),
+    );
+    return await this.addpackagesService.findAll(lang, !isAdmin);
+  }
+
+  // --- PREVIEWS ROUTE (Live only) ---
+  @Get('previews')
+  async findPreviews(
+    @Query('lang') lang: string = 'en',
+  ): Promise<PackageListItemDto[]> {
+    return await this.addpackagesService.findAll(lang, true);
   }
 
   // --- ONE DAY SUMMARIES ROUTE ---
@@ -44,10 +83,19 @@ export class AddpackagesController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '5',
     @Query('lang') lang: string = 'en',
-  ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
+  ): Promise<{
+    data: PackageSummaryResponseDto[];
+    totalCount: number;
+    hasMore: boolean;
+  }> {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 5);
-    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'oneday', lang);
+    return await this.addpackagesService.findSummariesPaginated(
+      pageNum,
+      limitNum,
+      'oneday',
+      lang,
+    );
   }
 
   // --- MULTI DAY SUMMARIES ROUTE ---
@@ -56,25 +104,50 @@ export class AddpackagesController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '5',
     @Query('lang') lang: string = 'en',
-  ): Promise<{ data: PackageSummaryResponseDto[]; totalCount: number; hasMore: boolean }> {
+  ): Promise<{
+    data: PackageSummaryResponseDto[];
+    totalCount: number;
+    hasMore: boolean;
+  }> {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.max(1, parseInt(limit, 10) || 5);
-    return await this.addpackagesService.findSummariesPaginated(pageNum, limitNum, 'multiday', lang);
+    return await this.addpackagesService.findSummariesPaginated(
+      pageNum,
+      limitNum,
+      'multiday',
+      lang,
+    );
   }
 
   // ==========================================
   // 2. DYNAMIC PARAMETER ROUTES (MUST BE LAST)
   // ==========================================
 
+  // --- TOGGLE VISIBILITY (isLive) ---
+  @Patch(':slug/visibility')
+  async updateVisibility(
+    @Param('slug') slug: string,
+    @Body('isLive') isLive: boolean,
+  ) {
+    return await this.addpackagesService.updateVisibility(slug, isLive);
+  }
+
   // --- FIND ONE PACKAGE BY SLUG ---
   @Get(':slug')
   async findOne(
     @Param('slug') slug: string,
     @Query('lang') lang?: string,
+    @Headers('x-admin-key') adminKey?: string,
+    @Req() req?: Request,
   ) {
-    return await this.addpackagesService.findOne(slug, lang);
+    const isAdmin = Boolean(
+      (adminKey &&
+        process.env.ADMIN_API_KEY &&
+        adminKey === process.env.ADMIN_API_KEY) ||
+      req?.cookies?.['admin_session'],
+    );
+    return await this.addpackagesService.findOne(slug, lang, isAdmin);
   }
-
 
   // --- TEXT-ONLY UPDATE BY SLUG ---
   @Patch(':slug')

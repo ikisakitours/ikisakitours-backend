@@ -1,8 +1,10 @@
 import { IsNotEmpty, IsString, IsIn } from 'class-validator';
 
 export class DeleteAccountDto {
- @IsString()
-  @IsIn(['password', 'text'], { message: 'deleteMethod must be either password or text' })
+  @IsString()
+  @IsIn(['password', 'text'], {
+    message: 'deleteMethod must be either password or text',
+  })
   deleteMethod!: 'password' | 'text';
 
   @IsString()

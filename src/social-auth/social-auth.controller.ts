@@ -1,4 +1,12 @@
-import { Controller, Get, Req, Res, UseGuards,ExecutionContext, Injectable } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Req,
+  Res,
+  UseGuards,
+  ExecutionContext,
+  Injectable,
+} from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import express from 'express';
 import { SocialAuthService } from './social-auth.service';
@@ -7,7 +15,7 @@ import { SocialAuthService } from './social-auth.service';
 export class GoogleOAuthGuard extends AuthGuard('google') {
   getAuthenticateOptions(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
-    return { state: req.query.state }; 
+    return { state: req.query.state };
   }
 }
 
@@ -28,7 +36,7 @@ export class InstagramOAuthGuard extends AuthGuard('instagram') {
 
 @Controller('social-auth')
 export class SocialAuthController {
-  constructor(private readonly socialAuthService: SocialAuthService) { }
+  constructor(private readonly socialAuthService: SocialAuthService) {}
 
   // 1. Trigger Google Login Redirect
   @Get('google')
@@ -41,8 +49,8 @@ export class SocialAuthController {
   @Get('google/redirect')
   @UseGuards(AuthGuard('google'))
   async googleAuthRedirect(@Req() req, @Res() res: express.Response) {
-   const state = req.query.state as string;
-   return this.handleAuthRedirect(req, res, state);
+    const state = req.query.state as string;
+    return this.handleAuthRedirect(req, res, state);
   }
 
   // 1. Trigger Instagram Login Redirect
@@ -56,7 +64,7 @@ export class SocialAuthController {
   @Get('instagram/redirect')
   @UseGuards(AuthGuard('instagram'))
   async instagramAuthRedirect(@Req() req, @Res() res: express.Response) {
-    const state = req.query.state as string; 
+    const state = req.query.state as string;
     return this.handleAuthRedirect(req, res, state);
   }
 
@@ -71,14 +79,18 @@ export class SocialAuthController {
   @Get('facebook/redirect')
   @UseGuards(AuthGuard('facebook'))
   async facebookAuthRedirect(@Req() req, @Res() res: express.Response) {
-   const state = req.query.state as string;
-   return this.handleAuthRedirect(req, res, state);
+    const state = req.query.state as string;
+    return this.handleAuthRedirect(req, res, state);
   }
 
-  private async handleAuthRedirect(req: any, res: express.Response,state?: string) {
-   const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
-    
-    const redirectPath = (state && state.startsWith('/')) ? state : '/';
+  private async handleAuthRedirect(
+    req: any,
+    res: express.Response,
+    state?: string,
+  ) {
+    const frontendUrl = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
+
+    const redirectPath = state && state.startsWith('/') ? state : '/';
     try {
       const socialUser = req.user; // Comes from strategy validate()
       const { access_token, maxAgeMs } =
@@ -93,7 +105,7 @@ export class SocialAuthController {
       });
 
       // Redirect user back to Next.js frontend
-    return res.redirect(`${frontendUrl}${redirectPath}`);
+      return res.redirect(`${frontendUrl}${redirectPath}`);
     } catch (error) {
       return res.redirect(`${frontendUrl}/login?error=SocialLoginFailed`);
     }

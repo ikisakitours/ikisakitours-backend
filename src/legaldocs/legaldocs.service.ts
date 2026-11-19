@@ -23,7 +23,9 @@ export class LegalDocsService {
     lang: string,
   ): string {
     if (!field) return '';
-    return field[lang] || field['en'] || Object.values(field).find(Boolean) || '';
+    return (
+      field[lang] || field['en'] || Object.values(field).find(Boolean) || ''
+    );
   }
 
   private mapToClientResponseDto(
@@ -37,30 +39,42 @@ export class LegalDocsService {
           ? 'en'
           : Object.keys(record.title || {})[0] || lang;
 
-    const sections = (record.sections || []).map((sec): ClientLegalSectionDto => {
-      const subItems = (sec.subItems || []).map((si): ClientLegalSubItemDto => ({
-        id: si.id,
-        title: si.title ? this.getLocalizedText(si.title, targetLang) : undefined,
-        body: si.body ? this.getLocalizedText(si.body, targetLang) : undefined,
-        icon: si.icon,
-      }));
+    const sections = (record.sections || []).map(
+      (sec): ClientLegalSectionDto => {
+        const subItems = (sec.subItems || []).map(
+          (si): ClientLegalSubItemDto => ({
+            id: si.id,
+            title: si.title
+              ? this.getLocalizedText(si.title, targetLang)
+              : undefined,
+            body: si.body
+              ? this.getLocalizedText(si.body, targetLang)
+              : undefined,
+            icon: si.icon,
+          }),
+        );
 
-      return {
-        id: sec.id,
-        heading: this.getLocalizedText(sec.heading, targetLang),
-        sectionIcon: sec.sectionIcon,
-        type: sec.type,
-        content: sec.content ? this.getLocalizedText(sec.content, targetLang) : undefined,
-        subItems: subItems.length > 0 ? subItems : undefined,
-        expanded: sec.expanded,
-      };
-    });
+        return {
+          id: sec.id,
+          heading: this.getLocalizedText(sec.heading, targetLang),
+          sectionIcon: sec.sectionIcon,
+          type: sec.type,
+          content: sec.content
+            ? this.getLocalizedText(sec.content, targetLang)
+            : undefined,
+          subItems: subItems.length > 0 ? subItems : undefined,
+          expanded: sec.expanded,
+        };
+      },
+    );
 
     return {
       id: record.id,
       language: targetLang,
       title: this.getLocalizedText(record.title, targetLang),
-      eyebrow: record.eyebrow ? this.getLocalizedText(record.eyebrow, targetLang) : undefined,
+      eyebrow: record.eyebrow
+        ? this.getLocalizedText(record.eyebrow, targetLang)
+        : undefined,
       accent: record.accent ?? undefined,
       lastUpdated: record.lastUpdated,
       sections,
@@ -107,9 +121,11 @@ export class LegalDocsService {
 
     return this.mapToClientResponseDto(record, lang);
   }
-  
-    // ── 3.1 Fetch All Localized Documents for Client / User UI ──────────────────
-  async getClientAllDocuments(lang: string = 'en'): Promise<ClientLegalDocResponseDto[]> {
+
+  // ── 3.1 Fetch All Localized Documents for Client / User UI ──────────────────
+  async getClientAllDocuments(
+    lang: string = 'en',
+  ): Promise<ClientLegalDocResponseDto[]> {
     const records = await this.db.select().from(schema.legalDocs);
     return records.map((rec) => this.mapToClientResponseDto(rec, lang));
   }
@@ -173,8 +189,10 @@ export class LegalDocsService {
     if (dto.title !== undefined) updatePayload.title = dto.title;
     if (dto.eyebrow !== undefined) updatePayload.eyebrow = dto.eyebrow;
     if (dto.accent !== undefined) updatePayload.accent = dto.accent;
-    if (dto.lastUpdated !== undefined) updatePayload.lastUpdated = dto.lastUpdated;
-    if (dto.sections !== undefined) updatePayload.sections = dto.sections as any;
+    if (dto.lastUpdated !== undefined)
+      updatePayload.lastUpdated = dto.lastUpdated;
+    if (dto.sections !== undefined)
+      updatePayload.sections = dto.sections as any;
 
     const [updated] = await this.db
       .update(schema.legalDocs)
@@ -197,9 +215,7 @@ export class LegalDocsService {
       throw new NotFoundException(`Legal document with ID "${id}" not found.`);
     }
 
-    await this.db
-      .delete(schema.legalDocs)
-      .where(eq(schema.legalDocs.id, id));
+    await this.db.delete(schema.legalDocs).where(eq(schema.legalDocs.id, id));
 
     return {
       message: `Legal document "${id}" deleted successfully`,

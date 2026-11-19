@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -11,15 +16,23 @@ import { ClientServicePricingResponseDto } from './dto/client-service-pricing-re
 export class ServicePricingService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) { }
+  ) {}
 
   // ── Helper methods for Client UI language localization (similar to blogs.service.ts) ──
-  private getLocalizedText(field: Record<string, string> | null | undefined, lang: string): string {
+  private getLocalizedText(
+    field: Record<string, string> | null | undefined,
+    lang: string,
+  ): string {
     if (!field) return '';
-    return field[lang] || field['en'] || Object.values(field).find(Boolean) || '';
+    return (
+      field[lang] || field['en'] || Object.values(field).find(Boolean) || ''
+    );
   }
 
-  private getLocalizedList(field: Record<string, string[]> | null | undefined, lang: string): string[] {
+  private getLocalizedList(
+    field: Record<string, string[]> | null | undefined,
+    lang: string,
+  ): string[] {
     if (!field) return [];
     const list = field[lang] || field['en'] || Object.values(field)[0];
     return Array.isArray(list) ? list : [];
@@ -32,9 +45,11 @@ export class ServicePricingService {
     const targetLang =
       record.titleBase && record.titleBase[lang]
         ? lang
-        : (record.titleBase && record.titleBase['en']
+        : record.titleBase && record.titleBase['en']
           ? 'en'
-          : (record.titleBase ? Object.keys(record.titleBase)[0] || 'en' : 'en'));
+          : record.titleBase
+            ? Object.keys(record.titleBase)[0] || 'en'
+            : 'en';
 
     return {
       id: record.id,
@@ -67,7 +82,9 @@ export class ServicePricingService {
       .limit(1);
 
     if (!record) {
-      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+      throw new NotFoundException(
+        `Service pricing for '${serviceType}' not found`,
+      );
     }
 
     return this.mapToClientResponseDto(record, lang);
@@ -77,7 +94,8 @@ export class ServicePricingService {
   async getAllPricing() {
     const records = await this.db.select().from(schema.servicePricing);
 
-    const recordMap: Record<string, typeof schema.servicePricing.$inferSelect> = {};
+    const recordMap: Record<string, typeof schema.servicePricing.$inferSelect> =
+      {};
     for (const rec of records) {
       recordMap[rec.serviceType] = rec;
     }
@@ -103,7 +121,9 @@ export class ServicePricingService {
       .limit(1);
 
     if (!record) {
-      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+      throw new NotFoundException(
+        `Service pricing for '${serviceType}' not found`,
+      );
     }
 
     return {
@@ -183,7 +203,9 @@ export class ServicePricingService {
       .limit(1);
 
     if (!existing) {
-      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+      throw new NotFoundException(
+        `Service pricing for '${serviceType}' not found`,
+      );
     }
 
     const updatePayload: Partial<typeof schema.servicePricing.$inferInsert> = {
@@ -191,12 +213,17 @@ export class ServicePricingService {
     };
 
     if (dto.titleBase !== undefined) updatePayload.titleBase = dto.titleBase;
-    if (dto.titleAccent !== undefined) updatePayload.titleAccent = dto.titleAccent;
-    if (dto.subtitleStrong !== undefined) updatePayload.subtitleStrong = dto.subtitleStrong;
+    if (dto.titleAccent !== undefined)
+      updatePayload.titleAccent = dto.titleAccent;
+    if (dto.subtitleStrong !== undefined)
+      updatePayload.subtitleStrong = dto.subtitleStrong;
     if (dto.subtitle !== undefined) updatePayload.subtitle = dto.subtitle;
-    if (dto.popularBadge !== undefined) updatePayload.popularBadge = dto.popularBadge;
-    if (dto.popularTitle !== undefined) updatePayload.popularTitle = dto.popularTitle;
-    if (dto.popularDesc !== undefined) updatePayload.popularDesc = dto.popularDesc;
+    if (dto.popularBadge !== undefined)
+      updatePayload.popularBadge = dto.popularBadge;
+    if (dto.popularTitle !== undefined)
+      updatePayload.popularTitle = dto.popularTitle;
+    if (dto.popularDesc !== undefined)
+      updatePayload.popularDesc = dto.popularDesc;
     if (dto.notes !== undefined) updatePayload.notes = dto.notes;
 
     const [updated] = await this.db
@@ -222,7 +249,9 @@ export class ServicePricingService {
       .limit(1);
 
     if (!existing) {
-      throw new NotFoundException(`Service pricing for '${serviceType}' not found`);
+      throw new NotFoundException(
+        `Service pricing for '${serviceType}' not found`,
+      );
     }
 
     await this.db

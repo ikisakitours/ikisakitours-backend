@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Param, Body, Req, UnauthorizedException, UseGuards, Patch, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+  Patch,
+  Delete,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtService } from '@nestjs/jwt';
 import { CommentsService } from './comments.service';
@@ -16,7 +29,7 @@ export class CommentsController {
   constructor(
     private readonly commentsService: CommentsService,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   // 1. Fetch all comments (for Admin Panel view)
   @Get()
@@ -29,7 +42,6 @@ export class CommentsController {
   async findPublicComments() {
     return await this.commentsService.findPublicComments();
   }
-
 
   // 2. User creates a new comment (JWT extracted automatically)
   /*
@@ -59,7 +71,6 @@ export class CommentsController {
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request & { user: { sub: string } },
   ): Promise<CommentResponseDto> {
-
     const userId = req.user.sub;
 
     return await this.commentsService.createComment(createCommentDto, userId);
@@ -81,6 +92,12 @@ export class CommentsController {
     @Body() updateVisibilityDto: UpdateVisibilityDto,
   ): Promise<CommentResponseDto> {
     return await this.commentsService.updateVisibility(id, updateVisibilityDto);
+  }
+
+  // Delete comment
+  @Delete(':id')
+  async deleteComment(@Param('id') id: string) {
+    return await this.commentsService.deleteComment(id);
   }
 
   //--------------package--------
@@ -127,6 +144,9 @@ export class CommentsController {
     @Param('id') id: string,
     @Body() updateVisibilityDto: UpdateVisibilityDto,
   ) {
-    return await this.commentsService.updatePackageReviewVisibility(id, updateVisibilityDto,);
+    return await this.commentsService.updatePackageReviewVisibility(
+      id,
+      updateVisibilityDto,
+    );
   }
 }

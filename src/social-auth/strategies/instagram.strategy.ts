@@ -8,8 +8,7 @@ export class InstagramStrategy extends PassportStrategy(Strategy, 'instagram') {
     super({
       clientID: process.env.INSTAGRAM_CLIENT_ID,
       clientSecret: process.env.INSTAGRAM_CLIENT_SECRET,
-      callbackURL:
-        process.env.INSTAGRAM_CALLBACK_URL,
+      callbackURL: process.env.INSTAGRAM_CALLBACK_URL,
     });
   }
 

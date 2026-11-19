@@ -32,18 +32,32 @@ export function calculateDynamicPricing(
 ): PricingCalculationResult {
   // Fallback safe base price
   const fallbackPrice =
-    typeof basePrice === 'number' && !isNaN(basePrice) ? basePrice : Number(basePrice) || 0;
+    typeof basePrice === 'number' && !isNaN(basePrice)
+      ? basePrice
+      : Number(basePrice) || 0;
 
   // 1. Extract counts safely (handles both singular: 'adult' and plural: 'adults')
-  const adults = Math.max(0, Number(travelerCounts.adult ?? travelerCounts.adults ?? 0));
+  const adults = Math.max(
+    0,
+    Number(travelerCounts.adult ?? travelerCounts.adults ?? 0),
+  );
 
   // In the UI, 'couple' count represents the number of Couples (rooms/pairs, e.g. 2 Couples)
-  const coupleCount = Math.max(0, Number(travelerCounts.couple ?? travelerCounts.couples ?? 0));
+  const coupleCount = Math.max(
+    0,
+    Number(travelerCounts.couple ?? travelerCounts.couples ?? 0),
+  );
   // Each couple consists of 2 adult persons
   const couplePersons = coupleCount * 2;
 
-  const children = Math.max(0, Number(travelerCounts.child ?? travelerCounts.children ?? 0));
-  const infants = Math.max(0, Number(travelerCounts.infant ?? travelerCounts.infants ?? 0));
+  const children = Math.max(
+    0,
+    Number(travelerCounts.child ?? travelerCounts.children ?? 0),
+  );
+  const infants = Math.max(
+    0,
+    Number(travelerCounts.infant ?? travelerCounts.infants ?? 0),
+  );
 
   // Total paying travelers headcount (determines Group Discount Tier)
   // Note: Infants travel free on lap and do not count toward paying group discount tiers
@@ -61,12 +75,15 @@ export function calculateDynamicPricing(
     if (totalPax > 0) {
       // Find tier where totalPax falls between minPax and maxPax
       activeTier = tiers.find(
-        (tier) => totalPax >= Number(tier.minPax) && totalPax <= Number(tier.maxPax),
+        (tier) =>
+          totalPax >= Number(tier.minPax) && totalPax <= Number(tier.maxPax),
       );
 
       // If totalPax exceeds the highest tier, apply the largest group discount rate
       if (!activeTier) {
-        const sortedAsc = [...tiers].sort((a, b) => Number(a.minPax) - Number(b.minPax));
+        const sortedAsc = [...tiers].sort(
+          (a, b) => Number(a.minPax) - Number(b.minPax),
+        );
         const highestTier = sortedAsc[sortedAsc.length - 1];
         const lowestTier = sortedAsc[0];
 
@@ -122,13 +139,15 @@ export function calculateDynamicPricing(
   if (passengerPricing) {
     if (passengerPricing.childRateType === 'fixed') {
       childUnitPrice =
-        typeof passengerPricing.childRateValue === 'number' && passengerPricing.childRateValue >= 0
+        typeof passengerPricing.childRateValue === 'number' &&
+        passengerPricing.childRateValue >= 0
           ? Number(passengerPricing.childRateValue)
           : unitPrice;
       childDiscountNote = 'Fixed child fee';
     } else {
       const percent =
-        typeof passengerPricing.childRateValue === 'number' && passengerPricing.childRateValue > 0
+        typeof passengerPricing.childRateValue === 'number' &&
+        passengerPricing.childRateValue > 0
           ? Number(passengerPricing.childRateValue)
           : 50;
       childUnitPrice = (unitPrice * percent) / 100;
