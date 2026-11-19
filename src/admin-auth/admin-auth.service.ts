@@ -144,6 +144,37 @@ export class AdminAuthService {
       })
       .where(eq(schema.adminUsers.id, admin.id));
 
+    // Check 2FA Challenge when enabled
+    if (admin.isTwoFactorEnabled) {
+      // Case A: totpCode is NOT provided in body
+      if (!dto.totpCode || dto.totpCode.trim() === '') {
+        return {
+          requiresTwoFactor: true,
+          message: 'Two-factor authentication code required.',
+        };
+      }
+
+      // Case B: totpCode IS provided in body
+      const is2FaValid =
+        admin.twoFactorSecret &&
+        verifyTotpCode(dto.totpCode.trim(), admin.twoFactorSecret);
+
+      if (!is2FaValid) {
+        await this.logAudit(
+          admin.id,
+          'LOGIN_2FA_FAILED',
+          'auth',
+          { reason: 'Invalid TOTP code' },
+          clientIp,
+          userAgent,
+        );
+        throw new UnauthorizedException({
+          success: false,
+          message: 'Invalid 2FA code. Please check your authenticator app.',
+        });
+      }
+    }
+
     // Generate Tokens
     const accessToken = this.jwtService.sign(
       { sub: admin.id, role: admin.role, email: admin.email },
@@ -459,7 +490,7 @@ export class AdminAuthService {
 
     const secret = generateTotpSecret();
     const otpauth = generateOtpauthUri({
-      issuer: 'Ikisaki Tours',
+      issuer: 'IkisakiTours',
       label: admin.email,
       secret,
     });
@@ -498,15 +529,19 @@ export class AdminAuthService {
 
     const secretToVerify = dto.secret || admin.twoFactorSecret;
     if (!secretToVerify) {
-      throw new BadRequestException(
-        'No 2FA setup found. Please generate a QR code first.',
-      );
+      throw new BadRequestException({
+        success: false,
+        message: 'No 2FA setup found. Please generate a QR code first.',
+      });
     }
 
     const isValid = verifyTotpCode(dto.totpCode, secretToVerify);
 
     if (!isValid) {
-      throw new BadRequestException('Invalid 2FA code');
+      throw new BadRequestException({
+        success: false,
+        message: 'Invalid verification code. Please try again.',
+      });
     }
 
     await this.db
@@ -529,7 +564,7 @@ export class AdminAuthService {
 
     return {
       success: true,
-      message: 'Two-Factor Authentication activated successfully',
+      message: 'Two-Factor Authentication activated successfully!',
     };
   }
 
@@ -553,7 +588,10 @@ export class AdminAuthService {
       admin.passwordHash,
     );
     if (!isMatch) {
-      throw new UnauthorizedException('Current password is incorrect');
+      throw new BadRequestException({
+        success: false,
+        message: 'Incorrect password.',
+      });
     }
 
     await this.db
@@ -576,7 +614,7 @@ export class AdminAuthService {
 
     return {
       success: true,
-      message: 'Two-Factor Authentication disabled',
+      message: 'Two-Factor Authentication disabled.',
     };
   }
 }
