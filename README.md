@@ -489,4 +489,3 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 **© 2026 Ikisaki Tours (Pvt) Ltd** · Powered by **Aetheria Labs** · Engineered by **Pramod_Siriwardhana** & **Shehan_W**
 
 </div>
-
