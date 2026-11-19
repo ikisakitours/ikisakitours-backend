@@ -8,7 +8,8 @@ import { UploadsModule } from '../uploads/uploads.module';
   imports: [
     JwtModule.register({
       global: true,
-      secret: process.env.JWT_SECRET || 'super-secret-key-change-this-in-production',
+      secret:
+        process.env.JWT_SECRET || 'super-secret-key-change-this-in-production',
       signOptions: { expiresIn: '1d' },
     }),
     UploadsModule,

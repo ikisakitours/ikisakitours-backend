@@ -14,7 +14,7 @@ import { UpdateDestinationDto } from './dto/update-destination.dto';
 export class DestinationsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) { }
+  ) {}
 
   // Helper method: Generate URL-friendly slug from text
   private slugify(text: string): string {
@@ -35,9 +35,11 @@ export class DestinationsService {
     const targetLang =
       dest.title && dest.title[lang]
         ? lang
-        : (dest.title && dest.title['en']
+        : dest.title && dest.title['en']
           ? 'en'
-          : (dest.title ? Object.keys(dest.title)[0] || 'en' : 'en'));
+          : dest.title
+            ? Object.keys(dest.title)[0] || 'en'
+            : 'en';
 
     return {
       id: dest.id,
@@ -68,9 +70,11 @@ export class DestinationsService {
     const targetLang =
       dest.title && dest.title[lang]
         ? lang
-        : (dest.title && dest.title['en']
+        : dest.title && dest.title['en']
           ? 'en'
-          : (dest.title ? Object.keys(dest.title)[0] || 'en' : 'en'));
+          : dest.title
+            ? Object.keys(dest.title)[0] || 'en'
+            : 'en';
 
     return {
       id: dest.id,
@@ -94,9 +98,11 @@ export class DestinationsService {
     const targetLang =
       dest.title && dest.title[lang]
         ? lang
-        : (dest.title && dest.title['en']
+        : dest.title && dest.title['en']
           ? 'en'
-          : (dest.title ? Object.keys(dest.title)[0] || 'en' : 'en'));
+          : dest.title
+            ? Object.keys(dest.title)[0] || 'en'
+            : 'en';
 
     return {
       id: dest.id,
@@ -143,12 +149,23 @@ export class DestinationsService {
   }
 
   // 2. Fetch small previews for card display on frontend
-  async findPreviews(lang: string = 'en'): Promise<DestinationPreviewResponseDto[]> {
+  async findPreviews(
+    lang: string = 'en',
+    onlyLive: boolean = true,
+  ): Promise<DestinationPreviewResponseDto[]> {
     const records = await this.db.query.destinations.findMany({
+      where: onlyLive ? eq(schema.destinations.isLive, true) : undefined,
       orderBy: [desc(schema.destinations.createdAt)],
     });
 
     return records.map((d) => this.mapToDestinationPreviewResponseDto(d, lang));
+  }
+
+  // 2.1 Admin fetch all destinations with isLive flag
+  async findAllAdmin() {
+    return await this.db.query.destinations.findMany({
+      orderBy: [desc(schema.destinations.createdAt)],
+    });
   }
 
   // 3. Fetch single destination by ID
@@ -165,25 +182,48 @@ export class DestinationsService {
   }
 
   // 4. Fetch single destination by Slug (for public frontend view)
-  async findBySlug(slug: string, lang: string = 'en'): Promise<DestinationResponseDto> {
+  async findBySlug(
+    slug: string,
+    lang: string = 'en',
+    isAdmin: boolean = false,
+  ): Promise<DestinationResponseDto> {
     const dest = await this.db.query.destinations.findFirst({
       where: eq(schema.destinations.slug, slug),
     });
 
     if (!dest) {
-      throw new NotFoundException(
-        `Destination with slug "${slug}" not found`
-      );
+      throw new NotFoundException(`Destination with slug "${slug}" not found`);
+    }
+
+    if (!isAdmin && dest.isLive === false) {
+      throw new NotFoundException(`Destination with slug "${slug}" not found`);
     }
 
     return this.mapToDestinationResponseDto(dest, lang);
+  }
+
+  // 4.1 Update visibility
+  async updateVisibility(id: string, isLive: boolean) {
+    const [updatedDest] = await this.db
+      .update(schema.destinations)
+      .set({ isLive, updatedAt: new Date() })
+      .where(eq(schema.destinations.id, id))
+      .returning();
+
+    if (!updatedDest) {
+      throw new NotFoundException(`Destination with ID "${id}" not found`);
+    }
+
+    return updatedDest;
   }
 
   // 5. Delete destination by ID
   async remove(id: string): Promise<{ message: string }> {
     await this.findOne(id);
 
-    await this.db.delete(schema.destinations).where(eq(schema.destinations.id, id));
+    await this.db
+      .delete(schema.destinations)
+      .where(eq(schema.destinations.id, id));
 
     return { message: `Destination with ID "${id}" deleted successfully.` };
   }
@@ -198,7 +238,9 @@ export class DestinationsService {
   }
 
   // destination data that need by create package
-  async findPackagePreviewsByIds(ids: string[]): Promise<DestinationPackageResponseDto[]> {
+  async findPackagePreviewsByIds(
+    ids: string[],
+  ): Promise<DestinationPackageResponseDto[]> {
     if (!ids || ids.length === 0) return [];
 
     const destinations = await this.db.query.destinations.findMany({
@@ -213,11 +255,6 @@ export class DestinationsService {
       id: dest.id,
       slug: dest.slug,
     }));
-  }
-
-  // ADMIN 1: Fetch all raw multilingual destinations for the admin list view
-  async findAllAdmin() {
-    return await this.db.select().from(schema.destinations);
   }
 
   // ADMIN 2: Fetch a single raw multilingual destination by ID for the edit form

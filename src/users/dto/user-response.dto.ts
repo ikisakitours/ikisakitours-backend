@@ -1,4 +1,10 @@
-import { IsString, IsEmail, IsDate, IsBoolean, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsEmail,
+  IsDate,
+  IsBoolean,
+  IsOptional,
+} from 'class-validator';
 
 export class UserResponseDto {
   @IsString()

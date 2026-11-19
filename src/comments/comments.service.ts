@@ -17,7 +17,7 @@ export class CommentsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly uploadsService: UploadsService,
-  ) { }
+  ) {}
 
   // Helper to map DB record + Joined User to Response DTO
   private toCommentResponseDto(comment: any): CommentResponseDto {
@@ -28,7 +28,9 @@ export class CommentsService {
       isPubliclyVisible: comment.isPublic ?? true,
       firstName: comment.user?.firstName,
       lastName: comment.user?.lastName,
-      authorName: comment.user ? `${comment.user.firstName} ${comment.user.lastName}` : 'Anonymous User',
+      authorName: comment.user
+        ? `${comment.user.firstName} ${comment.user.lastName}`
+        : 'Anonymous User',
       country: comment.user?.country || 'Unknown',
       avatarUrl: comment.user?.avatarUrl ?? null,
       isVerified: comment.user?.isVerified ?? false,
@@ -76,7 +78,6 @@ export class CommentsService {
       averageRating,
     };
   }
-
 
   // Fetches from the view (automatically filters out isPublic = false)
   async findPublicComments(): Promise<CommentListResponseDto> {
@@ -133,9 +134,11 @@ export class CommentsService {
     };
   }
 
-
   // 2. Create a comment using authenticated userId from JWT
-  async createComment(dto: CreateCommentDto, userId: string): Promise<CommentResponseDto> {
+  async createComment(
+    dto: CreateCommentDto,
+    userId: string,
+  ): Promise<CommentResponseDto> {
     const user = await this.db.query.users.findFirst({
       where: eq(schema.users.id, userId),
     });
@@ -160,7 +163,10 @@ export class CommentsService {
   }
 
   // 3. Admin reply to a specific comment card
-  async replyToComment(id: string, dto: ReplyCommentDto): Promise<CommentResponseDto> {
+  async replyToComment(
+    id: string,
+    dto: ReplyCommentDto,
+  ): Promise<CommentResponseDto> {
     const [updatedComment] = await this.db
       .update(schema.comments)
       .set({ adminReply: dto.adminReply })
@@ -200,6 +206,25 @@ export class CommentsService {
     return this.toCommentResponseDto({ ...updatedComment, user });
   }
 
+  // Delete a comment
+  async deleteComment(
+    id: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const [deleted] = await this.db
+      .delete(schema.comments)
+      .where(eq(schema.comments.id, id))
+      .returning();
+
+    if (!deleted) {
+      throw new NotFoundException(`Comment with ID "${id}" not found`);
+    }
+
+    return {
+      success: true,
+      message: `Comment with ID "${id}" successfully deleted.`,
+    };
+  }
+
   //Only package reviews
   //--------------------------------------------------------------
   //Create a package review in the dedicated package_reviews table
@@ -230,7 +255,10 @@ export class CommentsService {
     // 2. Upload files
     let imageUrls: string[] = [];
     if (images && images.length > 0) {
-      imageUrls = await this.uploadsService.uploadMultiple(images, 'package-reviews');
+      imageUrls = await this.uploadsService.uploadMultiple(
+        images,
+        'package-reviews',
+      );
     }
 
     // 3. Snapshot (display-safe fields only)
@@ -275,7 +303,10 @@ export class CommentsService {
   async replyToPackageReview(id: string, adminReply: string) {
     const [updatedReview] = await this.db
       .update(schema.packageReviews)
-      .set({ adminReply })
+      .set({
+        adminReply,
+        adminReplyAt: new Date().toISOString(),
+      })
       .where(eq(schema.packageReviews.id, id))
       .returning();
 
@@ -286,10 +317,29 @@ export class CommentsService {
     return updatedReview;
   }
 
+  async deletePackageReview(id: string) {
+    const [deleted] = await this.db
+      .delete(schema.packageReviews)
+      .where(eq(schema.packageReviews.id, id))
+      .returning();
+
+    if (!deleted) {
+      throw new NotFoundException(`Package review with ID "${id}" not found`);
+    }
+
+    return {
+      success: true,
+      message: `Package review with ID "${id}" deleted.`,
+    };
+  }
+
   // package review summery method
-  async getPackageReviewSummary(packageId: string): Promise<PackageReviewSummaryDto> {
+  async getPackageReviewSummary(
+    packageId: string,
+  ): Promise<PackageReviewSummaryDto> {
     const reviews = await this.db.query.packageReviews.findMany({
-      where: and(eq(schema.packageReviews.packageId, packageId),
+      where: and(
+        eq(schema.packageReviews.packageId, packageId),
         eq(schema.packageReviews.isPublic, true),
       ),
       orderBy: (table, { desc }) => [desc(table.rating), desc(table.createdAt)],
@@ -327,7 +377,7 @@ export class CommentsService {
     // Flatten all image URLs, shuffle, take a single random set of 5
     const pool: string[] = [];
     for (const review of reviews) {
-      for (const url of ((review.imageUrls as string[]) || [])) {
+      for (const url of (review.imageUrls as string[]) || []) {
         if (typeof url === 'string' && url.length > 0) pool.push(url);
       }
     }
@@ -359,8 +409,10 @@ export class CommentsService {
   // Retrieve all package reviews for a given packageId
   async getAllReviewsByPackageId(packageId: string) {
     const reviews = await this.db.query.packageReviews.findMany({
-      where: and(eq(schema.packageReviews.packageId, packageId),
-        eq(schema.packageReviews.isPublic, true),),
+      where: and(
+        eq(schema.packageReviews.packageId, packageId),
+        eq(schema.packageReviews.isPublic, true),
+      ),
       orderBy: (table, { desc }) => [desc(table.createdAt)],
     });
 

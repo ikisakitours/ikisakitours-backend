@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional, IsObject, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  IsOptional,
+  IsObject,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { TravelersDto } from './travelers.dto';
 

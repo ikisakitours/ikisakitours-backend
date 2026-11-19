@@ -12,7 +12,7 @@ export class SocialAuthService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly jwtService: JwtService,
-  ) { }
+  ) {}
 
   private generateToken(user: User): string {
     const payload = { sub: user.id };

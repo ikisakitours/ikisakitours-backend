@@ -1,4 +1,14 @@
-import { Controller, Post, Get, Body, Param, Patch, Query } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  Patch,
+  Delete,
+  Query,
+  Headers,
+} from '@nestjs/common';
 import { CreateCustomServiceDto } from './dto/create-custom-service.dto';
 import { CreateChauffeurServiceDto } from './dto/create-chauffeur-service.dto';
 import { CreateTransferServiceDto } from './dto/create-transfer-service.dto';
@@ -9,7 +19,13 @@ import { UpdateServiceNotesDto } from './dto/service-notes/update-service-notes.
 
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) { }
+  constructor(private readonly servicesService: ServicesService) {}
+
+  // --- 0. ALL SERVICES (ADMIN) ---
+  @Get()
+  async findAll(@Headers('x-admin-key') adminKey?: string) {
+    return this.servicesService.findAllServices();
+  }
 
   // --- 1. CUSTOM MADE TOURS ---
   @Post('custom')
@@ -66,6 +82,10 @@ export class ServicesController {
     return this.servicesService.updateServiceNote(id, dto);
   }
 
+  @Delete('notes/:id')
+  async deleteServiceNote(@Param('id') id: string) {
+    return this.servicesService.deleteServiceNote(id);
+  }
 
   // --- 4. UPDATE SERVICE STATUS ---
   @Patch(':id/status')
@@ -76,9 +96,21 @@ export class ServicesController {
     return this.servicesService.updateServiceStatus(id, dto.status);
   }
 
+  // --- 5. GET SINGLE SERVICE REQUEST BY ID ---
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.servicesService.findOneService(id);
+  }
+
+  // --- 6. DELETE SERVICE REQUEST BY ID ---
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    return this.servicesService.deleteService(id);
+  }
+
   // --- TEMPORARY DEBUG ROUTE ---
   @Get('test-debug')
   testDebug() {
-    return { status: "Online", timestamp: new Date().toISOString() };
+    return { status: 'Online', timestamp: new Date().toISOString() };
   }
 }

@@ -29,7 +29,10 @@ export class CookiesService {
         .where(eq(schema.cookieConsents.userId, userId))
         .returning();
 
-      return { message: 'Cookie preferences updated successfully', data: updated };
+      return {
+        message: 'Cookie preferences updated successfully',
+        data: updated,
+      };
     }
 
     const [created] = await this.db
@@ -58,10 +61,10 @@ export class CookiesService {
       .filter(([key, value]) => value === true)
       .map(([key]) => key);
 
-    return { 
-      hasConsent: true, 
+    return {
+      hasConsent: true,
       acceptedList, // e.g., ['analytics', 'marketing'] depending on your keys
-      preferences: record.preferences 
+      preferences: record.preferences,
     };
   }
 }

@@ -43,7 +43,9 @@ export class NewsletterService {
       };
     } catch (error) {
       console.error('Newsletter Subscription Error:', error);
-      throw new BadRequestException('Failed to process newsletter subscription');
+      throw new BadRequestException(
+        'Failed to process newsletter subscription',
+      );
     }
   }
 }

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsObject, IsOptional } from 'class-validator';
 
 export class CreateServiceNotesDto {
   @IsString()
@@ -22,16 +22,16 @@ export class CreateServiceNotesDto {
   luggages!: string;
 
   @IsString()
-  @IsNotEmpty()
-  withDriverPrice!: string;
+  @IsOptional()
+  withDriverPrice?: string | null;
 
   @IsString()
-  @IsNotEmpty()
-  withGuidePrice!: string;
+  @IsOptional()
+  withGuidePrice?: string | null;
 
   @IsString()
-  @IsNotEmpty()
-  withDriverAndGuidePrice!: string;
+  @IsOptional()
+  withDriverAndGuidePrice?: string | null;
 
   @IsObject()
   @IsNotEmpty()

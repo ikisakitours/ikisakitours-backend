@@ -1,4 +1,18 @@
-import { pgTable, uuid, varchar, text, timestamp, boolean, integer, numeric, jsonb, uniqueIndex, serial, unique, pgView } from 'drizzle-orm/pg-core';
+import {
+  pgTable,
+  uuid,
+  varchar,
+  text,
+  timestamp,
+  boolean,
+  integer,
+  numeric,
+  jsonb,
+  uniqueIndex,
+  serial,
+  unique,
+  pgView,
+} from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
 
 export const users = pgTable('users', {
@@ -23,8 +37,6 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-
-
 //comments
 export const comments = pgTable('comments', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -44,7 +56,6 @@ export const comments = pgTable('comments', {
   }),
 });
 
-
 //test comment table for visibility check
 export const publicComments = pgView('public_comments', {
   id: uuid('id').notNull(),
@@ -57,25 +68,28 @@ export const publicComments = pgView('public_comments', {
   createdAt: timestamp('created_at').notNull(),
 }).as(sql`SELECT * FROM comments WHERE is_public = true`);
 
-
 //package reviews table
 export const packageReviews = pgTable('package_reviews', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
   packageId: text('package_id').notNull(),
   packageName: text('package_name').notNull(),
   type: text('type').notNull().default('PACKAGE'),
 
-  userSnapshot: jsonb('user_snapshot').$type<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    country: string,
-    avatarUrl: string | null;
-    isVip: boolean;
-    isVerified: boolean;
-    hasAccess: boolean;
-  }>().notNull(),
+  userSnapshot: jsonb('user_snapshot')
+    .$type<{
+      id: string;
+      firstName: string;
+      lastName: string;
+      email: string;
+      country: string;
+      avatarUrl: string | null;
+      isVip: boolean;
+      isVerified: boolean;
+      hasAccess: boolean;
+    }>()
+    .notNull(),
 
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
@@ -83,11 +97,10 @@ export const packageReviews = pgTable('package_reviews', {
   experience: text('experience').notNull(),
   imageUrls: jsonb('image_urls').default([]),
   adminReply: text('admin_reply'),
+  adminReplyAt: timestamp('admin_reply_at', { mode: 'string' }),
   isPublic: boolean('is_public').notNull().default(true),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
 });
-
-
 
 //--------------------------------------------------------
 //package table
@@ -163,9 +176,13 @@ export const packages = pgTable('packages', {
 
   // Multilingual JSONB Text Fields
   title: jsonb('title').$type<Record<string, string>>().notNull(),
-  titleEmphasis: jsonb('title_emphasis').$type<Record<string, string>>().notNull(),
+  titleEmphasis: jsonb('title_emphasis')
+    .$type<Record<string, string>>()
+    .notNull(),
   leadTitle: jsonb('lead_title').$type<Record<string, string>>().notNull(),
-  leadDescription: jsonb('lead_description').$type<Record<string, string>>().notNull(),
+  leadDescription: jsonb('lead_description')
+    .$type<Record<string, string>>()
+    .notNull(),
   description: jsonb('description').$type<Record<string, string>>().notNull(),
 
   // Multilingual JSONB Arrays
@@ -184,7 +201,9 @@ export const packages = pgTable('packages', {
   destinations: jsonb('destinations').$type<PackageDestination[]>().notNull(),
 
   // Multilingual Activity Details
-  activityDetails: jsonb('activity_details').$type<ActivityDetail[]>().notNull(),
+  activityDetails: jsonb('activity_details')
+    .$type<ActivityDetail[]>()
+    .notNull(),
 
   // Multilingual Itinerary
   itinerary: jsonb('itinerary').$type<ItineraryItem[]>().notNull(),
@@ -192,11 +211,11 @@ export const packages = pgTable('packages', {
   // Unified Dynamic Group Pricing & Custom Add-ons Configuration
   pricingConfig: jsonb('pricing_config').$type<PricingConfig>(),
 
+  isLive: boolean('is_live').default(true).notNull(),
+
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 //----------------------------------------------------------
 //package like table
@@ -223,7 +242,6 @@ export const packageLikes = pgTable(
   }),
 );
 
-
 //-----------------------------------------------------------
 //blog table
 export const blogs = pgTable('blogs', {
@@ -241,11 +259,10 @@ export const blogs = pgTable('blogs', {
   author: text('author').notNull(),
   images: text('images').array().notNull(),
   likes: integer('likes').notNull().default(0),
+  isLive: boolean('is_live').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 //destination table
 export const destinations = pgTable('destinations', {
@@ -258,14 +275,23 @@ export const destinations = pgTable('destinations', {
   description: jsonb('description').$type<Record<string, string>>().notNull(),
   province: jsonb('province').$type<Record<string, string>>().notNull(),
   highlights: jsonb('highlights').$type<Record<string, string[]>>().notNull(),
-  bestTimeToVisit: jsonb('best_time_to_visit').$type<Record<string, string>>().notNull(),
+  bestTimeToVisit: jsonb('best_time_to_visit')
+    .$type<Record<string, string>>()
+    .notNull(),
   climate: jsonb('climate').$type<Record<string, string>>().notNull(),
-  primaryLanguage: jsonb('primary_language').$type<Record<string, string>>().notNull(),
-  localCurrency: jsonb('local_currency').$type<Record<string, string>>().notNull(),
+  primaryLanguage: jsonb('primary_language')
+    .$type<Record<string, string>>()
+    .notNull(),
+  localCurrency: jsonb('local_currency')
+    .$type<Record<string, string>>()
+    .notNull(),
 
   // Shared metadata across all languages
   images: text('images').array().notNull(),
-  coordinates: jsonb('coordinates').$type<{ lat: number; lng: number }>().notNull(),
+  coordinates: jsonb('coordinates')
+    .$type<{ lat: number; lng: number }>()
+    .notNull(),
+  isLive: boolean('is_live').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -294,7 +320,6 @@ export const blogLikes = pgTable(
   },
 );
 
-
 //cookie table
 export const cookieConsents = pgTable('cookie_consents', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -302,17 +327,17 @@ export const cookieConsents = pgTable('cookie_consents', {
     .notNull()
     .unique()
     .references(() => users.id, { onDelete: 'cascade' }),
-  preferences: jsonb('preferences').$type<{
-    strictlyNecessary: boolean;
-    performance: boolean;
-    functional: boolean;
-    targetingAndMarketing: boolean;
-  }>().notNull(),
+  preferences: jsonb('preferences')
+    .$type<{
+      strictlyNecessary: boolean;
+      performance: boolean;
+      functional: boolean;
+      targetingAndMarketing: boolean;
+    }>()
+    .notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 //service table can be changed in the future
 export const serviceRequests = pgTable('service_requests', {
@@ -324,16 +349,18 @@ export const serviceRequests = pgTable('service_requests', {
   tourPackageType: text('tour_package_type'),
   pickupLocation: text('pickup_location').notNull(),
   dropOffLocation: text('drop_off_location'),
-  language: text('language').notNull(),
+  language: text('language').default('English').notNull(),
   journeyDate: text('journey_date').notNull(),
   pickupTime: text('pickup_time').notNull(),
   // Travelers breakdown stored as JSONB for clean querying and flexibility
-  travelers: jsonb('travelers').$type<{
-    adults: number;
-    couples: number;
-    children: number;
-    infants: number;
-  }>().notNull(),
+  travelers: jsonb('travelers')
+    .$type<{
+      adults: number;
+      couples: number;
+      children: number;
+      infants: number;
+    }>()
+    .notNull(),
   // Custom & Chauffeur specific fields
   tourDuration: text('tour_duration'),
   description: text('description'),
@@ -351,29 +378,26 @@ export const serviceRequests = pgTable('service_requests', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-
 //service notes
-export const serviceNotes = pgTable("service_notes", {
-  id: serial("id").primaryKey(),
-  serviceType: varchar("service_type").notNull(),
-  vehicleType: varchar("vehicle_type").notNull(),
-  startingPrice: varchar("starting_price").notNull(),
-  vehicleCapacity: varchar("vehicle_capacity").notNull(),
-  luggages: varchar("luggages").notNull(),
+export const serviceNotes = pgTable('service_notes', {
+  id: serial('id').primaryKey(),
+  serviceType: varchar('service_type').notNull(),
+  vehicleType: varchar('vehicle_type').notNull(),
+  startingPrice: varchar('starting_price').notNull(),
+  vehicleCapacity: varchar('vehicle_capacity').notNull(),
+  luggages: varchar('luggages').notNull(),
 
-  // New pricing columns
-  withDriverPrice: varchar("with_driver_price").notNull(),
-  withGuidePrice: varchar("with_guide_price").notNull(),
-  withDriverAndGuidePrice: varchar("with_driver_and_guide_price").notNull(),
+  // Tier pricing columns (mandatory for chauffeur/custom, optional/null for transfer)
+  withDriverPrice: varchar('with_driver_price'),
+  withGuidePrice: varchar('with_guide_price'),
+  withDriverAndGuidePrice: varchar('with_driver_and_guide_price'),
 
   // Dynamic multilingual notes
-  notes: jsonb("notes").notNull().default({}),
+  notes: jsonb('notes').notNull().default({}),
 
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 //news letter
 export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
@@ -383,8 +407,6 @@ export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
   subscribedAt: timestamp('subscribed_at').defaultNow().notNull(),
   status: text('status').default('active').notNull(), // 'active', 'unsubscribed'
 });
-
-
 
 //contact table
 export const contacts = pgTable('contacts', {
@@ -400,18 +422,15 @@ export const contacts = pgTable('contacts', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
 
-
-
 //faq table
 export const faqs = pgTable('faqs', {
   id: uuid('id').defaultRandom().primaryKey(),
   category: jsonb('category').$type<Record<string, string>>().notNull(),
   question: jsonb('question').$type<Record<string, string>>().notNull(),
   answer: jsonb('answer').$type<Record<string, string>>().notNull(),
+  isLive: boolean('is_live').default(true).notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });
-
-
 
 export interface AvailabilityDateDetail {
   tourType?: string;
@@ -432,12 +451,16 @@ export interface AvailabilityDateDetailItem extends AvailabilityDateDetail {
 export const availability = pgTable('availability', {
   id: serial('id').primaryKey(),
   apiClosedDates: text('api_closed_dates').array().notNull().default([]),
-  dateDetails: jsonb('date_details').$type<Record<string, AvailabilityDateDetail>>().notNull().default({}),
-  closedDateDetails: jsonb('closed_date_details').$type<AvailabilityDateDetailItem[]>().notNull().default([]),
+  dateDetails: jsonb('date_details')
+    .$type<Record<string, AvailabilityDateDetail>>()
+    .notNull()
+    .default({}),
+  closedDateDetails: jsonb('closed_date_details')
+    .$type<AvailabilityDateDetailItem[]>()
+    .notNull()
+    .default([]),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 //service pricing table (charter, custom, transfer)
 export const servicePricing = pgTable('service_pricing', {
@@ -445,17 +468,21 @@ export const servicePricing = pgTable('service_pricing', {
   serviceType: varchar('service_type', { length: 50 }).notNull().unique(), // 'charter' | 'custom' | 'transfer'
   titleBase: jsonb('title_base').$type<Record<string, string>>().notNull(),
   titleAccent: jsonb('title_accent').$type<Record<string, string>>().notNull(),
-  subtitleStrong: jsonb('subtitle_strong').$type<Record<string, string>>().notNull(),
+  subtitleStrong: jsonb('subtitle_strong')
+    .$type<Record<string, string>>()
+    .notNull(),
   subtitle: jsonb('subtitle').$type<Record<string, string>>().notNull(),
-  popularBadge: jsonb('popular_badge').$type<Record<string, string>>().notNull(),
-  popularTitle: jsonb('popular_title').$type<Record<string, string>>().notNull(),
+  popularBadge: jsonb('popular_badge')
+    .$type<Record<string, string>>()
+    .notNull(),
+  popularTitle: jsonb('popular_title')
+    .$type<Record<string, string>>()
+    .notNull(),
   popularDesc: jsonb('popular_desc').$type<Record<string, string>>().notNull(),
   notes: jsonb('notes').$type<Record<string, string[]>>().notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 // ── Legal Documents Types & Table ──────────────────────────
 export interface LegalSubItem {
@@ -486,8 +513,6 @@ export const legalDocs = pgTable('legal_docs', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
-
-
 
 // ── Package Booking Types ──
 export interface BookingTravelers {
@@ -531,29 +556,44 @@ export interface BookingPricingSummary {
 
 // package booking table (for admin panel, client checkout, and payment gateway readiness)
 export const packageBookings = pgTable('package_bookings', {
-  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  bookingReference: text('booking_reference').$defaultFn(() => 'IK-' + Date.now().toString().slice(-4) + Math.random().toString(36).substring(2, 6).toUpperCase()),
-  
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  bookingReference: text('booking_reference').$defaultFn(
+    () =>
+      'IK-' +
+      Date.now().toString().slice(-4) +
+      Math.random().toString(36).substring(2, 6).toUpperCase(),
+  ),
+
   // Package details
   packageId: text('package_id').notNull(),
   packageSlug: text('package_slug'),
   packageName: text('package_name').notNull(),
   packageType: text('package_type'),
   type: text('type').notNull(), // "oneday" | "multiday"
-  
+
   // Schedule & Travelers
   journeyDate: text('journey_date').notNull(),
   travelers: jsonb('travelers').$type<BookingTravelers>().notNull(),
   totalPax: integer('total_pax').default(1),
 
   // Options & Pricing Breakdown
-  selectedOptions: jsonb('selected_options').$type<BookingSelectedOption[]>().default([]),
+  selectedOptions: jsonb('selected_options')
+    .$type<BookingSelectedOption[]>()
+    .default([]),
   basePrice: numeric('base_price', { precision: 12, scale: 2 }).default('0'),
-  optionsTotal: numeric('options_total', { precision: 12, scale: 2 }).default('0'),
-  totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).default('0'),
+  optionsTotal: numeric('options_total', { precision: 12, scale: 2 }).default(
+    '0',
+  ),
+  totalAmount: numeric('total_amount', { precision: 12, scale: 2 }).default(
+    '0',
+  ),
   currency: text('currency').default('USD'),
   locale: text('locale').default('en'),
-  pricingSummary: jsonb('pricing_summary').$type<BookingPricingSummary>().default({}),
+  pricingSummary: jsonb('pricing_summary')
+    .$type<BookingPricingSummary>()
+    .default({}),
 
   // Server-side audit & anti-tampering verification
   verifiedAmount: numeric('verified_amount', { precision: 12, scale: 2 }),
@@ -576,13 +616,12 @@ export const packageBookings = pgTable('package_bookings', {
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
-
 //forget password table
-export const passwordResets = pgTable("password_resets", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  email: text("email").notNull(),
-  otp: text("otp").notNull(),
-  expiresAt: timestamp("expires_at").notNull(),
+export const passwordResets = pgTable('password_resets', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: text('email').notNull(),
+  otp: text('otp').notNull(),
+  expiresAt: timestamp('expires_at').notNull(),
 });
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -623,5 +662,76 @@ export const commentsRelations = relations(comments, ({ one }) => ({
   package: one(packages, {
     fields: [comments.packageId],
     references: [packages.id],
+  }),
+}));
+
+// ── Enterprise Admin Security Engine Tables ──────────────────────────
+export const adminUsers = pgTable('admin_users', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  email: varchar('email', { length: 255 }).unique().notNull(),
+  passwordHash: varchar('password_hash', { length: 255 }).notNull(),
+  fullName: varchar('full_name', { length: 100 }).notNull(),
+  role: varchar('role', { length: 50 }).default('ADMIN').notNull(), // 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS_MANAGER'
+  twoFactorSecret: varchar('two_factor_secret', { length: 255 }),
+  isTwoFactorEnabled: boolean('is_two_factor_enabled').default(false).notNull(),
+  failedLoginAttempts: integer('failed_login_attempts').default(0).notNull(),
+  lockedUntil: timestamp('locked_until'),
+  lastLoginAt: timestamp('last_login_at'),
+  lastLoginIp: varchar('last_login_ip', { length: 45 }),
+  isActive: boolean('is_active').default(true).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const adminSessions = pgTable('admin_sessions', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  adminId: uuid('admin_id')
+    .notNull()
+    .references(() => adminUsers.id, { onDelete: 'cascade' }),
+  refreshTokenHash: varchar('refresh_token_hash', { length: 255 }).notNull(),
+  userAgent: text('user_agent'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  isRevoked: boolean('is_revoked').default(false).notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const adminAuditLogs = pgTable('admin_audit_logs', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  adminId: uuid('admin_id').references(() => adminUsers.id, {
+    onDelete: 'set null',
+  }),
+  action: varchar('action', { length: 100 }).notNull(),
+  resource: varchar('resource', { length: 100 }).notNull(),
+  details: jsonb('details'),
+  ipAddress: varchar('ip_address', { length: 45 }),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .defaultNow()
+    .notNull(),
+});
+
+export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
+  sessions: many(adminSessions),
+  auditLogs: many(adminAuditLogs),
+}));
+
+export const adminSessionsRelations = relations(adminSessions, ({ one }) => ({
+  admin: one(adminUsers, {
+    fields: [adminSessions.adminId],
+    references: [adminUsers.id],
+  }),
+}));
+
+export const adminAuditLogsRelations = relations(adminAuditLogs, ({ one }) => ({
+  admin: one(adminUsers, {
+    fields: [adminAuditLogs.adminId],
+    references: [adminUsers.id],
   }),
 }));

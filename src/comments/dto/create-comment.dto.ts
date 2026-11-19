@@ -1,30 +1,40 @@
-import { IsString, IsNotEmpty, IsOptional, IsEnum, IsBoolean, IsInt, Min, Max, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsEnum,
+  IsBoolean,
+  IsInt,
+  Min,
+  Max,
+  IsUUID,
+} from 'class-validator';
 
 export enum CommentType {
-    WEBSITE = 'WEBSITE',
-    PACKAGE = 'PACKAGE',
+  WEBSITE = 'WEBSITE',
+  PACKAGE = 'PACKAGE',
 }
 
 export class CreateCommentDto {
-    @IsOptional()
-    @IsUUID()
-    packageId?: string;
+  @IsOptional()
+  @IsUUID()
+  packageId?: string;
 
-    @IsString()
-    @IsNotEmpty()
-    content!: string;
+  @IsString()
+  @IsNotEmpty()
+  content!: string;
 
-    @IsEnum(CommentType)
-    @IsNotEmpty()
-    type!: CommentType;
+  @IsEnum(CommentType)
+  @IsNotEmpty()
+  type!: CommentType;
 
-    @IsOptional()
-    @IsBoolean()
-    isPublic?: boolean;
+  @IsOptional()
+  @IsBoolean()
+  isPublic?: boolean;
 
-    @IsOptional()
-    @IsInt()
-    @Min(1)
-    @Max(5)
-    rating?: number;
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating?: number;
 }

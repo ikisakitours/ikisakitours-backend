@@ -64,7 +64,10 @@ const parseJsonArray = (value: any) => {
   return Array.isArray(value) ? value : [];
 };
 
-const parseAndMap = <T extends object>(value: any, dtoClass: new () => T): T[] => {
+const parseAndMap = <T extends object>(
+  value: any,
+  dtoClass: new () => T,
+): T[] => {
   let parsed = value;
   if (typeof value === 'string') {
     try {

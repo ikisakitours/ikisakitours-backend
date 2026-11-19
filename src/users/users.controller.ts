@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Body, UseGuards, Res, Req, Patch, UseInterceptors, UploadedFile, Delete, Param } from '@nestjs/common'; // Added Res import
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Res,
+  Req,
+  Patch,
+  UseInterceptors,
+  UploadedFile,
+  Delete,
+  Param,
+} from '@nestjs/common'; // Added Res import
 import type { Response } from 'express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -15,10 +28,11 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 
+import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
 
 @Controller('auth')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) { }
+  constructor(private readonly usersService: UsersService) {}
 
   // PUBLIC: Handles POST /api/auth/signup
   @Post('signup')
@@ -38,12 +52,12 @@ export class UsersController {
     if (authResult.maxAgeMs) {
       // Set the token inside an HTTP-only cookie
       res.cookie('token', authResult.access_token, {
-        httpOnly: true,                                // Protects from XSS (JavaScript cannot access cookie)
+        httpOnly: true, // Protects from XSS (JavaScript cannot access cookie)
         //secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
         secure: true,
         //sameSite: 'lax',                               // Protects against CSRF attacks
         sameSite: 'none',
-        maxAge: authResult.maxAgeMs,                   // Dynamic duration (1 day vs 30 days)
+        maxAge: authResult.maxAgeMs, // Dynamic duration (1 day vs 30 days)
       });
     }
 
@@ -64,8 +78,8 @@ export class UsersController {
     return { message: 'Logged out successfully' };
   }
 
-  // PROTECTED: Handles GET /api/auth/users (Requires valid Bearer Token)
-  @UseGuards(AdminApiKeyGuard)
+  // PROTECTED: Handles GET /api/auth/users (Requires valid Admin Session or API Key)
+  @UseGuards(AdminAuthGuard)
   @Get('users')
   async findAll() {
     return await this.usersService.findAll();
@@ -73,7 +87,9 @@ export class UsersController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async findMe(@Req() req: Request & { user: { sub: string } }): Promise<UserResponseDto> {
+  async findMe(
+    @Req() req: Request & { user: { sub: string } },
+  ): Promise<UserResponseDto> {
     return await this.usersService.findMe(req.user.sub);
   }
 
@@ -105,9 +121,11 @@ export class UsersController {
     @Param('id') userId: string,
     @Body() updateUserStatusDto: UpdateUserStatusDto,
   ) {
-    return await this.usersService.updateUserStatus(userId, updateUserStatusDto);
+    return await this.usersService.updateUserStatus(
+      userId,
+      updateUserStatusDto,
+    );
   }
-
 
   // PROTECTED: Handles DELETE /api/auth/me
   @UseGuards(JwtAuthGuard)
@@ -118,7 +136,10 @@ export class UsersController {
     @Res({ passthrough: true }) res: Response,
   ) {
     // 1. Delete the user from the database after password validation
-    const result = await this.usersService.deleteAccount(req.user.sub, deleteAccountDto);
+    const result = await this.usersService.deleteAccount(
+      req.user.sub,
+      deleteAccountDto,
+    );
 
     // 2. Clear the cookie since the user's account is now deleted and they are logged out
     res.clearCookie('token', {
@@ -148,5 +169,4 @@ export class UsersController {
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.usersService.resetPassword(dto);
   }
-
 }

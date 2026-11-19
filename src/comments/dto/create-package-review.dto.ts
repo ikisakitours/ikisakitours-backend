@@ -1,42 +1,52 @@
-import { IsString, IsNotEmpty, IsEmail, IsInt, Min, Max, IsOptional, IsEnum, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsEmail,
+  IsInt,
+  Min,
+  Max,
+  IsOptional,
+  IsEnum,
+  IsUUID,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export enum CommentType {
-    WEBSITE = 'WEBSITE',
-    PACKAGE = 'PACKAGE',
+  WEBSITE = 'WEBSITE',
+  PACKAGE = 'PACKAGE',
 }
 
 export class CreatePackageReviewDto {
-    @IsUUID()
-    userId!: string;
+  @IsUUID()
+  userId!: string;
 
-    @IsString()
-    @IsNotEmpty()
-    packageId!: string;
+  @IsString()
+  @IsNotEmpty()
+  packageId!: string;
 
-    @IsString()
-    @IsNotEmpty()
-    packageName!: string;
+  @IsString()
+  @IsNotEmpty()
+  packageName!: string;
 
-    @IsEnum(CommentType)
-    @IsOptional()
-    type: CommentType = CommentType.PACKAGE;
+  @IsEnum(CommentType)
+  @IsOptional()
+  type: CommentType = CommentType.PACKAGE;
 
-    @IsEmail()
-    email!: string;
+  @IsEmail()
+  email!: string;
 
-    // Transforms string "5" from FormData into integer 5 before validation runs
-    @Transform(({ value }) => parseInt(value, 10))
-    @IsInt()
-    @Min(1)
-    @Max(5)
-    rating!: number;
+  // Transforms string "5" from FormData into integer 5 before validation runs
+  @Transform(({ value }) => parseInt(value, 10))
+  @IsInt()
+  @Min(1)
+  @Max(5)
+  rating!: number;
 
-    @IsString()
-    @IsNotEmpty()
-    experience!: string;
+  @IsString()
+  @IsNotEmpty()
+  experience!: string;
 
-    @IsString()
-    @IsOptional()
-    adminReply?: string;
+  @IsString()
+  @IsOptional()
+  adminReply?: string;
 }

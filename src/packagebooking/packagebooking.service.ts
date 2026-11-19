@@ -99,7 +99,8 @@ export class PackageBookingService {
         journeyDate: createDto.journeyDate,
         travelers: createDto.travelers,
         totalPax,
-        selectedOptions: (createDto.selectedOptions as schema.BookingSelectedOption[]) || [],
+        selectedOptions:
+          (createDto.selectedOptions as schema.BookingSelectedOption[]) || [],
         basePrice: (createDto.basePrice ?? 0).toString(),
         optionsTotal: (createDto.optionsTotal ?? 0).toString(),
         totalAmount: (createDto.totalAmount ?? verifiedAmount ?? 0).toString(),
@@ -146,7 +147,8 @@ export class PackageBookingService {
 
     // 2. Calculate selected add-ons using prices directly from DB package options
     let optionsTotal = 0;
-    const dbOptions: schema.PackageOptionItem[] = pkg.pricingConfig?.options || [];
+    const dbOptions: schema.PackageOptionItem[] =
+      pkg.pricingConfig?.options || [];
     const dbOptionsMap = new Map<string, schema.PackageOptionItem>(
       dbOptions.map((o) => [o.id, o]),
     );
@@ -185,12 +187,17 @@ export class PackageBookingService {
       const optPrice = dbOpt
         ? Number(dbOpt.price)
         : Number(clientOpt.unitPrice ?? clientOpt.price ?? 0);
-      const calcType = dbOpt ? dbOpt.calculationType : (clientOpt.calculationType || 'per_person');
+      const calcType = dbOpt
+        ? dbOpt.calculationType
+        : clientOpt.calculationType || 'per_person';
 
       let count = 1;
       if (typeof clientOpt.count === 'number' && clientOpt.count > 0) {
         count = clientOpt.count;
-      } else if (typeof clientOpt.quantity === 'number' && clientOpt.quantity > 0) {
+      } else if (
+        typeof clientOpt.quantity === 'number' &&
+        clientOpt.quantity > 0
+      ) {
         count = clientOpt.quantity;
       } else if (calcType === 'per_person') {
         count = totalPayingPax;
@@ -231,8 +238,10 @@ export class PackageBookingService {
 
     if (dto.status) updateData.status = dto.status;
     if (dto.paymentStatus) updateData.paymentStatus = dto.paymentStatus;
-    if (dto.paymentMethod !== undefined) updateData.paymentMethod = dto.paymentMethod;
-    if (dto.paymentTransactionId !== undefined) updateData.paymentTransactionId = dto.paymentTransactionId;
+    if (dto.paymentMethod !== undefined)
+      updateData.paymentMethod = dto.paymentMethod;
+    if (dto.paymentTransactionId !== undefined)
+      updateData.paymentTransactionId = dto.paymentTransactionId;
 
     const [updatedBooking] = await this.db
       .update(schema.packageBookings)

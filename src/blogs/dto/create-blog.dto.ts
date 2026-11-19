@@ -20,7 +20,7 @@ export class CreateBlogDto {
   @IsOptional()
   slug?: string;
 
-  // Since title, summary, readTime, and blog are now JSONB objects 
+  // Since title, summary, readTime, and blog are now JSONB objects
   @IsObject()
   @IsNotEmpty()
   title!: Record<string, string>;

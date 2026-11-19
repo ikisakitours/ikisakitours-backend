@@ -12,7 +12,7 @@ import { UpdateBlogDto } from './dto/update-blog.dto';
 export class BlogsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) { }
+  ) {}
 
   // Helper method: Generate URL-friendly slug from text
   private slugify(text: string): string {
@@ -33,9 +33,11 @@ export class BlogsService {
     const targetLang =
       blog.title && blog.title[lang]
         ? lang
-        : (blog.title && blog.title['en']
+        : blog.title && blog.title['en']
           ? 'en'
-          : (blog.title ? Object.keys(blog.title)[0] || 'en' : 'en'));
+          : blog.title
+            ? Object.keys(blog.title)[0] || 'en'
+            : 'en';
 
     return {
       id: blog.id,
@@ -63,9 +65,11 @@ export class BlogsService {
     const targetLang =
       blog.title && blog.title[lang]
         ? lang
-        : (blog.title && blog.title['en']
+        : blog.title && blog.title['en']
           ? 'en'
-          : (blog.title ? Object.keys(blog.title)[0] || 'en' : 'en'));
+          : blog.title
+            ? Object.keys(blog.title)[0] || 'en'
+            : 'en';
 
     return {
       id: blog.id,
@@ -89,7 +93,8 @@ export class BlogsService {
     const titleText = dto.title['en'] || Object.values(dto.title)[0] || '';
 
     // Generate slug from custom DTO slug or fallback to title text
-    const slug = (dto.slug?.trim() || this.slugify(titleText)) || `blog-${Date.now()}`;
+    const slug =
+      dto.slug?.trim() || this.slugify(titleText) || `blog-${Date.now()}`;
 
     const [newBlog] = await this.db
       .insert(schema.blogs)
@@ -110,14 +115,25 @@ export class BlogsService {
   }
 
   // 2. Fetch small previews for card display on frontend
-  async findPreviews(lang: string = 'en'): Promise<BlogPreviewResponseDto[]> {
-    // Fetch all records sorted by creation date (no language 'where' filter)
+  async findPreviews(
+    lang: string = 'en',
+    onlyLive: boolean = true,
+  ): Promise<BlogPreviewResponseDto[]> {
+    // Fetch records sorted by creation date
     const records = await this.db.query.blogs.findMany({
+      where: onlyLive ? eq(schema.blogs.isLive, true) : undefined,
       orderBy: [desc(schema.blogs.createdAt)],
     });
 
     // Pass the requested language down into the mapper for JSONB fallback
     return records.map((b) => this.mapToBlogPreviewResponseDto(b, lang));
+  }
+
+  // 2.1 Admin fetch all blogs with isLive flag
+  async findAllAdmin() {
+    return await this.db.query.blogs.findMany({
+      orderBy: [desc(schema.blogs.createdAt)],
+    });
   }
 
   // 3. Fetch single blog post by ID
@@ -134,7 +150,11 @@ export class BlogsService {
   }
 
   // 4. Fetch single destination/blog by Slug (for public frontend view)
-  async findBySlug(slug: string, lang: string = 'en'): Promise<BlogResponseDto> {
+  async findBySlug(
+    slug: string,
+    lang: string = 'en',
+    isAdmin: boolean = false,
+  ): Promise<BlogResponseDto> {
     const blog = await this.db.query.blogs.findFirst({
       where: eq(schema.blogs.slug, slug),
     });
@@ -143,7 +163,26 @@ export class BlogsService {
       throw new NotFoundException(`Blog with slug "${slug}" not found`);
     }
 
+    if (!isAdmin && blog.isLive === false) {
+      throw new NotFoundException(`Blog with slug "${slug}" not found`);
+    }
+
     return this.mapToBlogResponseDto(blog, lang);
+  }
+
+  // 4.1 Update visibility (isLive)
+  async updateVisibility(id: string, isLive: boolean) {
+    const [updatedBlog] = await this.db
+      .update(schema.blogs)
+      .set({ isLive, updatedAt: new Date() })
+      .where(eq(schema.blogs.id, id))
+      .returning();
+
+    if (!updatedBlog) {
+      throw new NotFoundException(`Blog with ID "${id}" not found`);
+    }
+
+    return updatedBlog;
   }
 
   // 5. Update likes count
@@ -251,13 +290,6 @@ export class BlogsService {
     };
   }
 
-
-  // ADMIN 1: Fetch all raw multilingual blogs for the admin table
-  async findAllAdmin() {
-    // Adjust 'blogs' to match your actual Drizzle table schema import name
-    return await this.db.select().from(schema.blogs);
-  }
-
   // ADMIN 2: Fetch a single raw multilingual blog by ID for the edit form
   async findOneAdmin(id: string) {
     const [blog] = await this.db
@@ -283,7 +315,7 @@ export class BlogsService {
       .update(schema.blogs)
       .set({
         ...updateDto,
-        updatedAt: new Date(), // Optional: if you track update timestamps
+        updatedAt: new Date(),
       })
       .where(eq(schema.blogs.id, id))
       .returning();

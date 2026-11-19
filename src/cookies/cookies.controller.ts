@@ -1,4 +1,12 @@
-import { Controller, Post, Get, Body, Param, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  Param,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
 import { CookiesService } from './cookies.service';
 import { SaveConsentDto } from './dto/save-consent.dto';
 

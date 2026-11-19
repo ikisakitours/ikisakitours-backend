@@ -1,4 +1,11 @@
-import { IsString, IsBoolean, IsOptional, IsInt, Min, Max } from 'class-validator';
+import {
+  IsString,
+  IsBoolean,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+} from 'class-validator';
 
 export class CommentResponseDto {
   @IsString()

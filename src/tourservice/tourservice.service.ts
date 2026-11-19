@@ -13,7 +13,7 @@ import { CreateServiceNotesDto } from './dto/service-notes/create-service-notes.
 export class ServicesService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
-  ) { }
+  ) {}
 
   // 1. Create Custom Made Service Request
   async createCustomService(dto: CreateCustomServiceDto) {
@@ -40,7 +40,10 @@ export class ServicesService {
       })
       .returning();
 
-    return { message: 'Custom service request submitted successfully', data: record };
+    return {
+      message: 'Custom service request submitted successfully',
+      data: record,
+    };
   }
 
   // 2. Create Private Chauffeur Service Request
@@ -70,7 +73,10 @@ export class ServicesService {
       })
       .returning();
 
-    return { message: 'Private chauffeur request submitted successfully', data: record };
+    return {
+      message: 'Private chauffeur request submitted successfully',
+      data: record,
+    };
   }
 
   // 3. Create Transfer Service Request
@@ -87,6 +93,8 @@ export class ServicesService {
         journeyDate: dto.journeyDate,
         pickupTime: dto.pickupTime,
         travelers: dto.travelers,
+        startingPrice: dto.startingPrice,
+        selectedPrice: dto.selectedPrice,
         fullName: dto.fullName,
         email: dto.email,
         phoneNumber: dto.phoneNumber,
@@ -98,8 +106,47 @@ export class ServicesService {
     return { message: 'Transfer request submitted successfully', data: record };
   }
 
-  // 4. Fetch Requests by Category
-  async findAllByCategory(category: 'custom-made' | 'private-chauffeur' | 'transfer') {
+  // 4. Fetch All Service Requests (Admin - sorted by createdAt DESC)
+  async findAllServices() {
+    return await this.db
+      .select()
+      .from(schema.serviceRequests)
+      .orderBy(desc(schema.serviceRequests.createdAt));
+  }
+
+  // 5. Fetch Single Service Request by ID
+  async findOneService(id: string) {
+    const [record] = await this.db
+      .select()
+      .from(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, id))
+      .limit(1);
+
+    if (!record) {
+      throw new NotFoundException(`Service request with ID ${id} not found`);
+    }
+
+    return record;
+  }
+
+  // 6. Delete Service Request by ID
+  async deleteService(id: string) {
+    const [deleted] = await this.db
+      .delete(schema.serviceRequests)
+      .where(eq(schema.serviceRequests.id, id))
+      .returning();
+
+    if (!deleted) {
+      throw new NotFoundException(`Service request with ID ${id} not found`);
+    }
+
+    return { message: 'Service request deleted successfully', data: deleted };
+  }
+
+  // 7. Fetch Requests by Category
+  async findAllByCategory(
+    category: 'custom-made' | 'private-chauffeur' | 'transfer',
+  ) {
     const records = await this.db
       .select()
       .from(schema.serviceRequests)
@@ -115,7 +162,7 @@ export class ServicesService {
       .update(schema.serviceRequests)
       .set({
         status,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       })
       .where(eq(schema.serviceRequests.id, id))
       .returning();
@@ -166,10 +213,12 @@ export class ServicesService {
         .orderBy(desc(schema.serviceNotes.createdAt));
     }
 
-    // ONLY map and flatten if a specific language is requested. 
+    // ONLY map and flatten if a specific language is requested.
     // If no 'lang' query param is passed, return the raw records with the full multi-language dictionary!
     if (lang) {
-      return records.map((record) => this.mapToServiceNoteResponseDto(record, lang));
+      return records.map((record) =>
+        this.mapToServiceNoteResponseDto(record, lang),
+      );
     }
 
     return records;
@@ -192,14 +241,35 @@ export class ServicesService {
       throw new NotFoundException(`Service note with ID ${id} not found`);
     }
 
-    return { message: 'Service note updated successfully', data: updatedRecord };
+    return {
+      message: 'Service note updated successfully',
+      data: updatedRecord,
+    };
+  }
+
+  // 9. Delete Service Note
+  async deleteServiceNote(id: string | number) {
+    const numericId = typeof id === 'string' ? parseInt(id, 10) : id;
+
+    const [deleted] = await this.db
+      .delete(schema.serviceNotes)
+      .where(eq(schema.serviceNotes.id, numericId))
+      .returning();
+
+    if (!deleted) {
+      throw new NotFoundException(`Service note with ID ${id} not found`);
+    }
+
+    return { message: 'Service note deleted successfully', data: deleted };
   }
 
   private mapToServiceNoteResponseDto(note: any, lang: string = 'en') {
     const getLocalizedArray = (fieldObj: Record<string, string[]> | null) => {
       if (!fieldObj) return [];
       if (Array.isArray(fieldObj)) return fieldObj; // Fallback if already an array
-      return fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || [];
+      return (
+        fieldObj[lang] || fieldObj['en'] || Object.values(fieldObj)[0] || []
+      );
     };
 
     return {

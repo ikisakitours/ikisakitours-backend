@@ -3,4 +3,5 @@ export class PackageListItemDto {
   slug!: string;
   title!: string;
   type!: string;
+  isLive?: boolean;
 }
