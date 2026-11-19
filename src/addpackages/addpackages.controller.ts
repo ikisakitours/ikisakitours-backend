@@ -11,6 +11,7 @@ import {
   UploadedFiles,
   Headers,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { AddpackagesService } from './addpackages.service';
@@ -20,6 +21,10 @@ import { PackageResponseDto } from './dto/PackageResponse.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { PackageSummaryResponseDto } from './dto/package-summary-response.dto';
 import { PackageListItemDto } from './dto/package-list-item.dto';
+import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
+import { RolesGuard } from '../admin-auth/roles.guard';
+import { Roles } from '../admin-auth/roles.decorator';
+import { AdminRole } from '../admin-auth/roles.enum';
 
 export enum PackageType {
   ONE_DAY = 'oneday',
@@ -31,6 +36,8 @@ export class AddpackagesController {
   constructor(private readonly addpackagesService: AddpackagesService) {}
 
   @Post()
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.PACKAGE_MANAGER)
   @UseInterceptors(FilesInterceptor('images', 10))
   async create(
     @Body() createDto: CreateAddPackageDto,
@@ -46,6 +53,8 @@ export class AddpackagesController {
 
   // --- ADMIN FETCH ALL PACKAGES (Live + Hidden) ---
   @Get('admin')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.PACKAGE_MANAGER)
   async findAllAdmin(
     @Query('lang') lang: string = 'en',
   ): Promise<PackageListItemDto[]> {
@@ -125,6 +134,8 @@ export class AddpackagesController {
 
   // --- TOGGLE VISIBILITY (isLive) ---
   @Patch(':slug/visibility')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.PACKAGE_MANAGER)
   async updateVisibility(
     @Param('slug') slug: string,
     @Body('isLive') isLive: boolean,
@@ -151,6 +162,8 @@ export class AddpackagesController {
 
   // --- TEXT-ONLY UPDATE BY SLUG ---
   @Patch(':slug')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.PACKAGE_MANAGER)
   async updateTextOnly(
     @Param('slug') slug: string,
     @Body() updateDto: Partial<CreateAddPackageDto>,
@@ -160,6 +173,8 @@ export class AddpackagesController {
 
   // --- DELETE PACKAGE BY SLUG ---
   @Delete(':slug')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(AdminRole.SUPER_ADMIN, AdminRole.PACKAGE_MANAGER)
   async remove(@Param('slug') slug: string) {
     return await this.addpackagesService.remove(slug);
   }

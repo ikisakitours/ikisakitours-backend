@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { AdminAuthController } from './admin-auth.controller';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminAuthGuard } from './admin-auth.guard';
+import { RolesGuard } from './roles.guard';
 import { DatabaseModule } from '../database/database.module';
 
 @Global()
@@ -18,7 +19,7 @@ import { DatabaseModule } from '../database/database.module';
     }),
   ],
   controllers: [AdminAuthController],
-  providers: [AdminAuthService, AdminAuthGuard],
-  exports: [AdminAuthService, AdminAuthGuard, JwtModule],
+  providers: [AdminAuthService, AdminAuthGuard, RolesGuard],
+  exports: [AdminAuthService, AdminAuthGuard, RolesGuard, JwtModule],
 })
 export class AdminAuthModule {}

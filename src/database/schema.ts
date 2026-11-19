@@ -671,14 +671,14 @@ export const adminUsers = pgTable('admin_users', {
   email: varchar('email', { length: 255 }).unique().notNull(),
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   fullName: varchar('full_name', { length: 100 }).notNull(),
-  role: varchar('role', { length: 50 }).default('ADMIN').notNull(), // 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS_MANAGER'
+  role: varchar('role', { length: 50 }).default('SUPER_ADMIN').notNull(),
   avatarUrl: text('avatar_url'),
   twoFactorSecret: varchar('two_factor_secret', { length: 255 }),
   isTwoFactorEnabled: boolean('is_two_factor_enabled').default(false).notNull(),
   failedLoginAttempts: integer('failed_login_attempts').default(0).notNull(),
   lockedUntil: timestamp('locked_until'),
-  lastLoginAt: timestamp('last_login_at'),
-  lastLoginIp: varchar('last_login_ip', { length: 45 }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
+  lastLoginIp: varchar('last_login_ip', { length: 100 }),
   isActive: boolean('is_active').default(true).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true })
     .defaultNow()

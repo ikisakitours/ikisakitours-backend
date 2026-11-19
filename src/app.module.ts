@@ -22,6 +22,7 @@ import { EmailModule } from './email/email.module';
 import { ServicePricingModule } from './servicepricing/servicepricing.module';
 import { LegalDocsModule } from './legaldocs/legaldocs.module';
 import { AdminAuthModule } from './admin-auth/admin-auth.module';
+import { AdminStaffModule } from './admin-staff/admin-staff.module';
 
 @Module({
   imports: [
@@ -45,6 +46,7 @@ import { AdminAuthModule } from './admin-auth/admin-auth.module';
     ServicePricingModule,
     LegalDocsModule,
     AdminAuthModule,
+    AdminStaffModule,
   ],
   controllers: [AppController, CronController],
   providers: [AppService],

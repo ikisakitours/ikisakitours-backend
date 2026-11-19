@@ -9,6 +9,7 @@ import {
   Query,
   Headers,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { DestinationsService } from './destinations.service';
@@ -18,6 +19,10 @@ import { DestinationResponseDto } from './dto/destination-response.dto';
 import { DestinationPreviewResponseDto } from './dto/destination-preview-response.dto';
 import { DestinationMapResponseDto } from './dto/destination-map-response.dto';
 import { DestinationPackageResponseDto } from './dto/destination-package-response.dto';
+import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
+import { RolesGuard } from '../admin-auth/roles.guard';
+import { Roles } from '../admin-auth/roles.decorator';
+import { AdminRole } from '../admin-auth/roles.enum';
 
 @Controller('destinations')
 export class DestinationsController {
@@ -25,6 +30,12 @@ export class DestinationsController {
 
   // 1. Create a destination (Admin) - Receives JSON with R2 image URLs
   @Post()
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.DESTINATION_EXPERT,
+  )
   async create(
     @Body() createDto: CreateDestinationDto,
   ): Promise<DestinationResponseDto> {
@@ -33,12 +44,24 @@ export class DestinationsController {
 
   // ADMIN 1: Fetch all raw multilingual destinations for the admin table (MUST be above :id)
   @Get('admin')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.DESTINATION_EXPERT,
+  )
   async findAllAdmin() {
     return await this.destinationsService.findAllAdmin();
   }
 
   // ADMIN 2: Fetch a single raw multilingual destination by ID for the edit form (MUST be above :id)
   @Get('admin/:id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.DESTINATION_EXPERT,
+  )
   async findOneAdmin(@Param('id') id: string) {
     return await this.destinationsService.findOneAdmin(id);
   }
@@ -85,6 +108,12 @@ export class DestinationsController {
 
   // Visibility toggle
   @Patch(':id/visibility')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.DESTINATION_EXPERT,
+  )
   async updateVisibility(
     @Param('id') id: string,
     @Body('isLive') isLive: boolean,
@@ -118,6 +147,12 @@ export class DestinationsController {
 
   // ADMIN 3: Update an existing destination by ID
   @Patch(':id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.DESTINATION_EXPERT,
+  )
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdateDestinationDto,
@@ -127,6 +162,12 @@ export class DestinationsController {
 
   // 5. Delete route
   @Delete(':id')
+  @UseGuards(AdminAuthGuard, RolesGuard)
+  @Roles(
+    AdminRole.SUPER_ADMIN,
+    AdminRole.PACKAGE_MANAGER,
+    AdminRole.DESTINATION_EXPERT,
+  )
   async remove(@Param('id') id: string): Promise<{ message: string }> {
     return await this.destinationsService.remove(id);
   }
