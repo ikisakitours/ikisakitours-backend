@@ -24,12 +24,14 @@
 
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
-- [Module Directory (All 15 Domains)](#module-directory-all-15-domains)
+- [Module Directory (All 17 Domains)](#module-directory-all-17-domains)
 - [Core Engineering Highlights](#core-engineering-highlights)
   - [1. Unified Dynamic Group Pricing (`pricingConfig`)](#1-unified-dynamic-group-pricing-pricingconfig)
   - [2. Dual-Persona Multilingual `JSONB` Content Resolution](#2-dual-persona-multilingual-jsonb-content-resolution)
   - [3. Availability Calendar, Color-Coded Blackouts & Multi-Tour Closures](#3-availability-calendar-color-coded-blackouts--multi-tour-closures)
   - [4. Resilient Serverless Pipeline, Cloudflare R2 & Keep-Alive Cron](#4-resilient-serverless-pipeline-cloudflare-r2--keep-alive-cron)
+  - [5. Enterprise Admin Security Engine, Dual Bearer/Cookie Auth & Native 2FA (TOTP)](#5-enterprise-admin-security-engine-dual-bearercookie-auth--native-2fa-totp)
+  - [6. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)](#6-private-tour-services-chauffeur-hire--airport-transfer-engine-services)
 - [API Service Layer Reference](#api-service-layer-reference)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -62,11 +64,11 @@ Engineered on **NestJS 11** and **TypeScript**, the platform utilizes **Drizzle 
 ```mermaid
 flowchart LR
   ClientWeb["Customer Website\n(www.ikisakitours.com)\n[?lang=en / ?lang=ja]"] -->|"Public HTTPS REST"| NestAPI
-  AdminPanel["Admin Dashboard\n(Next.js 16 + React 19)\n[x-admin-key]" ] -->|"Admin Operations"| NestAPI
+  AdminPanel["Admin Dashboard\n(Next.js 16 + React 19)\n[Bearer Token / Cookie / x-admin-key]" ] -->|"Admin Operations & Auth"| NestAPI
   
   NestAPI["Ikisaki Backend API Engine\nNestJS 11 + Drizzle ORM\n(Global Prefix: /api)"]
   
-  NestAPI --> Postgres[("PostgreSQL 16 (Supabase)\nMultilingual JSONB + PricingConfig")]
+  NestAPI --> Postgres[("PostgreSQL 16 (Supabase)\nMultilingual JSONB + PricingConfig\n+ Admin Users & Audit Logs")]
   NestAPI --> R2Storage["Cloudflare R2 Bucket\n(S3 WebP Image CDN)"]
   NestAPI --> ResendMail["Resend Mailer API\n(Booking & Contact Alerts)"]
   
@@ -75,19 +77,21 @@ flowchart LR
 
 ---
 
-## Module Directory (All 15 Domains)
+## Module Directory (All 17 Domains)
 
 | Domain | Route Mount | Operational & Business Capabilities |
 | :--- | :--- | :--- |
+| **Admin Auth & Security** | `/api/admin/auth` | Enterprise authentication: Bearer JWT + HttpOnly cookies, session rotation, account lockouts, self-service profile, password change, and native RFC 6238 TOTP 2FA with QR codes |
+| **Tour Services & Transfers** | `/api/services` | Private chauffeur hire, airport & intercity transfers, and custom tailor-made tour requests with passenger breakdowns, language preference, and dynamic quotes |
 | **Tour Packages** | `/api/addpackages` | One-day & multi-day packages, 18 badge categories, dynamic group pricing tiers, passenger rules, custom add-ons, dynamic meals/hotels, and like counters |
 | **Availability Calendar** | `/api/availability` | Central booking calendar, blackout dates, multi-color hex coding, tour-type closures, and bilingual client closure notes |
 | **Destinations** | `/api/destinations` | Sri Lanka travel hubs, geographic coordinates (`lat`, `lng`), interactive map markers, photo galleries, and slug lookup |
 | **Bookings & Orders** | `/api/package-bookings` | Customer tour reservations, adult/child/infant breakdown, calculated totals, and status lifecycle (`pending`, `confirmed`, `completed`, `cancelled`) |
 | **Service Pricing** | `/api/service-pricing` | Supplementary service tariffs: Private Chauffeur, Airport Transfers, and Custom Tailor-Made tour rate cards |
-| **Service Guidelines** | `/api/tourservice` | Vehicle specifications, capacity limits, luggage policies, and multilingual service guidelines |
+| **Service Guidelines** | `/api/services/notes` & `/api/tourservice` | Vehicle specifications, luggage/pax limits, fuel/toll policies, and bilingual Japanese/English service guidelines |
 | **Travel Blog CMS** | `/api/blogs` | Multilingual travel articles, auto-slugification, tag taxonomies, reader card previews, and persistent user like tracking |
-| **Comments & Reviews** | `/api/comments` | Unified Website Feedback & Tour Package Reviews, star ratings, public visibility toggles, and direct Admin Replies |
-| **Inquiries & Contacts**| `/api/contacts` | Customer contact form lead capture, inquiry categorization, and transactional email dispatch |
+| **Comments & Reviews** | `/api/comments` | Unified Website Feedback & Tour Package Reviews, star ratings, moderation workflows (`approved`, `hidden`), and direct Admin Replies |
+| **Inquiries & Contacts**| `/api/contacts` | Customer contact form lead capture, inquiry categorization, and transactional email dispatch via Resend |
 | **Legal & Compliance** | `/api/legaldocs` | Dynamic compliance CMS: Terms of Service, Privacy Policy, Cookie Policy, and Cancellation terms with client auto-translation |
 | **Cookie Consent** | `/api/cookies` | GDPR & ePrivacy compliance tracking recording visitor consent choices per user identifier |
 | **Customer Support** | `/api/faqs` | Categorized multilingual support Q&A pairs with admin management |
@@ -190,7 +194,58 @@ The availability system synchronizes closed booking dates between admin staff an
 
 ---
 
+### 5. Enterprise Admin Security Engine, Dual Bearer/Cookie Auth & Native 2FA (TOTP)
+
+The administrative control plane (`/api/admin/auth`) is engineered with zero-compromise enterprise security:
+- **Dual Bearer Token & HttpOnly Cookie Extraction**: Seamless cross-origin support extracting `Bearer <token>` from the `Authorization` header with graceful fallback to HttpOnly cookies (`admin_session`, `admin_token`, `jwt`, `token`) and `x-admin-key` Super Admin service bypass.
+- **Zero-Dependency Native RFC 6238 TOTP Engine**: Custom-built on Node.js `crypto` with zero external ESM dependencies, completely eliminating serverless `ERR_REQUIRE_ESM` runtime incompatibilities. 100% compliant with Google Authenticator, Microsoft Authenticator, Authy, and 1Password with QR code data URLs via `qrcode`.
+- **Brute-Force & Account Lockout Defense**: Enforces consecutive failed login tracking with automatic 30-minute account locks upon 5 consecutive failures.
+- **Token Rotation & Session Reuse Attack Detection**: Issues rotating 7-day refresh tokens. If a previously revoked refresh token is presented, all active sessions for that admin user are instantly invalidated.
+- **Enterprise Security Audit Logging**: Every critical security action (`LOGIN_SUCCESS`, `LOGIN_FAILED`, `PROFILE_UPDATED`, `PASSWORD_CHANGED`, `2FA_ENABLED`, `2FA_DISABLED`, `TOKEN_REFRESH`) is immutably logged in `admin_audit_logs` with client IP and User-Agent.
+
+---
+
+### 6. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)
+
+Unified management for private bespoke travel experiences:
+- **Airport & Intercity Transfers (`transfer`)**: Starting base rates mapped from vehicle class specifications with distance-based dynamic quotations issued via email.
+- **Private Chauffeur Hire (`chauffeur`)**: Tiered pricing support (*With Driver*, *With Guide*, or *With Driver & Guide*).
+- **Custom Tailor-Made Tours (`custom`)**: Full bespoke itinerary requests capturing destination interests and special requests.
+- **Bilingual Guest Communication (`language`)**: Preferred guest communication language (English, Japanese, German, French) stored per service request.
+- **Granular Travelers Breakdown**: Structured JSON breakdown storing `{ adults, couples, children, infants }` for operational transport preparation.
+
+---
+
 ## API Service Layer Reference
+
+### Admin Authentication, Profile & 2FA (`/api/admin/auth`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/admin/auth/login` | Public | Admin login with bcrypt (12 rounds), returns `token`, `accessToken`, and `user` payload, sets 15-min session & 7-day refresh cookies |
+| `POST` | `/api/admin/auth/logout` | Session / JWT | Revokes current refresh token session and clears authentication cookies |
+| `GET` | `/api/admin/auth/me` | Bearer / Cookie | Fetch profile of currently authenticated admin (`id`, `email`, `fullName`, `role`, `avatarUrl`, `isTwoFactorEnabled`) |
+| `POST` | `/api/admin/auth/refresh` | Cookie | Session refresh with token rotation & reuse detection |
+| `PATCH` | `/api/admin/auth/profile` | Bearer / Cookie | Self-service update for administrator display name (`fullName`) and WebP avatar image URL (`avatarUrl`) |
+| `PATCH` | `/api/admin/auth/change-password` | Bearer / Cookie | Self-service password change; validates `currentPassword`, enforces $\ge 8$ chars, hashes with bcrypt factor 12 |
+| `POST` | `/api/admin/auth/2fa/generate` | Bearer / Cookie | Generates Base32 TOTP secret, `otpauth://` URI, and QR Code Data URL for Google Authenticator |
+| `POST` | `/api/admin/auth/2fa/enable` | Bearer / Cookie | Verifies 6-digit TOTP code and activates Two-Factor Authentication |
+| `POST` | `/api/admin/auth/2fa/disable` | Bearer / Cookie | Confirms current password and deactivates Two-Factor Authentication |
+
+### Tour Services & Transportation Requests (`/api/services`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/services` | `x-admin-key` / Guard | List all tour service requests sorted by `createdAt DESC` |
+| `GET` | `/api/services/:id` | `x-admin-key` / Guard | Retrieve specific custom tour, chauffeur, or transfer booking details |
+| `POST` | `/api/services` | Public | Submit new service booking (custom tour, chauffeur charter, or transfer) |
+| `PATCH` | `/api/services/:id/status` | `x-admin-key` / Guard | Update service status (`pending`, `approved`, `active`, `completed`, `cancelled`) |
+| `DELETE` | `/api/services/:id` | `x-admin-key` / Guard | Delete a service request record |
+
+### Vehicle Guidelines & Specifications (`/api/services/notes` & `/api/tourservice`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/services/notes` | Public | Fetch vehicle category guidelines (Sedan, KDH Van, High Roof, Mini Coach) with pax/luggage capacities |
+| `POST` | `/api/services/notes` | `x-admin-key` | Create or update vehicle guideline notes |
+| `GET` | `/api/tourservice` | Public | Retrieve supplementary service rules and bilingual guidelines |
 
 ### Tour Packages & Catalog (`/api/addpackages`)
 | Method | Endpoint | Auth | Description |
@@ -277,7 +332,7 @@ The availability system synchronizes closed booking dates between admin staff an
 | **Database** | PostgreSQL 16 (Supabase Transaction Pooler) |
 | **ORM & Migrations** | Drizzle ORM `0.45.2`, Drizzle Kit `0.31.10`, `postgres` (Postgres.js) |
 | **Object Storage** | Cloudflare R2 (AWS S3 SDK `@aws-sdk/client-s3`) |
-| **Authentication** | Passport.js, `@nestjs/jwt`, `passport-jwt`, `passport-google-oauth20`, Bcrypt |
+| **Authentication & 2FA** | Dual Bearer Header + HttpOnly Cookie JWT, Bcrypt (factor 12), Native RFC 6238 TOTP Engine (Node `crypto`), `qrcode` |
 | **Mailer** | Resend API Client (`resend`) |
 | **Validation** | `class-validator` `0.15.1`, `class-transformer` `0.5.1` |
 | **Deployment** | Vercel Serverless (`@vercel/node`) + Vercel Scheduled Crons |
@@ -303,6 +358,13 @@ ikisakitours-backend/
     ├── app.module.ts                      # Application root module imports
     ├── app.controller.ts
     ├── app.service.ts
+    ├── admin-auth/                        # Enterprise admin authentication, profile & 2FA
+    │   ├── dto/                           # Profile, Password & 2FA verification DTOs
+    │   ├── admin-auth.controller.ts       # Self-service endpoints & session routes
+    │   ├── admin-auth.guard.ts            # Dual Bearer / HttpOnly cookie guard
+    │   ├── admin-auth.module.ts
+    │   ├── admin-auth.service.ts          # Lockout logic, token rotation, bcrypt hashing
+    │   └── totp.util.ts                   # Zero-dependency native RFC 6238 TOTP engine
     ├── addpackages/                       # Tour packages, pricing tiers & itineraries
     │   ├── dto/                           # Create, Response, Summary & Update DTOs
     │   ├── addpackages.controller.ts
@@ -324,12 +386,15 @@ ikisakitours-backend/
     ├── legaldocs/                         # Dynamic legal CMS (Terms, Privacy, Policies)
     ├── newsletter/                        # Subscriber lead management
     ├── packagebooking/                    # Reservation checkout & status lifecycle
+    ├── scripts/                           # Administrative provisioning scripts
+    │   └── seed-admin.ts                  # Super Admin provisioning script
+    ├── services/                          # Chauffeur hire, transfers & custom tour requests
     ├── servicepricing/                    # Charters, custom tours & transfer rate cards
     ├── social-auth/                       # OAuth2 social sign-in providers
     ├── tours/                             # Core tour catalog management
     ├── tourservice/                       # Supplementary travel service guidelines
     ├── uploads/                           # Cloudflare R2 media upload service
-    └── users/                             # User authentication, roles & profiles
+    └── users/                             # Customer authentication, roles & profiles
 ```
 
 </details>
@@ -427,16 +492,80 @@ npx drizzle-kit push
 ```
 
 ### Direct Supabase SQL Migration (Recommended for Pooler Timeouts)
-If your Supabase connection times out over the pooler, execute column updates directly in the **Supabase SQL Editor**:
+If your Supabase connection times out over the pooler, execute column and table updates directly in the **Supabase SQL Editor**:
 
 ```sql
--- Pricing Configuration
+-- 1. Admin Security & Audit Tables
+CREATE TABLE IF NOT EXISTS "admin_users" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "email" varchar(255) NOT NULL UNIQUE,
+  "password_hash" varchar(255) NOT NULL,
+  "full_name" varchar(100) NOT NULL,
+  "role" varchar(50) DEFAULT 'ADMIN' NOT NULL,
+  "avatar_url" text,
+  "two_factor_secret" varchar(255),
+  "is_two_factor_enabled" boolean DEFAULT false NOT NULL,
+  "failed_login_attempts" integer DEFAULT 0 NOT NULL,
+  "locked_until" timestamp,
+  "last_login_at" timestamp,
+  "last_login_ip" varchar(45),
+  "is_active" boolean DEFAULT true NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+ALTER TABLE "admin_users" ADD COLUMN IF NOT EXISTS "avatar_url" text;
+
+CREATE TABLE IF NOT EXISTS "admin_sessions" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "admin_id" uuid NOT NULL REFERENCES "admin_users"("id") ON DELETE CASCADE,
+  "refresh_token_hash" varchar(255) NOT NULL,
+  "user_agent" text,
+  "ip_address" varchar(45),
+  "expires_at" timestamp with time zone NOT NULL,
+  "is_revoked" boolean DEFAULT false NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS "admin_audit_logs" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "admin_id" uuid REFERENCES "admin_users"("id") ON DELETE SET NULL,
+  "action" varchar(100) NOT NULL,
+  "resource" varchar(100) NOT NULL,
+  "details" jsonb,
+  "ip_address" varchar(45),
+  "user_agent" text,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+-- 2. Tour Services (Chauffeur Hire, Airport Transfers & Custom Tours)
+CREATE TABLE IF NOT EXISTS "services" (
+  "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  "service_type" varchar(50) NOT NULL,
+  "starting_price" numeric(10, 2),
+  "selected_price" numeric(10, 2),
+  "language" varchar(50) DEFAULT 'English',
+  "travelers" jsonb NOT NULL,
+  "customer_details" jsonb NOT NULL,
+  "status" varchar(50) DEFAULT 'pending' NOT NULL,
+  "created_at" timestamp with time zone DEFAULT now() NOT NULL,
+  "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+
+-- 3. Pricing Configuration & Availability
 ALTER TABLE "packages" ADD COLUMN IF NOT EXISTS "pricing_config" jsonb;
 
--- Availability Details
 ALTER TABLE "availability" 
 ADD COLUMN IF NOT EXISTS "date_details" jsonb DEFAULT '{}'::jsonb NOT NULL,
 ADD COLUMN IF NOT EXISTS "closed_date_details" jsonb DEFAULT '[]'::jsonb NOT NULL;
+```
+
+### Provision Initial Super Admin Account
+To create or update the primary administrative account:
+
+```bash
+# Reads INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD from .env
+npm run seed:admin
 ```
 
 ---
@@ -455,12 +584,17 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 ## Production Readiness Checklist
 
 - [x] NestJS `11.0.1` + TypeScript `5.7+` compilation verified with `0` errors (`npm run build`)
+- [x] Enterprise Admin Security Engine: Bearer JWT + HttpOnly Cookies + Session Rotation live
+- [x] Zero-Dependency Native RFC 6238 TOTP 2FA Engine (100% immune to serverless ESM crashes)
+- [x] Admin self-service profile update (`fullName`, `avatarUrl`) and password change live
+- [x] Immutable security audit logging (`admin_audit_logs`) tracking all critical admin actions
+- [x] Private tour services engine for chauffeur charter, airport transfer, and custom tours live
 - [x] Unified `pricingConfig` (Group Discount Tiers + Passenger Category Rules + Custom Add-Ons) live
 - [x] Dynamic multilingual itinerary arrays (`meals[]` & `accommodation[]`) with backward compatibility
 - [x] Dual-persona content resolution (Client single language vs Admin raw dictionary)
 - [x] Calendar availability blackout dates with multi-color badges & bilingual closure notes
 - [x] Cloudflare R2 S3-compatible single and batch image upload pipeline
-- [x] Dynamic CORS regex whitelist (`*.ikisakitours.com`, `*.vercel.app`, `localhost:3000`, `localhost:3001`)
+- [x] Dynamic CORS whitelist (`*.ikisakitours.com`, `*.vercel.app`, `localhost:3000`, `localhost:3001`)
 - [x] Automated 3-day keep-alive cron job configured to prevent Supabase pooler inactivity sleep
 
 ---
