@@ -59,8 +59,9 @@ export class AdminAuthController {
 
     return {
       success: true,
-      user: result.user,
+      token: result.accessToken,
       accessToken: result.accessToken,
+      user: result.user,
     };
   }
 
@@ -69,7 +70,7 @@ export class AdminAuthController {
   @HttpCode(HttpStatus.OK)
   async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const refreshToken = req.cookies?.['admin_refresh'];
-    const adminId = (req as any).user?.sub;
+    const adminId = (req as any).user?.sub || (req as any).user?.id;
 
     await this.authService.logout(refreshToken, adminId);
 
@@ -95,8 +96,9 @@ export class AdminAuthController {
   // 3. GET /api/admin/auth/me
   @UseGuards(AdminAuthGuard)
   @Get('me')
-  async getMe(@Req() req: Request & { user: { sub: string } }) {
-    return await this.authService.getMe(req.user.sub);
+  async getMe(@Req() req: Request & { user: { sub?: string; id?: string } }) {
+    const adminId = req.user.sub || req.user.id!;
+    return await this.authService.getMe(adminId);
   }
 
   // 4. POST /api/admin/auth/refresh
@@ -137,8 +139,9 @@ export class AdminAuthController {
 
     return {
       success: true,
-      user: result.user,
+      token: result.accessToken,
       accessToken: result.accessToken,
+      user: result.user,
     };
   }
 

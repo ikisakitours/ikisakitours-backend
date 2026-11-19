@@ -180,6 +180,8 @@ export class AdminAuthService {
         email: admin.email,
         fullName: admin.fullName,
         role: admin.role,
+        avatarUrl: admin.avatarUrl || null,
+        isTwoFactorEnabled: admin.isTwoFactorEnabled || false,
       },
     };
   }
@@ -299,6 +301,8 @@ export class AdminAuthService {
         email: admin.email,
         fullName: admin.fullName,
         role: admin.role,
+        avatarUrl: admin.avatarUrl || null,
+        isTwoFactorEnabled: admin.isTwoFactorEnabled || false,
       },
     };
   }
@@ -319,8 +323,7 @@ export class AdminAuthService {
       fullName: admin.fullName,
       role: admin.role,
       avatarUrl: admin.avatarUrl || null,
-      isTwoFactorEnabled: admin.isTwoFactorEnabled,
-      lastLoginAt: admin.lastLoginAt,
+      isTwoFactorEnabled: admin.isTwoFactorEnabled || false,
     };
   }
 
@@ -374,14 +377,15 @@ export class AdminAuthService {
 
     return {
       success: true,
+      message: 'Profile updated successfully',
       user: {
         id: updated!.id,
         email: updated!.email,
         fullName: updated!.fullName,
         role: updated!.role,
         avatarUrl: updated!.avatarUrl || null,
+        isTwoFactorEnabled: updated!.isTwoFactorEnabled || false,
       },
-      message: 'Profile updated successfully',
     };
   }
 

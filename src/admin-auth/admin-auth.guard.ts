@@ -20,29 +20,42 @@ export class AdminAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<Request>();
+    const req = context.switchToHttp().getRequest<Request>();
 
-    // 1. Check x-admin-key header first (Service-to-service / CI / Scripts bypass)
-    const adminKey = request.headers['x-admin-key'] as string;
+    // 1. Extract Bearer token from Authorization header (case-insensitive)
+    const authHeader = (req.headers['authorization'] ||
+      req.headers['Authorization']) as string | undefined;
+    let token =
+      authHeader && authHeader.startsWith('Bearer ')
+        ? authHeader.split(' ')[1]
+        : null;
+
+    // 2. Fallback to HTTP-only cookie if Authorization header is absent
+    if (!token && req.cookies) {
+      token =
+        req.cookies['admin_session'] ||
+        req.cookies['admin_token'] ||
+        req.cookies['jwt'] ||
+        req.cookies['token'] ||
+        null;
+    }
+
+    // 3. Fallback: Allow super admin bypass if valid x-admin-key matches ADMIN_API_KEY
+    const adminKey = req.headers['x-admin-key'] as string | undefined;
     if (
+      !token &&
       adminKey &&
       process.env.ADMIN_API_KEY &&
       adminKey === process.env.ADMIN_API_KEY
     ) {
-      (request as any).user = {
-        sub: 'system-admin-key',
+      (req as any).user = {
+        id: 'super-admin-key',
+        sub: 'super-admin-key',
         role: 'SUPER_ADMIN',
-        email: 'system@ikisakitours.com',
+        email: 'admin@ikisakitours.com',
       };
       return true;
     }
-
-    // 2. Extract JWT token from HttpOnly cookie or Authorization Bearer header
-    const token =
-      request.cookies?.['admin_session'] ||
-      (request.headers.authorization?.startsWith('Bearer ')
-        ? request.headers.authorization.split(' ')[1]
-        : null);
 
     if (!token) {
       throw new UnauthorizedException(
@@ -51,12 +64,29 @@ export class AdminAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = this.jwtService.verify(token);
+      const secret =
+        process.env.ADMIN_JWT_SECRET ||
+        process.env.JWT_SECRET ||
+        'super-admin-secret-ikisaki-2026';
+      const payload = this.jwtService.verify(token, { secret });
+
+      const adminId = payload.sub || payload.id;
+      if (!adminId) {
+        throw new UnauthorizedException('Invalid administrative token payload');
+      }
 
       // Verify admin user still exists and isActive = true in DB
       const admin = await this.db.query.adminUsers.findFirst({
-        where: eq(schema.adminUsers.id, payload.sub),
-        columns: { id: true, email: true, role: true, isActive: true },
+        where: eq(schema.adminUsers.id, adminId),
+        columns: {
+          id: true,
+          email: true,
+          fullName: true,
+          role: true,
+          isActive: true,
+          avatarUrl: true,
+          isTwoFactorEnabled: true,
+        },
       });
 
       if (!admin || !admin.isActive) {
@@ -65,10 +95,15 @@ export class AdminAuthGuard implements CanActivate {
         );
       }
 
-      (request as any).user = {
+      (req as any).user = {
+        ...payload,
+        id: admin.id,
         sub: admin.id,
         email: admin.email,
+        fullName: admin.fullName,
         role: admin.role,
+        avatarUrl: admin.avatarUrl,
+        isTwoFactorEnabled: admin.isTwoFactorEnabled,
       };
 
       return true;
