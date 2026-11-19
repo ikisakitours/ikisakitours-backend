@@ -672,6 +672,7 @@ export const adminUsers = pgTable('admin_users', {
   passwordHash: varchar('password_hash', { length: 255 }).notNull(),
   fullName: varchar('full_name', { length: 100 }).notNull(),
   role: varchar('role', { length: 50 }).default('ADMIN').notNull(), // 'SUPER_ADMIN' | 'ADMIN' | 'OPERATIONS_MANAGER'
+  avatarUrl: text('avatar_url'),
   twoFactorSecret: varchar('two_factor_secret', { length: 255 }),
   isTwoFactorEnabled: boolean('is_two_factor_enabled').default(false).notNull(),
   failedLoginAttempts: integer('failed_login_attempts').default(0).notNull(),

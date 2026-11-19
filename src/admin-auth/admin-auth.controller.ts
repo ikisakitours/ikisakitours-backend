@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Req,
   Res,
@@ -12,6 +13,10 @@ import {
 import type { Request, Response } from 'express';
 import { AdminAuthService } from './admin-auth.service';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { UpdateAdminProfileDto } from './dto/update-admin-profile.dto';
+import { ChangeAdminPasswordDto } from './dto/change-admin-password.dto';
+import { Enable2FaDto } from './dto/enable-2fa.dto';
+import { Disable2FaDto } from './dto/disable-2fa.dto';
 import { AdminAuthGuard } from './admin-auth.guard';
 
 @Controller('admin/auth')
@@ -135,5 +140,102 @@ export class AdminAuthController {
       user: result.user,
       accessToken: result.accessToken,
     };
+  }
+
+  // 5. PATCH /api/admin/auth/profile
+  @UseGuards(AdminAuthGuard)
+  @Patch('profile')
+  async updateProfile(
+    @Req() req: Request & { user: { sub: string; id?: string } },
+    @Body() dto: UpdateAdminProfileDto,
+  ) {
+    const adminId = req.user.sub || req.user.id!;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    return await this.authService.updateProfile(
+      adminId,
+      dto,
+      clientIp,
+      userAgent,
+    );
+  }
+
+  // 6. PATCH /api/admin/auth/change-password
+  @UseGuards(AdminAuthGuard)
+  @Patch('change-password')
+  async changePassword(
+    @Req() req: Request & { user: { sub: string; id?: string } },
+    @Body() dto: ChangeAdminPasswordDto,
+  ) {
+    const adminId = req.user.sub || req.user.id!;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    return await this.authService.changePassword(
+      adminId,
+      dto,
+      clientIp,
+      userAgent,
+    );
+  }
+
+  // 7. POST /api/admin/auth/2fa/generate
+  @UseGuards(AdminAuthGuard)
+  @Post('2fa/generate')
+  @HttpCode(HttpStatus.OK)
+  async generate2Fa(
+    @Req() req: Request & { user: { sub: string; id?: string } },
+  ) {
+    const adminId = req.user.sub || req.user.id!;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    return await this.authService.generate2Fa(adminId, clientIp, userAgent);
+  }
+
+  // 8. POST /api/admin/auth/2fa/enable
+  @UseGuards(AdminAuthGuard)
+  @Post('2fa/enable')
+  @HttpCode(HttpStatus.OK)
+  async enable2Fa(
+    @Req() req: Request & { user: { sub: string; id?: string } },
+    @Body() dto: Enable2FaDto,
+  ) {
+    const adminId = req.user.sub || req.user.id!;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    return await this.authService.enable2Fa(
+      adminId,
+      dto,
+      clientIp,
+      userAgent,
+    );
+  }
+
+  // 9. POST /api/admin/auth/2fa/disable
+  @UseGuards(AdminAuthGuard)
+  @Post('2fa/disable')
+  @HttpCode(HttpStatus.OK)
+  async disable2Fa(
+    @Req() req: Request & { user: { sub: string; id?: string } },
+    @Body() dto: Disable2FaDto,
+  ) {
+    const adminId = req.user.sub || req.user.id!;
+    const clientIp =
+      (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress;
+    const userAgent = req.headers['user-agent'];
+
+    return await this.authService.disable2Fa(
+      adminId,
+      dto,
+      clientIp,
+      userAgent,
+    );
   }
 }

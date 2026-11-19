@@ -5,15 +5,22 @@ import {
   HttpException,
   HttpStatus,
   NotFoundException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, and, sql, desc } from 'drizzle-orm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { JwtService } from '@nestjs/jwt';
+import { generateSecret, generateURI, verifySync } from 'otplib';
+import * as QRCode from 'qrcode';
 import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { AdminLoginDto } from './dto/admin-login.dto';
+import { UpdateAdminProfileDto } from './dto/update-admin-profile.dto';
+import { ChangeAdminPasswordDto } from './dto/change-admin-password.dto';
+import { Enable2FaDto } from './dto/enable-2fa.dto';
+import { Disable2FaDto } from './dto/disable-2fa.dto';
 
 @Injectable()
 export class AdminAuthService {
@@ -307,7 +314,264 @@ export class AdminAuthService {
       email: admin.email,
       fullName: admin.fullName,
       role: admin.role,
+      avatarUrl: admin.avatarUrl || null,
+      isTwoFactorEnabled: admin.isTwoFactorEnabled,
       lastLoginAt: admin.lastLoginAt,
+    };
+  }
+
+  // 6. Update Admin Profile
+  async updateProfile(
+    adminId: string,
+    dto: UpdateAdminProfileDto,
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    const admin = await this.db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.id, adminId),
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Administrator profile not found');
+    }
+
+    const updateData: Partial<typeof schema.adminUsers.$inferInsert> = {
+      updatedAt: new Date(),
+    };
+
+    if (dto.fullName !== undefined) {
+      updateData.fullName = dto.fullName.trim();
+    }
+    if (dto.avatarUrl !== undefined) {
+      updateData.avatarUrl = dto.avatarUrl;
+    }
+
+    await this.db
+      .update(schema.adminUsers)
+      .set(updateData)
+      .where(eq(schema.adminUsers.id, adminId));
+
+    await this.logAudit(
+      adminId,
+      'PROFILE_UPDATED',
+      'admin_users',
+      {
+        updatedFields: Object.keys(updateData).filter(
+          (k) => k !== 'updatedAt',
+        ),
+      },
+      clientIp,
+      userAgent,
+    );
+
+    const updated = await this.db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.id, adminId),
+    });
+
+    return {
+      success: true,
+      user: {
+        id: updated!.id,
+        email: updated!.email,
+        fullName: updated!.fullName,
+        role: updated!.role,
+        avatarUrl: updated!.avatarUrl || null,
+      },
+      message: 'Profile updated successfully',
+    };
+  }
+
+  // 7. Change Password
+  async changePassword(
+    adminId: string,
+    dto: ChangeAdminPasswordDto,
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    const admin = await this.db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.id, adminId),
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Administrator profile not found');
+    }
+
+    const isMatch = await bcrypt.compare(
+      dto.currentPassword,
+      admin.passwordHash,
+    );
+    if (!isMatch) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    if (!dto.newPassword || dto.newPassword.length < 8) {
+      throw new BadRequestException(
+        'New password must be at least 8 characters long',
+      );
+    }
+
+    const newHash = await bcrypt.hash(dto.newPassword, 12);
+
+    await this.db
+      .update(schema.adminUsers)
+      .set({
+        passwordHash: newHash,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.adminUsers.id, adminId));
+
+    await this.logAudit(
+      adminId,
+      'PASSWORD_CHANGED',
+      'admin_users',
+      undefined,
+      clientIp,
+      userAgent,
+    );
+
+    return {
+      success: true,
+      message: 'Password updated successfully',
+    };
+  }
+
+  // 8. Generate 2FA Secret & QR Code
+  async generate2Fa(
+    adminId: string,
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    const admin = await this.db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.id, adminId),
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Administrator profile not found');
+    }
+
+    const secret = generateSecret();
+    const otpauth = generateURI({
+      issuer: 'Ikisaki Tours',
+      label: admin.email,
+      secret,
+    });
+    const qrCodeDataUrl = await QRCode.toDataURL(otpauth);
+
+    // Save secret in pending state (isTwoFactorEnabled remains false until verified)
+    await this.db
+      .update(schema.adminUsers)
+      .set({
+        twoFactorSecret: secret,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.adminUsers.id, adminId));
+
+    return {
+      success: true,
+      secret,
+      qrCodeDataUrl,
+    };
+  }
+
+  // 9. Enable 2FA
+  async enable2Fa(
+    adminId: string,
+    dto: Enable2FaDto,
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    const admin = await this.db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.id, adminId),
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Administrator profile not found');
+    }
+
+    const secretToVerify = dto.secret || admin.twoFactorSecret;
+    if (!secretToVerify) {
+      throw new BadRequestException(
+        'No 2FA setup found. Please generate a QR code first.',
+      );
+    }
+
+    const verification = verifySync({
+      secret: secretToVerify,
+      token: dto.totpCode.trim(),
+    });
+
+    if (!verification || !verification.valid) {
+      throw new BadRequestException('Invalid 2FA code');
+    }
+
+    await this.db
+      .update(schema.adminUsers)
+      .set({
+        twoFactorSecret: secretToVerify,
+        isTwoFactorEnabled: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.adminUsers.id, adminId));
+
+    await this.logAudit(
+      adminId,
+      '2FA_ENABLED',
+      'admin_users',
+      undefined,
+      clientIp,
+      userAgent,
+    );
+
+    return {
+      success: true,
+      message: 'Two-Factor Authentication activated successfully',
+    };
+  }
+
+  // 10. Disable 2FA
+  async disable2Fa(
+    adminId: string,
+    dto: Disable2FaDto,
+    clientIp?: string,
+    userAgent?: string,
+  ) {
+    const admin = await this.db.query.adminUsers.findFirst({
+      where: eq(schema.adminUsers.id, adminId),
+    });
+
+    if (!admin) {
+      throw new NotFoundException('Administrator profile not found');
+    }
+
+    const isMatch = await bcrypt.compare(
+      dto.currentPassword,
+      admin.passwordHash,
+    );
+    if (!isMatch) {
+      throw new UnauthorizedException('Current password is incorrect');
+    }
+
+    await this.db
+      .update(schema.adminUsers)
+      .set({
+        twoFactorSecret: null,
+        isTwoFactorEnabled: false,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.adminUsers.id, adminId));
+
+    await this.logAudit(
+      adminId,
+      '2FA_DISABLED',
+      'admin_users',
+      undefined,
+      clientIp,
+      userAgent,
+    );
+
+    return {
+      success: true,
+      message: 'Two-Factor Authentication disabled',
     };
   }
 }
