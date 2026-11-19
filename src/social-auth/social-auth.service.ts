@@ -1,4 +1,9 @@
-import { Injectable, Inject, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  UnauthorizedException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import { JwtService } from '@nestjs/jwt';
@@ -32,10 +37,20 @@ export class SocialAuthService {
       where: eq(schema.users.email, profile.email),
     });
 
-    // ─── NEW ADDITION: Check if existing user is blocked (hasAccess is false) ───
-    // If the user already exists but their access has been revoked, block them here.
+    // ─── Zero-Trust Account Suspension Check ───
     if (user && !user.hasAccess) {
-      throw new UnauthorizedException('Access denied');
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
     }
 
     // 2. If user doesn't exist, auto-register them

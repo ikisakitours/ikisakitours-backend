@@ -1,4 +1,10 @@
-import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -16,6 +22,38 @@ export class PackageBookingService {
   ) {}
 
   async create(createDto: CreatePackageBookingDto) {
+    // Zero-Trust Suspension Check: If the booking is made by or on behalf of a registered user who is suspended, reject it.
+    // Public guest bookings (where user is null or email does not belong to a suspended account) remain 100% functional.
+    if (createDto.userId || createDto.email) {
+      const user = await this.db.query.users.findFirst({
+        where: createDto.userId
+          ? eq(schema.users.id, createDto.userId)
+          : eq(schema.users.email, createDto.email.toLowerCase().trim()),
+        columns: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          hasAccess: true,
+        },
+      });
+
+      if (user && !user.hasAccess) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'ACCOUNT_SUSPENDED',
+          message: 'Your account access has been restricted by administration.',
+          user: {
+            id: user.id,
+            email: user.email,
+            firstname: user.firstName,
+            lastname: user.lastName,
+            hasAccess: false,
+          },
+        });
+      }
+    }
+
     // 1. Generate unique human-readable booking reference (e.g., IK-2611-X4D9)
     const bookingReference =
       'IK-' +

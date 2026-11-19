@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -15,8 +20,39 @@ export class ServicesService {
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  private async checkUserAccess(email?: string) {
+    if (!email) return;
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.email, email.toLowerCase().trim()),
+      columns: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        hasAccess: true,
+      },
+    });
+
+    if (user && !user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
+    }
+  }
+
   // 1. Create Custom Made Service Request
   async createCustomService(dto: CreateCustomServiceDto) {
+    await this.checkUserAccess(dto.email);
+
     const [record] = await this.db
       .insert(schema.serviceRequests)
       .values({
@@ -48,6 +84,8 @@ export class ServicesService {
 
   // 2. Create Private Chauffeur Service Request
   async createChauffeurService(dto: CreateChauffeurServiceDto) {
+    await this.checkUserAccess(dto.email);
+
     const [record] = await this.db
       .insert(schema.serviceRequests)
       .values({
@@ -81,6 +119,8 @@ export class ServicesService {
 
   // 3. Create Transfer Service Request
   async createTransferService(dto: CreateTransferServiceDto) {
+    await this.checkUserAccess(dto.email);
+
     const [record] = await this.db
       .insert(schema.serviceRequests)
       .values({
