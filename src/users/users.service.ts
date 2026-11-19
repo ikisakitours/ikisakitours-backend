@@ -3,6 +3,7 @@ import {
   Inject,
   ConflictException,
   UnauthorizedException,
+  ForbiddenException,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -109,11 +110,20 @@ export class UsersService {
 
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    // ─── NEW ADDITION: Check if user is blocked (hasAccess is false) ───
-    // If the user's account has been blocked or access is revoked,
-    // reject the login attempt and send an "Access denied" response.
+    // ─── Zero-Trust Account Suspension Check ───
     if (!user.hasAccess) {
-      throw new UnauthorizedException('Access denied');
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
     }
 
     if (!user.passwordHash) {
@@ -159,6 +169,21 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
     }
 
     return this.toUserResponseDto(user);

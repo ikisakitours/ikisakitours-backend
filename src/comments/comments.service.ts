@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, and } from 'drizzle-orm';
 import { CommentResponseDto } from './dto/comment-response.dto';
@@ -147,6 +152,21 @@ export class CommentsService {
       throw new NotFoundException('User account not found');
     }
 
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
+    }
+
     const [newComment] = await this.db
       .insert(schema.comments)
       .values({
@@ -250,6 +270,21 @@ export class CommentsService {
 
     if (!user) {
       throw new NotFoundException('User not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
     }
 
     // 2. Upload files
