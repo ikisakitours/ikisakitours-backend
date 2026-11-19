@@ -37,10 +37,19 @@ export class AdminAuthController {
 
     const result = await this.authService.login(dto, clientIp, userAgent);
 
+    // If 2FA is required and code not provided, return HTTP 200 without issuing cookies/tokens
+    if (result.requiresTwoFactor) {
+      return {
+        success: false,
+        requiresTwoFactor: true,
+        message: result.message || 'Two-factor authentication code required.',
+      };
+    }
+
     const isProduction = process.env.NODE_ENV === 'production';
 
     // Set 15-minute Access Token cookie
-    res.cookie('admin_session', result.accessToken, {
+    res.cookie('admin_session', result.accessToken!, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'strict',
@@ -49,7 +58,7 @@ export class AdminAuthController {
     });
 
     // Set 7-day Refresh Token cookie
-    res.cookie('admin_refresh', result.refreshToken, {
+    res.cookie('admin_refresh', result.refreshToken!, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'strict',
