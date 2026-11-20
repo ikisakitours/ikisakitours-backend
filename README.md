@@ -24,7 +24,7 @@
 
 - [Overview](#overview)
 - [System Architecture](#system-architecture)
-- [Module Directory (All 19 Domains)](#module-directory-all-19-domains)
+- [Module Directory (All 21 Domains)](#module-directory-all-21-domains)
 - [Core Engineering Highlights](#core-engineering-highlights)
   - [1. Unified Dynamic Group Pricing (`pricingConfig`)](#1-unified-dynamic-group-pricing-pricingconfig)
   - [2. Dual-Persona Multilingual `JSONB` Content Resolution](#2-dual-persona-multilingual-jsonb-content-resolution)
@@ -95,15 +95,17 @@ flowchart LR
 
 ---
 
-## Module Directory (All 19 Domains)
+## Module Directory (All 21 Domains)
 
 | Domain | Route Mount | Operational & Business Capabilities |
 | :--- | :--- | :--- |
 | **Staff & Team RBAC** | `/api/admin/staff` | 10-role enterprise staff directory, role assignments, account suspension/activation, session revocation, credential reset & audit logging |
 | **Admin Auth & Security** | `/api/admin/auth` | Enterprise authentication: Bearer JWT + HttpOnly cookies, session rotation, account lockouts, self-service profile, password change, and native RFC 6238 TOTP 2FA with QR codes |
-| **Customer Accounts & Security** | `/api/auth` | Customer registration, login, profile management, Zero-Trust real-time suspension enforcement, and branded reference ID (`IKISAKI-XXXXXX`) issuance |
+| **Customer Accounts & Security** | `/api/auth` | Customer registration, login, profile management, Zero-Trust real-time suspension enforcement, branded reference ID (`IKISAKI-XXXXXX`), Dual-Login password creation, and native RFC 6238 TOTP 2FA |
+| **Social OAuth 2.0** | `/api/social-auth` | Google, Facebook, and Instagram federated OAuth with Zero-Trust 2FA ticket challenge redirection and account suspension protection |
 | **Tour Services & Transfers** | `/api/services` | Private chauffeur hire, airport & intercity transfers, and custom tailor-made tour requests with passenger breakdowns, language preference, and dynamic quotes |
 | **Tour Packages** | `/api/addpackages` | One-day & multi-day packages, 18 badge categories, dynamic group pricing tiers, passenger rules, custom add-ons, dynamic meals/hotels, and like counters |
+| **Tour Catalog** | `/api/tours` | Lightweight public tour catalog query and individual tour detail listing endpoints |
 | **Availability Calendar** | `/api/availability` | Central booking calendar, blackout dates, multi-color hex coding, tour-type closures, and bilingual client closure notes |
 | **Destinations** | `/api/destinations` | Sri Lanka travel hubs, geographic coordinates (`lat`, `lng`), interactive map markers, photo galleries, and slug lookup |
 | **Bookings & Orders** | `/api/package-bookings` | Customer tour reservations, anti-tampering price recalculation, adult/child/infant breakdown, and status lifecycle (`pending`, `confirmed`, `completed`, `cancelled`) |
@@ -417,7 +419,9 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 | `PATCH` | `/api/services/:id/status` | `AdminAuthGuard` | Update service status (`pending`, `approved`, `active`, `completed`, `cancelled`) |
 | `DELETE` | `/api/services/:id` | `AdminAuthGuard` | Delete a service request record |
 | `GET` | `/api/services/notes` | Public | Fetch vehicle category guidelines (Sedan, KDH Van, High Roof, Mini Coach) with pax/luggage capacities |
-| `POST` | `/api/services/notes` | `AdminAuthGuard` | Create or update vehicle guideline notes |
+| `POST` | `/api/services/notes` | `AdminAuthGuard` | Create vehicle guideline notes |
+| `PATCH` | `/api/services/notes/:id` | `AdminAuthGuard` | Update specific vehicle guideline notes |
+| `DELETE` | `/api/services/notes/:id` | `AdminAuthGuard` | Remove a vehicle guideline note |
 
 ---
 
@@ -426,13 +430,17 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `POST` | `/api/addpackages` | `AdminAuthGuard` | Create a new tour package with multipart image upload & pricing config |
-| `GET` | `/api/addpackages` | Public | List all package items (localized title with `?lang=`) |
+| `GET` | `/api/addpackages/admin` | `AdminAuthGuard` | Retrieve all tour packages (including drafts) for admin dashboard |
+| `GET` | `/api/addpackages` | Public | List all live package items (localized title with `?lang=`) |
+| `GET` | `/api/addpackages/previews` | Public | Lightweight package preview cards for homepage carousels |
 | `GET` | `/api/addpackages/oneday` | Public | Paginated list of one-day tour summaries (`?page=1&limit=5&lang=en`) |
 | `GET` | `/api/addpackages/multiday`| Public | Paginated list of multi-day tour summaries (`?page=1&limit=5&lang=en`) |
 | `GET` | `/api/addpackages/:slug` | Public / Admin | Fetch package by slug (returns localized if `?lang=` supplied, raw if omitted) |
+| `PATCH` | `/api/addpackages/:slug/visibility` | `AdminAuthGuard` | Toggle tour package publication status (`isLive: true/false`) |
 | `PATCH` | `/api/addpackages/:slug` | `AdminAuthGuard` | Text-only & pricing update without re-uploading images |
 | `DELETE` | `/api/addpackages/:slug`| `AdminAuthGuard` | Delete a tour package by slug |
 | `POST` | `/api/addpackages/:packageId/like` | User | Toggle like / unlike for a user on a tour package |
+| `GET` | `/api/addpackages/:packageId/like` | User | Check if authenticated user has liked a tour package |
 
 ---
 
@@ -453,8 +461,15 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 | `GET` | `/api/destinations/previews` | Public | Fetch lightweight destination cards for UI carousels |
 | `GET` | `/api/destinations/map` | Public | Fetch coordinate points (`lat`, `lng`) for interactive maps |
 | `GET` | `/api/destinations/slug/:slug` | Public | Fetch full destination detail by slug |
+| `GET` | `/api/destinations` | Public | Fetch all live destinations (`?lang=en|ja`) |
+| `GET` | `/api/destinations/:id` | Public | Fetch single destination by ID |
+| `GET` | `/api/destinations/admin` | `AdminAuthGuard` | Fetch all destinations (including hidden) for admin management |
+| `GET` | `/api/destinations/admin/:id` | `AdminAuthGuard` | Fetch raw multilingual destination by ID |
 | `POST` | `/api/destinations` | `AdminAuthGuard` | Create a new destination entry |
+| `PATCH` | `/api/destinations/:id` | `AdminAuthGuard` | Update destination contents & coordinates |
+| `PATCH` | `/api/destinations/:id/visibility` | `AdminAuthGuard` | Toggle destination visibility (`isLive: true/false`) |
 | `DELETE` | `/api/destinations/:id` | `AdminAuthGuard` | Remove a destination entry |
+| `POST` | `/api/destinations/package/batch` | Public | Fetch batch package preview cards by array of package IDs |
 
 ---
 
@@ -464,6 +479,7 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 | :--- | :--- | :---: | :--- |
 | `POST` | `/api/package-bookings` | Public / Susp. Guard | Submit tour reservation (anti-tamper price check; rejects suspended customers; supports guest bookings) |
 | `GET` | `/api/package-bookings` | `AdminAuthGuard` | Retrieve all customer bookings |
+| `GET` | `/api/package-bookings/:id` | `AdminAuthGuard` | Retrieve specific customer booking record |
 | `PATCH` | `/api/package-bookings/:id/status` | `AdminAuthGuard` | Update booking status (`pending`, `confirmed`, `completed`, `cancelled`) |
 | `DELETE` | `/api/package-bookings/:id` | `AdminAuthGuard` | Remove a booking record |
 
@@ -475,10 +491,17 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 | :--- | :--- | :---: | :--- |
 | `GET` | `/api/blogs/previews` | Public | Fetch blog card previews with localized titles and summaries |
 | `GET` | `/api/blogs/slug/:slug` | Public | Fetch full blog post by slug |
+| `GET` | `/api/blogs` | Public | Fetch all live blog articles (`?lang=en|ja`) |
+| `GET` | `/api/blogs/:id` | Public | Fetch single blog article by ID |
+| `GET` | `/api/blogs/admin` | `AdminAuthGuard` | Fetch all blogs (including drafts) for admin management |
+| `GET` | `/api/blogs/admin/:id` | `AdminAuthGuard` | Fetch raw multilingual blog article by ID |
 | `POST` | `/api/blogs` | `AdminAuthGuard` | Publish a new blog post |
 | `PATCH` | `/api/blogs/:id` | `AdminAuthGuard` | Update an existing blog post |
+| `PATCH` | `/api/blogs/:id/visibility` | `AdminAuthGuard` | Toggle blog post visibility (`isLive: true/false`) |
 | `DELETE` | `/api/blogs/:id` | `AdminAuthGuard` | Delete a blog post |
 | `POST` | `/api/blogs/view` | User | Check user like status and fetch blog detail |
+| `POST` | `/api/blogs/like` | User | Toggle like / unlike on a blog article with user validation |
+| `PATCH` | `/api/blogs/:id/like` | Public | Increment / decrement like counter on a blog article |
 
 ---
 
@@ -486,12 +509,19 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
-| `GET` | `/api/comments` | Public | Fetch approved comments & rating statistics |
+| `GET` | `/api/comments` | `AdminAuthGuard` | Retrieve all comments for administrative moderation |
+| `GET` | `/api/comments/client` | Public | Fetch approved comments & rating statistics for client website |
 | `POST` | `/api/comments` | `JwtAuthGuard` | Post user review/feedback (verifies caller suspension status) |
-| `PATCH` | `/api/comments/:id/reply` | `AdminAuthGuard` | Admin reply to customer feedback |
+| `POST` | `/api/comments/:id/reply` | `AdminAuthGuard` | Admin reply to customer feedback |
+| `PATCH` | `/api/comments/:id/visibility` | `AdminAuthGuard` | Toggle comment visibility (`isPublic: true/false`) |
 | `DELETE` | `/api/comments/:id` | `AdminAuthGuard` | Delete a comment card |
 | `GET` | `/api/package-reviews` | Public | List all package reviews |
+| `GET` | `/api/package-reviews/:packageId` | Public | Fetch approved reviews for a specific tour package |
+| `GET` | `/api/package-reviews/:packageId/summary`| Public | Fetch rating distribution & average score for a tour package |
 | `POST` | `/api/package-reviews` | Public / Susp. Guard | Post package review with multi-image upload (checks caller suspension status) |
+| `PATCH` | `/api/package-reviews/:id/reply` | `AdminAuthGuard` | Admin reply to customer package review |
+| `PATCH` | `/api/package-reviews/:id/visibility` | `AdminAuthGuard` | Toggle package review visibility (`isPublic: true/false`) |
+| `DELETE` | `/api/package-reviews/:id` | `AdminAuthGuard` | Delete a package review record |
 
 ---
 
@@ -517,17 +547,59 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 
 ---
 
-### Inquiries, Feedback & System
+### Inquiries, Feedback, Pricing & System
 
+#### Customer Inquiries & Contacts (`/api/contacts`)
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
-| `POST` | `/api/contacts` | Public | Submit contact / inquiry form |
-| `GET` | `/api/contacts` | `AdminAuthGuard` | List all inquiries |
+| `POST` | `/api/contacts` | Public | Submit contact / inquiry form (triggers transactional email alert) |
+| `GET` | `/api/contacts` | `AdminAuthGuard` | List all inquiries sorted by creation date |
+| `GET` | `/api/contacts/:id` | `AdminAuthGuard` | Retrieve single inquiry details |
+| `PATCH` | `/api/contacts/:id/status` | `AdminAuthGuard` | Update inquiry handling status (`pending`, `in_progress`, `resolved`) |
+| `DELETE` | `/api/contacts/:id` | `AdminAuthGuard` | Remove an inquiry record |
+
+#### Customer Support FAQs (`/api/faqs`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/faqs` | Public | Retrieve categorized FAQs (`?lang=en|ja`) |
+| `GET` | `/api/faqs/admin` | `AdminAuthGuard` | Retrieve all FAQs (including hidden/draft entries) |
+| `GET` | `/api/faqs/admin/:id` | `AdminAuthGuard` | Retrieve raw multilingual FAQ entry by ID |
+| `POST` | `/api/faqs` | `AdminAuthGuard` | Create a new categorized FAQ |
+| `PATCH` | `/api/faqs/:id` | `AdminAuthGuard` | Update FAQ question, answer, category, or order |
+| `PATCH` | `/api/faqs/:id/visibility` | `AdminAuthGuard` | Toggle FAQ live visibility (`isLive: true/false`) |
+| `DELETE` | `/api/faqs/:id` | `AdminAuthGuard` | Delete an FAQ entry |
+
+#### Service Pricing Tariffs (`/api/service-pricing`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/service-pricing/client/:serviceType` | Public | Fetch transfer, charter, or custom rate cards resolved to requested language |
+| `GET` | `/api/service-pricing` | `AdminAuthGuard` | Fetch all pricing configurations (charter, custom, transfer) |
+| `GET` | `/api/service-pricing/:serviceType` | `AdminAuthGuard` | Fetch specific pricing record by service type |
+| `POST` | `/api/service-pricing` | `AdminAuthGuard` | Create or upsert pricing record |
+| `PATCH` | `/api/service-pricing/:serviceType` | `AdminAuthGuard` | Update existing pricing record |
+| `DELETE` | `/api/service-pricing/:serviceType` | `AdminAuthGuard` | Delete a service pricing tariff |
+
+#### Cookie Consent Compliance (`/api/cookies`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
 | `POST` | `/api/cookies/consent` | Public | Record visitor cookie preference choices |
-| `POST` | `/api/newsletter` | Public | Subscribe email address to tour updates |
-| `GET` | `/api/faqs` | Public | Retrieve categorized FAQs |
-| `GET` | `/api/service-pricing/client/:type` | Public | Fetch transfer / charter rate cards |
-| `GET` | `/api/cron/keep-alive` | Cron / Secret | Ping database to maintain pooler warmth |
+| `GET` | `/api/cookies/consent/:userId` | Public | Retrieve existing cookie consent preferences by identifier |
+
+#### Newsletter Subscriptions (`/api/newsletter`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `POST` | `/api/newsletter` | Public | Subscribe email address to tour updates (duplicate protection) |
+
+#### Tour Catalog (`/api/tours`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/tours` | Public | Retrieve full tours list |
+| `GET` | `/api/tours/:id` | Public | Retrieve specific tour detail by ID |
+
+#### System Operations & Crons (`/api/cron`)
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/cron/keep-alive` | Cron / Secret | Automated 3-day database ping keeping Supabase pooler active |
 
 ---
 
