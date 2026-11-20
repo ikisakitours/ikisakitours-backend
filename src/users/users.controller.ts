@@ -27,6 +27,9 @@ import { UpdateUserStatusDto } from './dto/update-user-status.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UpdatePasswordDto } from './dto/update-password.dto';
+import { EnableCustomer2FaDto } from './dto/enable-2fa.dto';
+import { DisableCustomer2FaDto } from './dto/disable-2fa.dto';
+import { VerifyTotpChallengeDto } from './dto/verify-totp-challenge.dto';
 
 import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
 
@@ -48,8 +51,18 @@ export class UsersController {
   ) {
     const authResult = await this.usersService.validateUser(loginDto);
 
+    // If 2FA is required, do NOT set cookie or issue token, return 2FA challenge prompt with verification ticket
+    if (authResult.requiresTwoFactor) {
+      return {
+        success: true,
+        requiresTwoFactor: true,
+        ticket: authResult.ticket,
+        email: authResult.email,
+      };
+    }
+
     // Check if maxAgeMs was provided by usersService
-    if (authResult.maxAgeMs) {
+    if (authResult.maxAgeMs && authResult.access_token) {
       // Set the token inside an HTTP-only cookie
       res.cookie('token', authResult.access_token, {
         httpOnly: true, // Protects from XSS (JavaScript cannot access cookie)
@@ -168,5 +181,50 @@ export class UsersController {
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
     return this.usersService.resetPassword(dto);
+  }
+
+  // ─── Customer 2FA Endpoints ───
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/generate')
+  async generate2Fa(@Req() req: Request & { user: { sub: string } }) {
+    return await this.usersService.generate2Fa(req.user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/enable')
+  async enable2Fa(
+    @Req() req: Request & { user: { sub: string } },
+    @Body() dto: EnableCustomer2FaDto,
+  ) {
+    return await this.usersService.enable2Fa(req.user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('2fa/disable')
+  async disable2Fa(
+    @Req() req: Request & { user: { sub: string } },
+    @Body() dto: DisableCustomer2FaDto,
+  ) {
+    return await this.usersService.disable2Fa(req.user.sub, dto);
+  }
+
+  // PUBLIC: Handles POST /api/auth/2fa/verify-challenge (Completes 2FA login for Social or Password)
+  @Post('2fa/verify-challenge')
+  async verifyTwoFactorChallenge(
+    @Body() dto: VerifyTotpChallengeDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const authResult = await this.usersService.verifyTwoFactorChallenge(dto);
+
+    if (authResult.maxAgeMs && authResult.access_token) {
+      res.cookie('token', authResult.access_token, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'none',
+        maxAge: authResult.maxAgeMs,
+      });
+    }
+
+    return authResult;
   }
 }

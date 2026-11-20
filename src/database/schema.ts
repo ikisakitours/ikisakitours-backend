@@ -34,6 +34,10 @@ export const users = pgTable('users', {
   isVip: boolean('is_vip').notNull().default(false),
   hasAccess: boolean('has_access').notNull().default(true),
 
+  isTwoFactorEnabled: boolean('is_two_factor_enabled').notNull().default(false),
+  twoFactorSecret: text('two_factor_secret'),
+  twoFactorTempSecret: text('two_factor_temp_secret'),
+
   terms: boolean('terms').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
 });

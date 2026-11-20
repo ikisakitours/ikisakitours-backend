@@ -6,6 +6,7 @@ import {
   UseGuards,
   ExecutionContext,
   Injectable,
+  ForbiddenException,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import express from 'express';
@@ -93,20 +94,56 @@ export class SocialAuthController {
     const redirectPath = state && state.startsWith('/') ? state : '/';
     try {
       const socialUser = req.user; // Comes from strategy validate()
-      const { access_token, maxAgeMs } =
+      const result =
         await this.socialAuthService.validateSocialUser(socialUser);
 
+      // If user has 2FA enabled, redirect to 2FA challenge step on frontend (do NOT set session cookie yet)
+      if (result.requiresTwoFactor) {
+        const queryParams = new URLSearchParams({
+          step: '2fa_challenge',
+          ticket: result.twoFactorTicket,
+          email: result.email,
+          ...(result.customerReferenceId
+            ? { ref: result.customerReferenceId }
+            : {}),
+        });
+        return res.redirect(`${frontendUrl}/login?${queryParams.toString()}`);
+      }
+
       // Set the standard app cookie
-      res.cookie('token', access_token, {
+      res.cookie('token', result.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'none',
-        maxAge: maxAgeMs,
+        maxAge: result.maxAgeMs,
       });
 
       // Redirect user back to Next.js frontend
       return res.redirect(`${frontendUrl}${redirectPath}`);
-    } catch (error) {
+    } catch (error: any) {
+      const responseData =
+        typeof error?.getResponse === 'function'
+          ? error.getResponse()
+          : error?.response;
+
+      if (
+        error instanceof ForbiddenException ||
+        error?.status === 403 ||
+        responseData?.error === 'ACCOUNT_SUSPENDED'
+      ) {
+        const refId = responseData?.user?.customerReferenceId || '';
+        const email = responseData?.user?.email || '';
+
+        const queryParams = new URLSearchParams({
+          error: 'ACCOUNT_SUSPENDED',
+          statusCode: '403',
+          ...(refId ? { ref: refId } : {}),
+          ...(email ? { email } : {}),
+        });
+
+        return res.redirect(`${frontendUrl}/login?${queryParams.toString()}`);
+      }
+
       return res.redirect(`${frontendUrl}/login?error=SocialLoginFailed`);
     }
   }

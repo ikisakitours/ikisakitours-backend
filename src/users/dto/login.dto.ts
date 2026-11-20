@@ -10,4 +10,8 @@ export class LoginDto {
   @IsOptional()
   @IsBoolean()
   staySignedIn?: boolean;
+
+  @IsOptional()
+  @IsString()
+  totpCode?: string;
 }
