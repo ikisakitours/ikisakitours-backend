@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, sql, and } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -240,6 +245,35 @@ export class BlogsService {
     blogId: string,
     userId: string,
   ): Promise<{ liked: boolean; likesCount: number }> {
+    if (userId) {
+      const user = await this.db.query.users.findFirst({
+        where: eq(schema.users.id, userId),
+        columns: {
+          id: true,
+          customerReferenceId: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          hasAccess: true,
+        },
+      });
+      if (user && !user.hasAccess) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'ACCOUNT_SUSPENDED',
+          message: 'Your account access has been restricted by administration.',
+          user: {
+            id: user.id,
+            customerReferenceId: user.customerReferenceId,
+            email: user.email,
+            firstname: user.firstName,
+            lastname: user.lastName,
+            hasAccess: false,
+          },
+        });
+      }
+    }
+
     await this.findOne(blogId);
 
     const existingLike = await this.db.query.blogLikes.findFirst({

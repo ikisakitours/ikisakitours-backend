@@ -91,6 +91,31 @@ export class SocialAuthService {
       user = newUser;
     }
 
+    // ─── Zero-Trust 2FA Challenge for Social Logins ───
+    if (user.isTwoFactorEnabled) {
+      const twoFactorTicket = this.jwtService.sign(
+        {
+          sub: user.id,
+          email: user.email,
+          is2FaChallenge: true,
+        },
+        { expiresIn: '5m' },
+      );
+
+      return {
+        requiresTwoFactor: true,
+        twoFactorTicket,
+        email: user.email,
+        customerReferenceId: user.customerReferenceId,
+        user: {
+          ...user,
+          referenceId: user.customerReferenceId,
+        },
+        access_token: '',
+        maxAgeMs: 0,
+      };
+    }
+
     // 3. Generate your standard app JWT token & cookie configurations
     const accessToken = this.generateToken(user);
     const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days

@@ -115,3 +115,14 @@ export function generateOtpauthUri(options: {
   const label = encodeURIComponent(options.label);
   return `otpauth://totp/${issuer}:${label}?secret=${options.secret}&issuer=${issuer}&algorithm=SHA1&digits=6&period=30`;
 }
+
+// RFC 6238 Aliases
+export const generateBase32Secret = generateTotpSecret;
+export const verifyTotp = verifyTotpCode;
+export function generateOtpAuthUrl(
+  issuer: string,
+  accountName: string,
+  secret: string,
+): string {
+  return generateOtpauthUri({ issuer, label: accountName, secret });
+}

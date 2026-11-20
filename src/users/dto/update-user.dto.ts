@@ -17,6 +17,11 @@ export class UpdateUserDto {
   @IsString()
   country?: string;
 
-  // Note: no profilePictureUrl field here — the controller sets this itself
-  // after uploading to R2, so the frontend never sends a URL directly.
+  @IsOptional()
+  @IsString()
+  avatarUrl?: string | null;
+
+  @IsOptional()
+  @IsString()
+  oldAvatarUrl?: string | null;
 }

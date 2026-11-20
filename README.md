@@ -35,10 +35,12 @@
   - [7. Automated Cloudflare R2 Asset Lifecycle & Orphaned Avatar Deletion](#7-automated-cloudflare-r2-asset-lifecycle--orphaned-avatar-deletion)
   - [8. Zero-Trust Customer Account Suspension & Branded Customer Reference IDs](#8-zero-trust-customer-account-suspension--branded-customer-reference-ids)
   - [9. Private Tour Services, Chauffeur Hire & Airport Transfer Engine (`/services`)](#9-private-tour-services-chauffeur-hire--airport-transfer-engine-services)
+  - [10. Enterprise Customer 2FA (RFC 6238 TOTP) & Zero-Trust Social OAuth Challenge](#10-enterprise-customer-2fa-rfc-6238-totp--zero-trust-social-oauth-challenge)
 - [API Service Layer Reference](#api-service-layer-reference)
   - [Staff & Team RBAC Management (`/api/admin/staff`)](#staff--team-rbac-management-apiadminstaff)
   - [Admin Authentication, Profile & 2FA (`/api/admin/auth`)](#admin-authentication-profile--2fa-apiadminauth)
   - [Customer Authentication, Security & Accounts (`/api/auth`)](#customer-authentication-security--accounts-apiauth)
+  - [Social OAuth 2.0 Integration (`/api/social-auth`)](#social-oauth-20-integration-apisocial-auth)
   - [Tour Services & Transportation Requests (`/api/services`)](#tour-services--transportation-requests-apiservices)
   - [Tour Packages & Catalog (`/api/addpackages`)](#tour-packages--catalog-apiaddpackages)
   - [Availability Calendar (`/api/availability`)](#availability-calendar-apiavailability)
@@ -249,8 +251,8 @@ The Staff Management Engine (`/api/admin/staff`) enforces strict Role-Based Acce
 
 To prevent accumulation of orphaned files and control storage costs, the backend implements automated Cloudflare R2 cleanup:
 - **`extractR2KeyFromUrl` Utility**: Intelligently extracts relative R2 object keys from public development domains (`*.r2.dev`), custom production CDNs (`assets.ikisakitours.com`), or relative paths, while strictly ignoring base64 data URIs and external Google/Facebook profile photos.
-- **Automatic Profile Avatar Purge**: When an admin or staff member uploads a new profile picture (`PATCH /api/admin/auth/profile`), the previous image file is automatically purged from the Cloudflare R2 bucket.
-- **Cascade Deletion on Staff Account Removal**: Deleting a staff account (`DELETE /api/admin/staff/:id`) automatically inspects and purges their avatar image from R2 before deleting the database record.
+- **Automatic Profile Avatar Purge**: When an admin, staff member, or customer uploads a new profile picture (`PATCH /api/admin/auth/profile` or `PATCH /api/auth/me/avatar`), or updates/removes their photo (`PATCH /api/auth/me` with `avatarUrl: null`), the previous image file is automatically purged from the Cloudflare R2 bucket.
+- **Cascade Deletion on Account Removal**: Deleting a staff account (`DELETE /api/admin/staff/:id`) or customer account (`DELETE /api/auth/me`) automatically inspects and purges their avatar image from R2 before deleting the database record.
 - **Non-Blocking Resilience**: Asset cleanup errors are safely caught, logged to console, and recorded as `R2_AVATAR_CLEANUP` in `admin_audit_logs` without failing primary database operations.
 
 ---
@@ -298,6 +300,43 @@ Unified management for private bespoke travel experiences:
 
 ---
 
+### 10. Enterprise Customer 2FA (RFC 6238 TOTP) & Zero-Trust Social OAuth Challenge
+
+To provide defense-grade security for registered travelers, the customer authentication layer incorporates a native, zero-dependency RFC 6238 TOTP Two-Factor Authentication engine supporting **Google Authenticator**, **Authy**, and **1Password**:
+
+#### 1. Setup & Secret Provisioning (`POST /api/auth/2fa/generate`)
+- Authenticated customers generate a cryptographically random 20-byte Base32 secret key.
+- Generates an `otpauth://` QR Code Data URL formatted as:
+  `otpauth://totp/Ikisaki%20Tours:${user.email}?secret=${secret}&issuer=Ikisaki%20Tours&algorithm=SHA1&digits=6&period=30`
+- Persists pending secret temporarily in `users.twoFactorTempSecret` without enabling 2FA until confirmed.
+
+#### 2. Verification & Activation (`POST /api/auth/2fa/enable`)
+- Customer scans the QR code in their Authenticator app and submits their first live 6-digit TOTP code.
+- Backend verifies the token with a ±30s drift window tolerance.
+- Upon successful verification, promotes `twoFactorTempSecret` to permanent `twoFactorSecret`, nulls the temp secret, and sets `isTwoFactorEnabled: true`.
+
+#### 3. Strict Zero-Trust Social OAuth Challenge (Google, Facebook, Instagram)
+- **Problem**: In standard OAuth 2.0 implementations, social login redirects can inadvertently bypass application-level 2FA.
+- **Solution (Gold Standard Zero-Trust)**: When a customer with `isTwoFactorEnabled: true` logs in via **Google 1-Click**, **Facebook**, or **Instagram**, the backend halts session cookie generation.
+- The callback redirect safely routes the user to:
+  ```text
+  /login?step=2fa_challenge&ticket=${shortLivedJwtTicket}&email=${user.email}&ref=${customerReferenceId}
+  ```
+- The frontend immediately displays the branded 6-digit Authenticator verification prompt.
+
+#### 4. Unified Challenge Verification (`POST /api/auth/2fa/verify-challenge`)
+- Both Social OAuth and Email/Password flows share a single high-security verification endpoint:
+  ```json
+  {
+    "ticket": "eyJhbGciOi...",
+    "totpCode": "123456",
+    "staySignedIn": true
+  }
+  ```
+- Validates the 5-minute single-use ticket, verifies the live 6-digit TOTP code, checks account suspension (`hasAccess`), and sets the HttpOnly session cookie (`token`).
+
+---
+
 ## API Service Layer Reference
 
 ### Staff & Team RBAC Management (`/api/admin/staff`)
@@ -335,17 +374,34 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
 | `POST` | `/api/auth/signup` | Public | Customer registration with auto-generated `customerReferenceId` (`IKISAKI-XXXXXX`) |
-| `POST` | `/api/auth/login` | Public | Customer login; returns JWT & user object; returns structured 403 `ACCOUNT_SUSPENDED` if `hasAccess: false` |
+| `POST` | `/api/auth/login` | Public | Customer login; returns JWT & user object, or `{ requiresTwoFactor: true, ticket }` if 2FA is active; returns structured 403 `ACCOUNT_SUSPENDED` if `hasAccess: false` |
 | `POST` | `/api/auth/logout` | Passthrough | Clears customer `token` cookie |
-| `GET` | `/api/auth/me` | `JwtAuthGuard` | Real-time verified customer profile retrieval with auto-backfill of `customerReferenceId` |
-| `PATCH` | `/api/auth/me` | `JwtAuthGuard` | Update customer name, email, or country |
-| `PATCH` | `/api/auth/me/avatar` | `JwtAuthGuard` | Upload customer profile avatar to Cloudflare R2 |
-| `DELETE` | `/api/auth/me` | `JwtAuthGuard` | Secure account deletion confirming password or text |
+| `GET` | `/api/auth/me` | `JwtAuthGuard` | Real-time verified customer profile retrieval with `isTwoFactorEnabled` & auto-backfill of `customerReferenceId` |
+| `PATCH` | `/api/auth/me` | `JwtAuthGuard` | Update customer name, email, country, or avatar (`avatarUrl`, `oldAvatarUrl`); automatically purges previous avatar from Cloudflare R2 |
+| `PATCH` | `/api/auth/me/avatar` | `JwtAuthGuard` | Upload customer profile avatar to Cloudflare R2; purges previous avatar from bucket |
+| `DELETE` | `/api/auth/me` | `JwtAuthGuard` | Secure account deletion confirming password or text; purges customer avatar from Cloudflare R2 |
 | `GET` | `/api/auth/users` | `AdminAuthGuard` | Administrator customer directory with status flags (`hasAccess`, `isVip`, `isVerified`, `customerReferenceId`) |
 | `PATCH` | `/api/auth/users/:id/status` | `AdminApiKeyGuard` | Administrator toggle for customer status (`hasAccess`, `isVip`, `isVerified`) |
 | `POST` | `/api/auth/forgot-password` | Public | Dispatch password reset OTP email |
 | `POST` | `/api/auth/reset-password` | Public | Reset customer password using verified OTP |
 | `POST` | `/api/auth/update-password` | Public | Update password validating old credentials |
+| `POST` | `/api/auth/2fa/generate` | `JwtAuthGuard` | Generates Base32 TOTP secret, `otpauth://` URI, and QR Code Data URL for Google Authenticator |
+| `POST` | `/api/auth/2fa/enable` | `JwtAuthGuard` | Verifies 6-digit TOTP code and activates customer Two-Factor Authentication |
+| `POST` | `/api/auth/2fa/disable` | `JwtAuthGuard` | Confirms current password or TOTP code and deactivates Two-Factor Authentication |
+| `POST` | `/api/auth/2fa/verify-challenge` | Public | Completes 2FA login (via Social OAuth or Password) using single-use ticket and live 6-digit TOTP code; sets session cookie |
+
+---
+
+### Social OAuth 2.0 Integration (`/api/social-auth`)
+
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :---: | :--- |
+| `GET` | `/api/social-auth/google` | Public | Initiates Google OAuth 2.0 authentication flow |
+| `GET` | `/api/social-auth/google/redirect` | Public | Handles Google OAuth callback; if account is suspended, redirects to `/login?error=ACCOUNT_SUSPENDED&ref=IKISAKI-XXXXXX`; if 2FA is active, redirects to `/login?step=2fa_challenge&ticket=...`; otherwise issues session cookie and redirects to destination |
+| `GET` | `/api/social-auth/facebook` | Public | Initiates Facebook OAuth authentication flow |
+| `GET` | `/api/social-auth/facebook/redirect` | Public | Handles Facebook OAuth callback with suspension and 2FA challenge safeguards |
+| `GET` | `/api/social-auth/instagram` | Public | Initiates Instagram OAuth authentication flow |
+| `GET` | `/api/social-auth/instagram/redirect` | Public | Handles Instagram OAuth callback with suspension and 2FA challenge safeguards |
 
 ---
 
@@ -757,7 +813,9 @@ The backend is configured for zero-config serverless deployment via [`vercel.jso
 - [x] 10-Role Staff Management & RBAC Access Control Engine (`/api/admin/staff`) live
 - [x] Enterprise Admin Security Engine: Bearer JWT + HttpOnly Cookies + Session Rotation live
 - [x] Zero-Dependency Native RFC 6238 TOTP 2FA Engine (100% immune to serverless ESM crashes)
-- [x] Automatic Cloudflare R2 Asset Lifecycle & Orphaned Avatar Purge live
+- [x] Enterprise Customer 2FA (RFC 6238 TOTP) with QR Code generator & Google Authenticator integration live
+- [x] Zero-Trust Social OAuth 2FA Challenge (`/login?step=2fa_challenge`) & ticket verification live
+- [x] Automatic Cloudflare R2 Asset Lifecycle & Orphaned Avatar Purge across Admin, Staff, and Customer profiles live
 - [x] Zero-Trust Customer Account Suspension (`hasAccess`) with structured 403 `ACCOUNT_SUSPENDED` response
 - [x] Branded Customer Reference ID Generator (`IKISAKI-XXXXXX`) with auto-backfill live
 - [x] Admin self-service profile update (`fullName`, `avatarUrl`) and password change live

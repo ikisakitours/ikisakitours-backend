@@ -43,6 +43,10 @@ export class UserResponseDto {
   @IsBoolean()
   hasAccess!: boolean;
 
+  @IsOptional()
+  @IsBoolean()
+  isTwoFactorEnabled?: boolean;
+
   @IsDate()
   createdAt!: Date;
 

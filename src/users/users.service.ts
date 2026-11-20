@@ -26,13 +26,26 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../email/email.service';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { generateCustomerReferenceId } from '../common/utils/reference-id.util';
+import * as QRCode from 'qrcode';
+import {
+  generateTotpSecret,
+  verifyTotpCode,
+  generateOtpAuthUrl,
+} from '../admin-auth/totp.util';
+import { EnableCustomer2FaDto } from './dto/enable-2fa.dto';
+import { DisableCustomer2FaDto } from './dto/disable-2fa.dto';
+import { VerifyTotpChallengeDto } from './dto/verify-totp-challenge.dto';
 
 type User = typeof schema.users.$inferSelect;
 
 export interface AuthResponse {
-  user: UserResponseDto;
-  access_token: string;
+  success?: boolean;
+  user?: UserResponseDto;
+  access_token?: string;
   maxAgeMs?: number;
+  requiresTwoFactor?: boolean;
+  ticket?: string;
+  email?: string;
 }
 
 @Injectable()
@@ -71,6 +84,7 @@ export class UsersService {
       isVerified: user.isVerified,
       isVip: user.isVip,
       hasAccess: user.hasAccess,
+      isTwoFactorEnabled: Boolean(user.isTwoFactorEnabled),
       createdAt: user.createdAt,
       provider: user.provider ?? null,
       providerId: user.providerId ?? null,
@@ -152,9 +166,13 @@ export class UsersService {
     }
 
     if (!user.passwordHash) {
-      throw new UnauthorizedException(
-        'This account uses social login. Please log in with Google or Instagram.',
-      );
+      throw new UnauthorizedException({
+        statusCode: 401,
+        error: 'SOCIAL_ACCOUNT_LOGIN_REQUIRED',
+        message:
+          'This account uses social login. Please log in with your social account (Google, Facebook, or Instagram), or use Forgot Password to set a password.',
+        provider: user.provider || 'social',
+      });
     }
     const isPasswordValid = await bcrypt.compare(
       loginDto.password,
@@ -162,6 +180,36 @@ export class UsersService {
     );
     if (!isPasswordValid)
       throw new UnauthorizedException('Invalid credentials');
+
+    // ─── 2FA Verification ───
+    if (user.isTwoFactorEnabled) {
+      if (!loginDto.totpCode) {
+        const ticket = this.jwtService.sign(
+          {
+            sub: user.id,
+            email: user.email,
+            is2FaChallenge: true,
+            staySignedIn: Boolean(loginDto.staySignedIn),
+          },
+          { expiresIn: '5m' },
+        );
+
+        return {
+          success: true,
+          requiresTwoFactor: true,
+          ticket,
+          email: user.email,
+        };
+      }
+
+      const isTotpValid =
+        user.twoFactorSecret &&
+        verifyTotpCode(loginDto.totpCode.trim(), user.twoFactorSecret);
+
+      if (!isTotpValid) {
+        throw new UnauthorizedException('Invalid 6-digit authenticator code.');
+      }
+    }
 
     const isLongSession = Boolean(loginDto.staySignedIn);
 
@@ -220,7 +268,7 @@ export class UsersService {
     return this.toUserResponseDto(user);
   }
 
-  // without user pfp route
+  // Update customer profile
   async updateProfile(
     userId: string,
     updateUserDto: UpdateUserDto,
@@ -233,16 +281,40 @@ export class UsersService {
       throw new NotFoundException('User profile not found');
     }
 
-    const [updatedUser] = await this.db
-      .update(schema.users)
-      .set({
-        ...(updateUserDto.firstname && { firstName: updateUserDto.firstname }),
-        ...(updateUserDto.lastname && { lastName: updateUserDto.lastname }),
-        ...(updateUserDto.email && { email: updateUserDto.email }),
-        ...(updateUserDto.country && { country: updateUserDto.country }),
-      })
-      .where(eq(schema.users.id, userId))
-      .returning();
+    // Automatic Cloudflare R2 Asset Cleanup (Orphaned Avatar Deletion)
+    const currentAvatarUrl = existingUser.avatarUrl;
+    const targetToDelete =
+      updateUserDto.oldAvatarUrl ||
+      (updateUserDto.avatarUrl !== undefined &&
+      updateUserDto.avatarUrl !== currentAvatarUrl
+        ? currentAvatarUrl
+        : null);
+
+    if (targetToDelete && targetToDelete !== updateUserDto.avatarUrl) {
+      await this.uploadsService.deleteAsset(targetToDelete);
+    }
+
+    const updateData: Partial<typeof schema.users.$inferInsert> = {};
+    if (updateUserDto.firstname !== undefined)
+      updateData.firstName = updateUserDto.firstname;
+    if (updateUserDto.lastname !== undefined)
+      updateData.lastName = updateUserDto.lastname;
+    if (updateUserDto.email !== undefined)
+      updateData.email = updateUserDto.email;
+    if (updateUserDto.country !== undefined)
+      updateData.country = updateUserDto.country;
+    if (updateUserDto.avatarUrl !== undefined)
+      updateData.avatarUrl = updateUserDto.avatarUrl;
+
+    let updatedUser = existingUser;
+    if (Object.keys(updateData).length > 0) {
+      const [result] = await this.db
+        .update(schema.users)
+        .set(updateData)
+        .where(eq(schema.users.id, userId))
+        .returning();
+      updatedUser = result;
+    }
 
     return this.toUserResponseDto(updatedUser);
   }
@@ -258,6 +330,11 @@ export class UsersService {
 
     if (!existingUser) {
       throw new NotFoundException('User profile not found');
+    }
+
+    // Clean up previous avatar from Cloudflare R2 before uploading new one
+    if (existingUser.avatarUrl) {
+      await this.uploadsService.deleteAsset(existingUser.avatarUrl);
     }
 
     const avatarUrl = await this.uploadsService.uploadImage(avatar, 'avatars');
@@ -279,6 +356,22 @@ export class UsersService {
 
     if (!user) {
       throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          customerReferenceId: user.customerReferenceId,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
     }
 
     // Verify password using bcrypt (just like login)
@@ -304,6 +397,11 @@ export class UsersService {
           'Confirmation text does not match. Type DELETE to confirm.',
         );
       }
+    }
+
+    // Clean up customer avatar from Cloudflare R2 if it exists
+    if (user.avatarUrl) {
+      await this.uploadsService.deleteAsset(user.avatarUrl);
     }
 
     // Delete user from database
@@ -343,12 +441,30 @@ export class UsersService {
   //forget password methods
   // 1. Forgot Password: Generate OTP and send email
   async forgotPassword(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
     // Check if user exists
     const [user] = await this.db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.email, email))
+      .where(eq(schema.users.email, normalizedEmail))
       .limit(1);
+
+    // If user is suspended, immediately throw structured 403
+    if (user && !user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          customerReferenceId: user.customerReferenceId,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
+    }
 
     // Security practice: Always return success even if email doesn't exist
     if (!user) {
@@ -366,17 +482,17 @@ export class UsersService {
     // Remove any existing active reset request for this email first
     await this.db
       .delete(schema.passwordResets)
-      .where(eq(schema.passwordResets.email, email));
+      .where(eq(schema.passwordResets.email, normalizedEmail));
 
     // Save the new OTP into the permanent password_resets table
     await this.db.insert(schema.passwordResets).values({
-      email,
+      email: normalizedEmail,
       otp,
       expiresAt,
     });
 
     // Send the email via Resend
-    await this.emailService.sendOtpEmail(email, otp);
+    await this.emailService.sendOtpEmail(normalizedEmail, otp);
 
     return {
       message: 'If an account with that email exists, an OTP has been sent.',
@@ -386,12 +502,36 @@ export class UsersService {
   // 2. Reset Password: Verify OTP and update password
   async resetPassword(dto: ResetPasswordDto) {
     const { email, otp, newPassword } = dto;
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Check if user is suspended
+    const [user] = await this.db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, normalizedEmail))
+      .limit(1);
+
+    if (user && !user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          customerReferenceId: user.customerReferenceId,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
+    }
 
     // Find the reset record for this email
     const [resetRecord] = await this.db
       .select()
       .from(schema.passwordResets)
-      .where(eq(schema.passwordResets.email, email))
+      .where(eq(schema.passwordResets.email, normalizedEmail))
       .limit(1);
 
     if (!resetRecord) {
@@ -415,12 +555,12 @@ export class UsersService {
     await this.db
       .update(schema.users)
       .set({ passwordHash: hashedPassword })
-      .where(eq(schema.users.email, email));
+      .where(eq(schema.users.email, normalizedEmail));
 
     // Clean up: Delete the used reset row from the password_resets table
     await this.db
       .delete(schema.passwordResets)
-      .where(eq(schema.passwordResets.email, email));
+      .where(eq(schema.passwordResets.email, normalizedEmail));
 
     return {
       message: 'Password has been successfully reset. You can now log in.',
@@ -430,16 +570,44 @@ export class UsersService {
   //password update
   async updateProfilePassword(dto: UpdatePasswordDto) {
     const { email, currentPassword, newPassword } = dto;
+    const normalizedEmail = email.toLowerCase().trim();
 
     // 1. Find the user by email
     const [user] = await this.db
       .select()
       .from(schema.users)
-      .where(eq(schema.users.email, email))
+      .where(eq(schema.users.email, normalizedEmail))
       .limit(1);
 
-    if (!user || !user.passwordHash) {
-      throw new NotFoundException('User not found or password not set');
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    // Check if user is suspended
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          customerReferenceId: user.customerReferenceId,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
+    }
+
+    if (!user.passwordHash) {
+      throw new BadRequestException({
+        statusCode: 400,
+        error: 'SOCIAL_ACCOUNT_NO_PASSWORD',
+        message:
+          'This account was registered using social login and does not have a password set.',
+        provider: user.provider || 'social',
+      });
     }
 
     // 2. Verify that the provided current password matches the database record
@@ -466,8 +634,236 @@ export class UsersService {
     await this.db
       .update(schema.users)
       .set({ passwordHash: hashedNewPassword })
-      .where(eq(schema.users.email, email));
+      .where(eq(schema.users.email, normalizedEmail));
 
     return { message: 'Password updated successfully' };
+  }
+
+  // ─── Customer 2FA: Generate Base32 Secret & QR Code Data URL ───
+  async generate2Fa(userId: string) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+      });
+    }
+
+    const secret = generateTotpSecret();
+    const otpAuthUrl = generateOtpAuthUrl('Ikisaki Tours', user.email, secret);
+    const qrCodeDataUrl = await QRCode.toDataURL(otpAuthUrl);
+
+    // Persist temporary secret in users.twoFactorTempSecret
+    await this.db
+      .update(schema.users)
+      .set({
+        twoFactorTempSecret: secret,
+      })
+      .where(eq(schema.users.id, userId));
+
+    return {
+      success: true,
+      secret,
+      qrCodeDataUrl,
+    };
+  }
+
+  // ─── Customer 2FA: Enable / Activate ───
+  async enable2Fa(userId: string, dto: EnableCustomer2FaDto) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+      });
+    }
+
+    const tempSecret = user.twoFactorTempSecret;
+    if (!tempSecret) {
+      throw new BadRequestException(
+        'No pending 2FA setup found. Please generate a QR code first.',
+      );
+    }
+
+    const isValid = verifyTotpCode(dto.totpCode.trim(), tempSecret);
+    if (!isValid) {
+      throw new BadRequestException(
+        'Invalid 6-digit verification code. Please check your authenticator app.',
+      );
+    }
+
+    await this.db
+      .update(schema.users)
+      .set({
+        isTwoFactorEnabled: true,
+        twoFactorSecret: tempSecret,
+        twoFactorTempSecret: null,
+      })
+      .where(eq(schema.users.id, userId));
+
+    return {
+      success: true,
+      message: 'Two-Factor Authentication activated successfully.',
+    };
+  }
+
+  // ─── Customer 2FA: Disable ───
+  async disable2Fa(userId: string, dto: DisableCustomer2FaDto) {
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, userId),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+      });
+    }
+
+    if (!user.isTwoFactorEnabled) {
+      return {
+        success: true,
+        message: 'Two-Factor Authentication is already disabled.',
+      };
+    }
+
+    let verified = false;
+
+    if (dto.currentPassword && user.passwordHash) {
+      const isPasswordValid = await bcrypt.compare(
+        dto.currentPassword,
+        user.passwordHash,
+      );
+      if (!isPasswordValid) {
+        throw new BadRequestException('Incorrect current password.');
+      }
+      verified = true;
+    } else if (dto.totpCode && user.twoFactorSecret) {
+      const isTotpValid = verifyTotpCode(
+        dto.totpCode.trim(),
+        user.twoFactorSecret,
+      );
+      if (!isTotpValid) {
+        throw new BadRequestException(
+          'Invalid 6-digit verification code. Please check your authenticator app.',
+        );
+      }
+      verified = true;
+    } else {
+      if (user.passwordHash) {
+        throw new BadRequestException(
+          'Please provide your current password or 6-digit authenticator code to disable 2FA.',
+        );
+      } else {
+        throw new BadRequestException(
+          'Please provide your 6-digit authenticator code to disable 2FA.',
+        );
+      }
+    }
+
+    if (!verified) {
+      throw new BadRequestException('Verification failed.');
+    }
+
+    await this.db
+      .update(schema.users)
+      .set({
+        isTwoFactorEnabled: false,
+        twoFactorSecret: null,
+        twoFactorTempSecret: null,
+      })
+      .where(eq(schema.users.id, userId));
+
+    return {
+      success: true,
+      message: 'Two-Factor Authentication disabled successfully.',
+    };
+  }
+
+  // ─── Verify 2FA Challenge during Login (Social or Email/Password) ───
+  async verifyTwoFactorChallenge(
+    dto: VerifyTotpChallengeDto,
+  ): Promise<AuthResponse> {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(dto.ticket);
+    } catch {
+      throw new UnauthorizedException(
+        '2FA verification session has expired. Please log in again.',
+      );
+    }
+
+    if (!payload?.sub || !payload?.is2FaChallenge) {
+      throw new UnauthorizedException('Invalid 2FA challenge ticket.');
+    }
+
+    const user = await this.db.query.users.findFirst({
+      where: eq(schema.users.id, payload.sub),
+    });
+
+    if (!user) {
+      throw new NotFoundException('User profile not found');
+    }
+
+    if (!user.hasAccess) {
+      throw new ForbiddenException({
+        statusCode: 403,
+        error: 'ACCOUNT_SUSPENDED',
+        message: 'Your account access has been restricted by administration.',
+        user: {
+          id: user.id,
+          customerReferenceId: user.customerReferenceId,
+          email: user.email,
+          firstname: user.firstName,
+          lastname: user.lastName,
+          hasAccess: false,
+        },
+      });
+    }
+
+    if (!user.isTwoFactorEnabled || !user.twoFactorSecret) {
+      throw new BadRequestException('2FA is not enabled for this account.');
+    }
+
+    const isValid = verifyTotpCode(dto.totpCode.trim(), user.twoFactorSecret);
+    if (!isValid) {
+      throw new UnauthorizedException('Invalid 6-digit authenticator code.');
+    }
+
+    const isLongSession = Boolean(dto.staySignedIn ?? payload.staySignedIn);
+    const expiresIn = isLongSession ? '30d' : '1d';
+    const maxAgeMs = isLongSession
+      ? 30 * 24 * 60 * 60 * 1000
+      : 1 * 24 * 60 * 60 * 1000;
+
+    const access_token = this.generateToken(user, expiresIn);
+
+    return {
+      success: true,
+      user: this.toUserResponseDto(user),
+      access_token,
+      maxAgeMs,
+    };
   }
 }

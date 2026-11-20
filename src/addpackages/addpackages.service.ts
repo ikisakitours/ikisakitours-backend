@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, count, sql, and, inArray } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -353,6 +358,35 @@ export class AddpackagesService {
 
   //like button
   async toggleLike(packageId: string, userId: string) {
+    if (userId) {
+      const user = await this.db.query.users.findFirst({
+        where: eq(schema.users.id, userId),
+        columns: {
+          id: true,
+          customerReferenceId: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          hasAccess: true,
+        },
+      });
+      if (user && !user.hasAccess) {
+        throw new ForbiddenException({
+          statusCode: 403,
+          error: 'ACCOUNT_SUSPENDED',
+          message: 'Your account access has been restricted by administration.',
+          user: {
+            id: user.id,
+            customerReferenceId: user.customerReferenceId,
+            email: user.email,
+            firstname: user.firstName,
+            lastname: user.lastName,
+            hasAccess: false,
+          },
+        });
+      }
+    }
+
     return await this.db.transaction(async (tx) => {
       const existingLike = await tx.query.packageLikes.findFirst({
         where: and(
