@@ -220,6 +220,7 @@ The availability system synchronizes closed booking dates between admin staff an
 
 The administrative control plane (`/api/admin/auth`) is engineered with zero-compromise enterprise security:
 - **Dual Bearer Token & HttpOnly Cookie Extraction**: Seamless cross-origin support extracting `Bearer <token>` from the `Authorization` header with graceful fallback to HttpOnly cookies (`admin_session`, `admin_token`, `jwt`, `token`) and `x-admin-key` Super Admin service bypass.
+- **Extended 3-Hour Access Token Lifecycle**: Admin access tokens have an extended 3-hour (`3h`) lifespan (with matching 3-hour cookie `maxAge`) allowing back-office operators and administrative staff to work comfortably throughout their workday without mid-workflow session expirations or constant re-login interruptions.
 - **Zero-Dependency Native RFC 6238 TOTP Engine**: Custom-built on Node.js `crypto` with zero external ESM dependencies, completely eliminating serverless `ERR_REQUIRE_ESM` runtime incompatibilities. 100% compliant with Google Authenticator, Microsoft Authenticator, Authy, and 1Password with QR code data URLs via `qrcode`.
 - **Brute-Force & Account Lockout Defense**: Enforces consecutive failed login tracking with automatic 30-minute account locks upon 5 consecutive failures.
 - **Token Rotation & Session Reuse Attack Detection**: Issues rotating 7-day refresh tokens. If a previously revoked refresh token is presented, all active sessions for that admin user are instantly invalidated.
@@ -282,6 +283,8 @@ A robust, real-time protection layer aligns the Admin Panel's `hasAccess` toggle
   }
   ```
 - **Login Defense**: Suspended customers attempting to log in via standard credentials (`POST /api/auth/login`) or Social OAuth (Google, Instagram, Facebook) receive the structured 403 response, allowing the frontend to render the `<AccessRestricted />` screen.
+- **Account Recovery & 2FA Suspension Defense**: The OTP password reset flow (`POST /api/auth/reset-password`) and 2FA challenge verification (`POST /api/auth/2fa/verify-challenge`) also enforce real-time `hasAccess` validation, guaranteeing suspended accounts cannot circumvent restrictions via password resets or multi-factor challenges.
+- **Dual-Login Creation for Social OAuth Users**: Users who originally registered via 1-click Social OAuth (Google, Facebook, Instagram) can establish an independent email/password credential at any time using the Forgot Password flow (`POST /api/auth/forgot-password` + `POST /api/auth/reset-password`). Once set, they can sign in seamlessly via either Social OAuth OR traditional password credentials without account duplication.
 - **Mutation Guard**: Submitting comments (`/api/comments`), tour reviews (`/api/package-reviews`), service bookings (`/api/services/*`), or package bookings (`/api/package-bookings`) verifies caller status and rejects suspended users while **public guest bookings and inquiries remain 100% functional**.
 
 #### Branded Customer Reference ID (`customerReferenceId`)
@@ -337,6 +340,12 @@ To provide defense-grade security for registered travelers, the customer authent
   ```
 - Validates the 5-minute single-use ticket, verifies the live 6-digit TOTP code, checks account suspension (`hasAccess`), and sets the HttpOnly session cookie (`token`).
 
+#### 5. Safe 2FA Deactivation (`POST /api/auth/2fa/disable`)
+- Follows industry best practices requiring identity re-verification before multi-factor defense is stripped:
+  - Users with password credentials supply their current account password.
+  - Social OAuth users (or password users) supply a live 6-digit TOTP code from their authenticator app.
+- Upon successful verification, securely nulls `twoFactorSecret` and sets `isTwoFactorEnabled: false`.
+
 ---
 
 ## API Service Layer Reference
@@ -359,7 +368,7 @@ All staff endpoints require `@UseGuards(AdminAuthGuard, RolesGuard)` and appropr
 
 | Method | Endpoint | Auth | Description |
 | :--- | :--- | :---: | :--- |
-| `POST` | `/api/admin/auth/login` | Public | Admin login with bcrypt (12 rounds), returns `token`, `accessToken`, and `user` payload, sets 15-min session & 7-day refresh cookies |
+| `POST` | `/api/admin/auth/login` | Public | Admin login with bcrypt (12 rounds), returns `token`, `accessToken`, and `user` payload, sets 3-hour session & 7-day refresh cookies |
 | `POST` | `/api/admin/auth/logout` | Session / JWT | Revokes current refresh token session and clears authentication cookies |
 | `GET` | `/api/admin/auth/me` | Bearer / Cookie | Fetch profile of currently authenticated admin (`id`, `email`, `fullName`, `role`, `avatarUrl`, `isTwoFactorEnabled`) |
 | `POST` | `/api/admin/auth/refresh` | Cookie | Session refresh with token rotation & reuse detection |
@@ -732,6 +741,7 @@ Create `.env` in the root directory:
 | `ADMIN_API_KEY` | Yes | Secret key required in the `x-admin-key` header for administrative endpoints |
 | `ADMIN_JWT_SECRET` | Optional | Dedicated signing secret for admin authentication JWT tokens |
 | `JWT_SECRET` | Yes | Secret key used to sign and verify customer JSON Web Tokens |
+| `RESEND_API_KEY` | Optional | Resend API key for transactional emails (password reset OTPs, booking confirmations) |
 | `R2_ACCOUNT_ID` | Yes | Cloudflare Account ID |
 | `R2_ACCESS_KEY_ID` | Yes | Cloudflare R2 S3 Access Key ID |
 | `R2_SECRET_ACCESS_KEY`| Yes | Cloudflare R2 S3 Secret Access Key |
@@ -739,9 +749,19 @@ Create `.env` in the root directory:
 | `R2_PUBLIC_URL` | Yes | Public CDN URL endpoint of the Cloudflare R2 bucket |
 | `GOOGLE_CLIENT_ID` | Optional | Google OAuth 2.0 Client ID for social authentication |
 | `GOOGLE_CLIENT_SECRET`| Optional | Google OAuth 2.0 Client Secret |
+| `GOOGLE_CALLBACK_URL` | Optional | Custom Google OAuth redirect URI (defaults to `/api/social-auth/google/redirect`) |
+| `FACEBOOK_CLIENT_ID` | Optional | Facebook App ID for OAuth login |
+| `FACEBOOK_CLIENT_SECRET`| Optional | Facebook App Secret |
+| `FACEBOOK_CALLBACK_URL`| Optional | Custom Facebook OAuth redirect URI (defaults to `/api/social-auth/facebook/redirect`) |
+| `INSTAGRAM_CLIENT_ID` | Optional | Instagram App ID for OAuth login |
+| `INSTAGRAM_CLIENT_SECRET`| Optional | Instagram App Secret |
+| `INSTAGRAM_CALLBACK_URL`| Optional | Custom Instagram OAuth redirect URI (defaults to `/api/social-auth/instagram/redirect`) |
 | `FRONTEND_URL` | Yes | Canonical public customer website origin (e.g. `https://www.ikisakitours.com`) |
 | `ADMINPANEL_URL` | Yes | Admin Dashboard origin (e.g. `https://ikisakitours-admin-panel.vercel.app`) |
 | `CRON_SECRET` | Optional | Bearer secret token to authorize manual cron executions |
+| `INITIAL_ADMIN_EMAIL` | Optional | Default admin email when running `npm run seed:admin` (default: `admin@ikisakitours.com`) |
+| `INITIAL_ADMIN_PASSWORD` | Optional | Default admin password when running `npm run seed:admin` |
+| `INITIAL_ADMIN_NAME` | Optional | Default admin name when running `npm run seed:admin` |
 
 ```env
 DATABASE_URL="postgresql://postgres.<project-id>:<password>@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
@@ -752,6 +772,7 @@ NODE_ENV=development
 ADMIN_API_KEY="your_secure_admin_api_key_here"
 ADMIN_JWT_SECRET="your_admin_jwt_secret_here"
 JWT_SECRET="your_jwt_secret_key_here"
+RESEND_API_KEY="re_123456789"
 
 R2_ACCOUNT_ID="your_cloudflare_account_id"
 R2_ACCESS_KEY_ID="your_r2_access_key_id"
@@ -761,10 +782,24 @@ R2_PUBLIC_URL="https://pub-your-id.r2.dev"
 
 GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
+# GOOGLE_CALLBACK_URL="http://localhost:4000/api/social-auth/google/redirect"
+
+FACEBOOK_CLIENT_ID="your-facebook-app-id"
+FACEBOOK_CLIENT_SECRET="your-facebook-app-secret"
+# FACEBOOK_CALLBACK_URL="http://localhost:4000/api/social-auth/facebook/redirect"
+
+INSTAGRAM_CLIENT_ID="your-instagram-app-id"
+INSTAGRAM_CLIENT_SECRET="your-instagram-app-secret"
+# INSTAGRAM_CALLBACK_URL="http://localhost:4000/api/social-auth/instagram/redirect"
 
 FRONTEND_URL="https://www.ikisakitours.com"
 ADMINPANEL_URL="https://ikisakitours-admin-panel.vercel.app"
 CRON_SECRET="your_cron_verification_secret"
+
+# Optional Initial Super Admin Provisioning (npm run seed:admin)
+INITIAL_ADMIN_EMAIL="admin@ikisakitours.com"
+INITIAL_ADMIN_PASSWORD="YourSecurePassword123!"
+INITIAL_ADMIN_NAME="Operations Director"
 ```
 
 > [!CAUTION]

@@ -17,7 +17,7 @@ import { UploadsModule } from '../uploads/uploads.module';
         process.env.ADMIN_JWT_SECRET ||
         process.env.JWT_SECRET ||
         'super-admin-secret-ikisaki-2026',
-      signOptions: { expiresIn: '15m' },
+      signOptions: { expiresIn: '3h' },
     }),
   ],
   controllers: [AdminAuthController],
