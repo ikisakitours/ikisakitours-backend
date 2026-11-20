@@ -48,13 +48,13 @@ export class AdminAuthController {
 
     const isProduction = process.env.NODE_ENV === 'production';
 
-    // Set 15-minute Access Token cookie
+    // Set 3-hour Access Token cookie
     res.cookie('admin_session', result.accessToken!, {
       httpOnly: true,
       secure: isProduction,
       sameSite: 'strict',
       path: '/',
-      maxAge: 15 * 60 * 1000, // 15 mins
+      maxAge: 3 * 60 * 60 * 1000, // 3 hours
     });
 
     // Set 7-day Refresh Token cookie
@@ -135,7 +135,7 @@ export class AdminAuthController {
       secure: isProduction,
       sameSite: 'strict',
       path: '/',
-      maxAge: 15 * 60 * 1000,
+      maxAge: 3 * 60 * 60 * 1000, // 3 hours
     });
 
     res.cookie('admin_refresh', result.refreshToken, {

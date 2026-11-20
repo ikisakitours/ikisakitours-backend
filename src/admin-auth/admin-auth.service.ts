@@ -229,7 +229,7 @@ export class AdminAuthService {
     // Generate Tokens
     const accessToken = this.jwtService.sign(
       { sub: admin.id, role: admin.role, email: admin.email },
-      { expiresIn: '15m' },
+      { expiresIn: '3h' },
     );
 
     const rawRefreshToken = crypto.randomUUID();
@@ -350,7 +350,7 @@ export class AdminAuthService {
     // Issue new Access Token and Refresh Token
     const accessToken = this.jwtService.sign(
       { sub: admin.id, role: admin.role, email: admin.email },
-      { expiresIn: '15m' },
+      { expiresIn: '3h' },
     );
 
     const newRawRefreshToken = crypto.randomUUID();
