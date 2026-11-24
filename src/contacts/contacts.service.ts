@@ -10,6 +10,7 @@ import * as schema from '../database/schema';
 import { DRIZZLE_DB } from '../database/database.provider';
 import { ContactResponseDto } from './dto/contact-response.dto';
 import { CreateContactDto } from './dto/create-contact.dto';
+import { generateInquiryReferenceId } from '../common/utils/reference-id.util';
 
 @Injectable()
 export class ContactsService {
@@ -17,12 +18,32 @@ export class ContactsService {
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
   ) {}
 
+  private async ensureContactReferenceId(
+    contact: typeof schema.contacts.$inferSelect,
+  ): Promise<typeof schema.contacts.$inferSelect> {
+    if (contact.referenceId) {
+      return contact;
+    }
+    const referenceId = generateInquiryReferenceId();
+    try {
+      const [updated] = await this.db
+        .update(schema.contacts)
+        .set({ referenceId })
+        .where(eq(schema.contacts.id, contact.id))
+        .returning();
+      return updated || { ...contact, referenceId };
+    } catch {
+      return { ...contact, referenceId };
+    }
+  }
+
   // Helper formatter to transform database row into your Response DTO structure
   private toContactResponseDto(
     contact: typeof schema.contacts.$inferSelect,
   ): ContactResponseDto {
     return {
       id: contact.id,
+      referenceId: contact.referenceId || generateInquiryReferenceId(),
       inquiryType: contact.inquiryType,
       // Formats timestamp nicely for your admin panel (e.g., "Aug 03, 2026")
       date: new Date(contact.createdAt).toLocaleDateString('en-US', {
@@ -46,6 +67,7 @@ export class ContactsService {
       const [newContact] = await this.db
         .insert(schema.contacts)
         .values({
+          referenceId: generateInquiryReferenceId(),
           fullName: dto.fullName,
           email: dto.email,
           phone: dto.phone,
@@ -70,7 +92,11 @@ export class ContactsService {
       orderBy: (contacts, { desc }) => [desc(contacts.createdAt)],
     });
 
-    return contactsList.map((contact) => this.toContactResponseDto(contact));
+    const ensuredList = await Promise.all(
+      contactsList.map((contact) => this.ensureContactReferenceId(contact)),
+    );
+
+    return ensuredList.map((contact) => this.toContactResponseDto(contact));
   }
 
   // Fetch a single entry by ID
@@ -83,7 +109,8 @@ export class ContactsService {
       throw new NotFoundException(`Contact inquiry with ID "${id}" not found`);
     }
 
-    return this.toContactResponseDto(contact);
+    const ensured = await this.ensureContactReferenceId(contact);
+    return this.toContactResponseDto(ensured);
   }
 
   // Update status (e.g. pending -> contacted -> completed)

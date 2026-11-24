@@ -5,6 +5,9 @@ export class FaqResponseDto {
   id!: string;
 
   @IsString()
+  referenceId!: string;
+
+  @IsString()
   category!: string;
 
   @IsString()

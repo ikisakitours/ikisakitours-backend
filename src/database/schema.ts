@@ -14,6 +14,13 @@ import {
   pgView,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import {
+  generateServiceReferenceId,
+  generateInquiryReferenceId,
+  generateReviewReferenceId,
+  generateFeedbackReferenceId,
+  generateFaqReferenceId,
+} from '../common/utils/reference-id.util';
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -45,6 +52,9 @@ export const users = pgTable('users', {
 //comments
 export const comments = pgTable('comments', {
   id: uuid('id').defaultRandom().primaryKey(),
+  referenceId: varchar('reference_id', { length: 50 })
+    .unique()
+    .$defaultFn(() => generateFeedbackReferenceId()),
   content: text('content').notNull(),
   type: varchar('type', { length: 50 }).notNull(),
   isPublic: boolean('is_public').notNull().default(true),
@@ -64,6 +74,7 @@ export const comments = pgTable('comments', {
 //test comment table for visibility check
 export const publicComments = pgView('public_comments', {
   id: uuid('id').notNull(),
+  referenceId: varchar('reference_id', { length: 50 }),
   content: text('content').notNull(),
   type: varchar('type', { length: 50 }).notNull(),
   isPublic: boolean('is_public').notNull(),
@@ -78,6 +89,9 @@ export const packageReviews = pgTable('package_reviews', {
   id: text('id')
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
+  referenceId: varchar('reference_id', { length: 50 })
+    .unique()
+    .$defaultFn(() => generateReviewReferenceId()),
   packageId: text('package_id').notNull(),
   packageName: text('package_name').notNull(),
   type: text('type').notNull().default('PACKAGE'),
@@ -347,6 +361,9 @@ export const cookieConsents = pgTable('cookie_consents', {
 //service table can be changed in the future
 export const serviceRequests = pgTable('service_requests', {
   id: uuid('id').defaultRandom().primaryKey(),
+  referenceId: varchar('reference_id', { length: 50 })
+    .unique()
+    .$defaultFn(() => generateServiceReferenceId()),
   serviceCategory: text('service_category').notNull(),
   transferServiceType: text('transfer_service_type'),
   // Shared fields
@@ -416,6 +433,9 @@ export const newsletterSubscriptions = pgTable('newsletter_subscriptions', {
 //contact table
 export const contacts = pgTable('contacts', {
   id: uuid('id').defaultRandom().primaryKey(),
+  referenceId: varchar('reference_id', { length: 50 })
+    .unique()
+    .$defaultFn(() => generateInquiryReferenceId()),
   fullName: text('full_name').notNull(),
   email: text('email').notNull(),
   phone: text('phone').notNull(),
@@ -430,6 +450,9 @@ export const contacts = pgTable('contacts', {
 //faq table
 export const faqs = pgTable('faqs', {
   id: uuid('id').defaultRandom().primaryKey(),
+  referenceId: varchar('reference_id', { length: 50 })
+    .unique()
+    .$defaultFn(() => generateFaqReferenceId()),
   category: jsonb('category').$type<Record<string, string>>().notNull(),
   question: jsonb('question').$type<Record<string, string>>().notNull(),
   answer: jsonb('answer').$type<Record<string, string>>().notNull(),

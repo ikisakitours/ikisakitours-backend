@@ -13,6 +13,7 @@ import { CreateChauffeurServiceDto } from './dto/create-chauffeur-service.dto';
 import { CreateTransferServiceDto } from './dto/create-transfer-service.dto';
 import { UpdateServiceNotesDto } from './dto/service-notes/update-service-notes.dto';
 import { CreateServiceNotesDto } from './dto/service-notes/create-service-notes.dto';
+import { generateServiceReferenceId } from '../common/utils/reference-id.util';
 
 @Injectable()
 export class ServicesService {
@@ -51,6 +52,25 @@ export class ServicesService {
     }
   }
 
+  private async ensureServiceReferenceId(
+    record: typeof schema.serviceRequests.$inferSelect,
+  ): Promise<typeof schema.serviceRequests.$inferSelect> {
+    if (record.referenceId) {
+      return record;
+    }
+    const referenceId = generateServiceReferenceId();
+    try {
+      const [updated] = await this.db
+        .update(schema.serviceRequests)
+        .set({ referenceId })
+        .where(eq(schema.serviceRequests.id, record.id))
+        .returning();
+      return updated || { ...record, referenceId };
+    } catch {
+      return { ...record, referenceId };
+    }
+  }
+
   // 1. Create Custom Made Service Request
   async createCustomService(dto: CreateCustomServiceDto) {
     await this.checkUserAccess(dto.email);
@@ -58,6 +78,7 @@ export class ServicesService {
     const [record] = await this.db
       .insert(schema.serviceRequests)
       .values({
+        referenceId: generateServiceReferenceId(),
         serviceCategory: 'custom-made',
         vehicleType: dto.vehicleType,
         tourPackageType: dto.tourPackageType,
@@ -91,6 +112,7 @@ export class ServicesService {
     const [record] = await this.db
       .insert(schema.serviceRequests)
       .values({
+        referenceId: generateServiceReferenceId(),
         serviceCategory: 'private-chauffeur',
         vehicleType: dto.vehicleType,
         tourPackageType: dto.tourPackageType,
@@ -101,14 +123,12 @@ export class ServicesService {
         travelers: dto.travelers,
         tourDuration: dto.tourDuration,
         description: dto.description,
-        startingPrice: dto.startingPrice,
-        selectedPrice: dto.selectedPrice,
         fullName: dto.fullName,
         email: dto.email,
         phoneNumber: dto.phoneNumber,
         specialRequests: dto.specialRequests,
-        // startingPrice: dto.startingPrice,
-        // selectedPrice: dto.selectedPrice,
+        startingPrice: dto.startingPrice,
+        selectedPrice: dto.selectedPrice,
         status: 'pending',
       })
       .returning();
@@ -126,6 +146,7 @@ export class ServicesService {
     const [record] = await this.db
       .insert(schema.serviceRequests)
       .values({
+        referenceId: generateServiceReferenceId(),
         serviceCategory: 'transfer',
         transferServiceType: dto.serviceType,
         vehicleType: dto.vehicleType,
@@ -150,10 +171,14 @@ export class ServicesService {
 
   // 4. Fetch All Service Requests (Admin - sorted by createdAt DESC)
   async findAllServices() {
-    return await this.db
+    const records = await this.db
       .select()
       .from(schema.serviceRequests)
       .orderBy(desc(schema.serviceRequests.createdAt));
+
+    return await Promise.all(
+      records.map((r) => this.ensureServiceReferenceId(r)),
+    );
   }
 
   // 5. Fetch Single Service Request by ID
@@ -168,7 +193,7 @@ export class ServicesService {
       throw new NotFoundException(`Service request with ID ${id} not found`);
     }
 
-    return record;
+    return await this.ensureServiceReferenceId(record);
   }
 
   // 6. Delete Service Request by ID
@@ -195,7 +220,9 @@ export class ServicesService {
       .where(eq(schema.serviceRequests.serviceCategory, category))
       .orderBy(desc(schema.serviceRequests.createdAt));
 
-    return records;
+    return await Promise.all(
+      records.map((r) => this.ensureServiceReferenceId(r)),
+    );
   }
 
   // 5 update status

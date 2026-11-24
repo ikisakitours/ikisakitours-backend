@@ -5,6 +5,9 @@ export class ContactResponseDto {
   id!: string;
 
   @IsString()
+  referenceId!: string;
+
+  @IsString()
   inquiryType!: string;
 
   @IsString()
