@@ -16,6 +16,10 @@ import { UpdateVisibilityDto } from './dto/update-visibility.dto';
 import { CreatePackageReviewDto } from './dto/create-package-review.dto';
 import { UploadsService } from '../uploads/uploads.service';
 import { PackageReviewSummaryDto } from './dto/package-review-summary.dto';
+import {
+  generateFeedbackReferenceId,
+  generateReviewReferenceId,
+} from '../common/utils/reference-id.util';
 
 @Injectable()
 export class CommentsService {
@@ -23,6 +27,44 @@ export class CommentsService {
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
     private readonly uploadsService: UploadsService,
   ) {}
+
+  private async ensureCommentReferenceId(comment: any): Promise<any> {
+    if (comment.referenceId) {
+      return comment;
+    }
+    const referenceId = generateFeedbackReferenceId();
+    try {
+      const [updated] = await this.db
+        .update(schema.comments)
+        .set({ referenceId })
+        .where(eq(schema.comments.id, comment.id))
+        .returning();
+      return updated
+        ? { ...comment, referenceId: updated.referenceId }
+        : { ...comment, referenceId };
+    } catch {
+      return { ...comment, referenceId };
+    }
+  }
+
+  private async ensurePackageReviewReferenceId(
+    review: typeof schema.packageReviews.$inferSelect,
+  ): Promise<typeof schema.packageReviews.$inferSelect> {
+    if (review.referenceId) {
+      return review;
+    }
+    const referenceId = generateReviewReferenceId();
+    try {
+      const [updated] = await this.db
+        .update(schema.packageReviews)
+        .set({ referenceId })
+        .where(eq(schema.packageReviews.id, review.id))
+        .returning();
+      return updated || { ...review, referenceId };
+    } catch {
+      return { ...review, referenceId };
+    }
+  }
 
   // Helper to map DB record + Joined User to Response DTO
   private toCommentResponseDto(comment: any): CommentResponseDto {
@@ -42,7 +84,7 @@ export class CommentsService {
       isVip: comment.user?.isVip ?? false,
       hasAccess: comment.user?.hasAccess ?? true,
       customerReferenceId: comment.user?.customerReferenceId ?? null,
-      referenceId: comment.user?.customerReferenceId ?? null,
+      referenceId: comment.referenceId || generateFeedbackReferenceId(),
       content: comment.content,
       adminReply: comment.adminReply || undefined,
       date: new Date(comment.createdAt).toLocaleDateString('en-US', {
@@ -62,10 +104,14 @@ export class CommentsService {
       orderBy: [desc(schema.comments.createdAt)],
     });
 
-    const totalComments = records.length;
+    const ensuredRecords = await Promise.all(
+      records.map((c) => this.ensureCommentReferenceId(c)),
+    );
+
+    const totalComments = ensuredRecords.length;
 
     // Filter comments with valid ratings to calculate the overall average
-    const ratedComments = records.filter(
+    const ratedComments = ensuredRecords.filter(
       (comment) => comment.rating !== null && comment.rating !== undefined,
     );
 
@@ -80,7 +126,9 @@ export class CommentsService {
         : 0;
 
     return {
-      comments: records.map((comment) => this.toCommentResponseDto(comment)),
+      comments: ensuredRecords.map((comment) =>
+        this.toCommentResponseDto(comment),
+      ),
       totalComments,
       averageRating,
     };
@@ -174,6 +222,7 @@ export class CommentsService {
     const [newComment] = await this.db
       .insert(schema.comments)
       .values({
+        referenceId: generateFeedbackReferenceId(),
         packageId: dto.packageId,
         content: dto.content,
         type: dto.type,
@@ -319,6 +368,7 @@ export class CommentsService {
     const [newReview] = await this.db
       .insert(schema.packageReviews)
       .values({
+        referenceId: generateReviewReferenceId(),
         packageId: dto.packageId,
         packageName: dto.packageName,
         type: 'PACKAGE',
@@ -336,9 +386,13 @@ export class CommentsService {
 
   // Fetch all package reviews ordered by newest first
   async findAllPackageReviews() {
-    return await this.db.query.packageReviews.findMany({
+    const reviews = await this.db.query.packageReviews.findMany({
       orderBy: (reviews, { desc }) => [desc(reviews.createdAt)],
     });
+
+    return await Promise.all(
+      reviews.map((r) => this.ensurePackageReviewReferenceId(r)),
+    );
   }
 
   async replyToPackageReview(id: string, adminReply: string) {
@@ -406,6 +460,7 @@ export class CommentsService {
 
     const topReviews = reviews.slice(0, 2).map((r) => ({
       id: r.id,
+      referenceId: r.referenceId || generateReviewReferenceId(),
       userSnapshot: r.userSnapshot,
       fullName: r.fullName,
       rating: r.rating,
@@ -457,7 +512,9 @@ export class CommentsService {
       orderBy: (table, { desc }) => [desc(table.createdAt)],
     });
 
-    return reviews;
+    return await Promise.all(
+      reviews.map((r) => this.ensurePackageReviewReferenceId(r)),
+    );
   }
 
   //update visibility on a package

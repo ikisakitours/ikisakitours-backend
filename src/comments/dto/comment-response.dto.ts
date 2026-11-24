@@ -46,9 +46,8 @@ export class CommentResponseDto {
   @IsString()
   customerReferenceId?: string | null;
 
-  @IsOptional()
   @IsString()
-  referenceId?: string | null;
+  referenceId!: string;
 
   @IsString()
   content!: string;
