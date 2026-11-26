@@ -746,6 +746,30 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
     .notNull(),
 });
 
+
+//-----------chat-bot-section-----------------------------
+export type LocalizedText = {
+  en: string;
+  ja?: string;
+};
+
+export const botFaqs = pgTable("bot_faqs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  topic: text("topic").notNull(),
+  question: jsonb("question").$type<LocalizedText>().notNull(),
+  answer: jsonb("answer").$type<LocalizedText>().notNull(),
+  keywords: jsonb("keywords").$type<string[]>().notNull().default([]),
+});
+
+export const botMissedQuestions = pgTable("bot_missed_questions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  locale: text("locale").notNull().default("en"),
+  userMessage: text("user_message").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+//--------------------------------------------------------------
+
+
 export const adminUsersRelations = relations(adminUsers, ({ many }) => ({
   sessions: many(adminSessions),
   auditLogs: many(adminAuditLogs),
