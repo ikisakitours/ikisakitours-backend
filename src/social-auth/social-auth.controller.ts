@@ -110,16 +110,20 @@ export class SocialAuthController {
         return res.redirect(`${frontendUrl}/login?${queryParams.toString()}`);
       }
 
-      // Set the standard app cookie
+      // Set the standard app cookie (secure: true required for SameSite=none across origins)
       res.cookie('token', result.access_token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
+        secure: true,
         sameSite: 'none',
         maxAge: result.maxAgeMs,
       });
 
-      // Redirect user back to Next.js frontend
-      return res.redirect(`${frontendUrl}${redirectPath}`);
+      // Redirect user back to Next.js frontend with auth parameters so frontend can initialize user state
+      const baseRedirect = `${frontendUrl}${redirectPath}`;
+      const separator = baseRedirect.includes('?') ? '&' : '?';
+      const successRedirectUrl = `${baseRedirect}${separator}social_login=success&token=${encodeURIComponent(result.access_token)}`;
+
+      return res.redirect(successRedirectUrl);
     } catch (error: any) {
       const responseData =
         typeof error?.getResponse === 'function'
