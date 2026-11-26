@@ -176,10 +176,17 @@ export interface PackageOptionItem {
   description?: Record<string, string>;
 }
 
+export interface PricingNoteItem {
+  id: string;
+  title: Record<string, string>;
+  description: Record<string, string>;
+}
+
 export interface PricingConfig {
   tiers: GroupPricingTier[];
   passengerPricing: PassengerCategoryPricing;
   options: PackageOptionItem[];
+  pricingNotes?: PricingNoteItem[];
 }
 
 export const packages = pgTable('packages', {
