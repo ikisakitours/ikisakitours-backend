@@ -12,7 +12,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type, Transform } from 'class-transformer';
-import type { PricingConfig } from '../../database/schema';
+import type { PricingConfig, PricingNoteItem } from '../../database/schema';
 
 export enum PackageType {
   ONE_DAY = 'oneday',
@@ -280,4 +280,9 @@ export class CreateAddPackageDto {
   })
   @IsObject()
   pricingConfig?: PricingConfig;
+
+  @IsOptional()
+  @Transform(({ value }) => parseJsonArray(value))
+  @IsArray()
+  pricingNotes?: PricingNoteItem[];
 }

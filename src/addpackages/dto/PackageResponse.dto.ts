@@ -13,7 +13,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import type { PricingConfig } from '../../database/schema';
+import type { PricingConfig, PricingNoteItem } from '../../database/schema';
 
 export enum PackageType {
   ONE_DAY = 'oneday',
@@ -205,6 +205,10 @@ export class CreateAddPackageDto {
   @IsOptional()
   @IsObject()
   pricingConfig?: PricingConfig | null;
+
+  @IsOptional()
+  @IsArray()
+  pricingNotes?: PricingNoteItem[];
 }
 
 // --- ULTIMATE SINGLE PACKAGE RESPONSE DTO ---

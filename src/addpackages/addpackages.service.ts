@@ -39,9 +39,10 @@ export class AddpackagesService {
       JSON.stringify(dto.activityDetails),
     );
     const plainItinerary = JSON.parse(JSON.stringify(dto.itinerary));
-    const plainPricingConfig = dto.pricingConfig
-      ? JSON.parse(JSON.stringify(dto.pricingConfig))
-      : null;
+    const plainPricingConfig = this.mergePricingConfig(
+      dto.pricingConfig,
+      dto.pricingNotes,
+    );
 
     // 3. Insert into database using unified jsonb fields
     const [newPackage] = await this.db
@@ -141,7 +142,10 @@ export class AddpackagesService {
       return this.mapToPackageResponseDto(pkg, lang);
     }
 
-    return pkg;
+    return {
+      ...pkg,
+      pricingNotes: pkg.pricingConfig?.pricingNotes ?? [],
+    };
   }
 
   // --- TOGGLE VISIBILITY ---
@@ -210,12 +214,11 @@ export class AddpackagesService {
         destinations: dto.destinations
           ? JSON.parse(JSON.stringify(dto.destinations))
           : existing.destinations,
-        pricingConfig:
-          dto.pricingConfig !== undefined
-            ? dto.pricingConfig
-              ? JSON.parse(JSON.stringify(dto.pricingConfig))
-              : null
-            : existing.pricingConfig,
+        pricingConfig: this.mergePricingConfig(
+          dto.pricingConfig,
+          dto.pricingNotes,
+          existing.pricingConfig,
+        ),
 
         updatedAt: new Date(),
       })
@@ -511,9 +514,57 @@ export class AddpackagesService {
       provider: pkg.provider,
       gallery: pkg.gallery || [],
       pricingConfig: pkg.pricingConfig || null,
+      pricingNotes: pkg.pricingConfig?.pricingNotes ?? [],
       likes: pkg.likes ?? 0,
       createdAt: pkg.createdAt,
       updatedAt: pkg.updatedAt,
     };
+  }
+
+  /**
+   * Normalizes and merges pricingConfig with optional top-level pricingNotes
+   * so both nested and top-level payloads persist in pricingConfig.pricingNotes.
+   */
+  private mergePricingConfig(
+    incomingConfig?: schema.PricingConfig | null,
+    incomingNotes?: schema.PricingNoteItem[],
+    existingConfig?: schema.PricingConfig | null,
+  ): schema.PricingConfig | null {
+    if (incomingConfig === null && incomingNotes === undefined) {
+      return null;
+    }
+
+    const baseConfig =
+      incomingConfig !== undefined
+        ? incomingConfig
+          ? JSON.parse(JSON.stringify(incomingConfig))
+          : null
+        : existingConfig
+          ? JSON.parse(JSON.stringify(existingConfig))
+          : null;
+
+    if (!baseConfig && !incomingNotes) {
+      return null;
+    }
+
+    const resolvedConfig: schema.PricingConfig = baseConfig || {
+      tiers: [],
+      passengerPricing: {
+        adult: { enabled: true, mode: 'per_person', price: 0 },
+        couple: { enabled: false, mode: 'per_couple', price: 0 },
+        child: { enabled: false, mode: 'per_person', price: 0 },
+        infant: { enabled: false, mode: 'free', price: 0 },
+      },
+      options: [],
+    };
+
+    if (incomingNotes !== undefined) {
+      const plainNotes = JSON.parse(JSON.stringify(incomingNotes));
+      if (!resolvedConfig.pricingNotes || resolvedConfig.pricingNotes.length === 0) {
+        resolvedConfig.pricingNotes = plainNotes;
+      }
+    }
+
+    return resolvedConfig;
   }
 }
