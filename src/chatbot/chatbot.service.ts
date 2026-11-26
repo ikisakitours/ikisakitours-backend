@@ -242,7 +242,7 @@ export class ChatbotService {
 
   private getFallbackMessage(locale: string): string {
     if (locale === 'ja') {
-      return '該当する回答が見つかりませんでした。詳しくはサポートまでお問い合わせください。';
+      return '該当する回答が見つかりませんでした.詳しくはサポートまでお問い合わせください.';
     }
     return "I couldn't find an answer for that yet. Please contact support for more help.";
   }

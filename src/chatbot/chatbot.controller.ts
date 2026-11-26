@@ -15,7 +15,6 @@ import { RolesGuard } from '@/admin-auth/roles.guard';
 import { Roles } from '@/admin-auth/roles.decorator';
 import { AdminRole } from '@/admin-auth/roles.enum';
 
-type SupportedLocale = 'en' | 'ja';
 
 interface AskChatbotDto {
     message: string;
@@ -61,7 +60,8 @@ export class ChatbotController {
         return this.chatbotService.getMissedQuestions();
     }
 
-    private normalizeLocale(locale?: string): SupportedLocale {
-        return locale?.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+    private normalizeLocale(locale?: string): string {
+        const cleaned = (locale ?? 'en').trim().toLowerCase();
+        return cleaned.split(/[-_]/)[0] || 'en';
     }
 }
