@@ -106,6 +106,9 @@ export class SocialAuthController {
           ...(result.customerReferenceId
             ? { ref: result.customerReferenceId }
             : {}),
+          ...(redirectPath && redirectPath !== '/'
+            ? { redirect: redirectPath }
+            : {}),
         });
         return res.redirect(`${frontendUrl}/login?${queryParams.toString()}`);
       }
