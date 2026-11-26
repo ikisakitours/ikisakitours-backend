@@ -748,10 +748,7 @@ export const adminAuditLogs = pgTable('admin_audit_logs', {
 
 
 //-----------chat-bot-section-----------------------------
-export type LocalizedText = {
-  en: string;
-  ja?: string;
-};
+export type LocalizedText = Record<string, string>;
 
 export const botFaqs = pgTable("bot_faqs", {
   id: uuid("id").defaultRandom().primaryKey(),

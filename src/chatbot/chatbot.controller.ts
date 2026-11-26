@@ -1,53 +1,67 @@
 import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Query,
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Post,
+    Query,
+    UseGuards,
 } from '@nestjs/common';
 import { ChatbotService } from './chatbot.service';
 import { CreateFaqDto } from './dto/create-faq.dto';
+import { AdminAuthGuard } from '@/admin-auth/admin-auth.guard';
+import { RolesGuard } from '@/admin-auth/roles.guard';
+import { Roles } from '@/admin-auth/roles.decorator';
+import { AdminRole } from '@/admin-auth/roles.enum';
 
 type SupportedLocale = 'en' | 'ja';
 
 interface AskChatbotDto {
-  message: string;
-  locale?: string;
+    message: string;
+    locale?: string;
 }
 
 @Controller('chatbot')
 export class ChatbotController {
-  constructor(private readonly chatbotService: ChatbotService) {}
+    constructor(private readonly chatbotService: ChatbotService) { }
 
-  @Post('ask')
-  async ask(@Body() body: AskChatbotDto) {
-    const locale = this.normalizeLocale(body.locale);
-    return this.chatbotService.ask(body.message ?? '', locale);
-  }
+    @Post('ask')
+    async ask(@Body() body: AskChatbotDto) {
+        const locale = this.normalizeLocale(body.locale);
+        return this.chatbotService.ask(body.message ?? '', locale);
+    }
 
-  @Get('faqs')
-  async getFaqs(@Query('locale') locale?: string) {
-    return this.chatbotService.getFaqs(this.normalizeLocale(locale));
-  }
+    @Get('faqs')
+    async getFaqs(@Query('locale') locale?: string) {
+        return this.chatbotService.getFaqs(this.normalizeLocale(locale));
+    }
 
-  @Post('faqs')
-  async createFaq(@Body() body: CreateFaqDto) {
-    return this.chatbotService.createFaq(body);
-  }
 
-  @Delete('faqs/:id')
-  async deleteFaq(@Param('id') id: string) {
-    return this.chatbotService.deleteFaq(id);
-  }
+    @UseGuards(AdminAuthGuard, RolesGuard)
+    @Roles(
+        AdminRole.SUPER_ADMIN
+    )
+    @Post('faqs')
+    async createFaq(@Body() body: CreateFaqDto) {
+        return this.chatbotService.createFaq(body);
+    }
 
-  @Get('missed')
-  async getMissedQuestions() {
-    return this.chatbotService.getMissedQuestions();
-  }
+    @UseGuards(AdminAuthGuard, RolesGuard)
+    @Roles(
+        AdminRole.SUPER_ADMIN
+    )
+    @Delete('faqs/:id')
+    async deleteFaq(@Param('id') id: string) {
+        return this.chatbotService.deleteFaq(id);
+    }
 
-  private normalizeLocale(locale?: string): SupportedLocale {
-    return locale?.toLowerCase().startsWith('ja') ? 'ja' : 'en';
-  }
+    @Get('missed')
+    async getMissedQuestions() {
+        return this.chatbotService.getMissedQuestions();
+    }
+
+    private normalizeLocale(locale?: string): SupportedLocale {
+        return locale?.toLowerCase().startsWith('ja') ? 'ja' : 'en';
+    }
 }

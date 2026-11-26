@@ -1,35 +1,24 @@
-import { Type } from 'class-transformer';
 import {
   IsArray,
   IsNotEmpty,
+  IsObject,
   IsOptional,
   IsString,
   IsUUID,
-  ValidateNested,
 } from 'class-validator';
-
-export class LocalizedTextDto {
-  @IsString()
-  @IsNotEmpty()
-  en!: string;
-
-  @IsOptional()
-  @IsString()
-  ja?: string;
-}
 
 export class CreateFaqDto {
   @IsString()
   @IsNotEmpty()
   topic!: string;
 
-  @ValidateNested()
-  @Type(() => LocalizedTextDto)
-  question!: LocalizedTextDto;
+  @IsObject()
+  @IsNotEmpty()
+  question!: Record<string, string>;
 
-  @ValidateNested()
-  @Type(() => LocalizedTextDto)
-  answer!: LocalizedTextDto;
+  @IsObject()
+  @IsNotEmpty()
+  answer!: Record<string, string>;
 
   @IsOptional()
   @IsArray()
