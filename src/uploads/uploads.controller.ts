@@ -5,10 +5,13 @@ import {
   UploadedFile,
   UploadedFiles,
   Body,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import 'multer';
 import { UploadsService } from './uploads.service';
+import { AdminAuthGuard } from '../admin-auth/admin-auth.guard';
+import { CreatePresignedUrlsDto } from './dto/create-presigned-urls.dto';
 
 @Controller('uploads')
 export class UploadsController {
@@ -31,5 +34,13 @@ export class UploadsController {
   ) {
     const urls = await this.uploadsService.uploadMultiple(images, folder);
     return { urls };
+  }
+
+  // Generate presigned R2 PUT URLs for direct browser-to-R2 uploads (bypasses Vercel 4.5MB limit)
+  @Post('presigned-urls')
+  @UseGuards(AdminAuthGuard)
+  async createPresignedUrls(@Body() dto: CreatePresignedUrlsDto) {
+    const uploads = await this.uploadsService.generatePresignedUrls(dto.files);
+    return { uploads };
   }
 }

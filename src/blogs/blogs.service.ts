@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, sql, and } from 'drizzle-orm';
@@ -12,11 +13,13 @@ import { CreateBlogDto } from './dto/create-blog.dto';
 import { BlogResponseDto } from './dto/blog-response.dto';
 import { BlogPreviewResponseDto } from './dto/blog-preview-response.dto';
 import { UpdateBlogDto } from './dto/update-blog.dto';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class BlogsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   // Helper method: Generate URL-friendly slug from text
@@ -101,22 +104,31 @@ export class BlogsService {
     const slug =
       dto.slug?.trim() || this.slugify(titleText) || `blog-${Date.now()}`;
 
-    const [newBlog] = await this.db
-      .insert(schema.blogs)
-      .values({
-        title: dto.title,
-        slug: slug,
-        summary: dto.summary,
-        category: dto.category,
-        readTime: dto.readTime,
-        blog: dto.blog,
-        author: dto.author,
-        images: dto.images ?? [],
-        likes: 0,
-      })
-      .returning();
+    try {
+      const [newBlog] = await this.db
+        .insert(schema.blogs)
+        .values({
+          title: dto.title,
+          slug: slug,
+          summary: dto.summary,
+          category: dto.category,
+          readTime: dto.readTime,
+          blog: dto.blog,
+          author: dto.author,
+          images: dto.images ?? [],
+          likes: 0,
+        })
+        .returning();
 
-    return this.mapToBlogResponseDto(newBlog, 'en');
+      return this.mapToBlogResponseDto(newBlog, 'en');
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          `A blog post with the slug "${slug}" already exists. Please use a different slug.`,
+        );
+      }
+      throw error;
+    }
   }
 
   // 2. Fetch small previews for card display on frontend
@@ -207,13 +219,14 @@ export class BlogsService {
     return this.mapToBlogResponseDto(updatedBlog);
   }
 
-  // 6. Delete blog post by ID
+  // 6. Delete blog post by ID & purge R2 assets
   async remove(id: string): Promise<{ message: string }> {
-    await this.findOne(id);
+    const existing = await this.findOneAdmin(id);
 
     await this.db.delete(schema.blogs).where(eq(schema.blogs.id, id));
+    await this.uploadsService.deleteAssets(existing.images || []);
 
-    return { message: `Blog post with ID "${id}" deleted successfully.` };
+    return { message: `Blog post deleted successfully.` };
   }
 
   // 7. Fetch full blog with a user-specific like check
@@ -339,21 +352,37 @@ export class BlogsService {
     return blog;
   }
 
-  // ADMIN 3: Update an existing blog post by ID
+  // ADMIN 3: Update an existing blog post by ID & purge removed R2 assets
   async update(id: string, updateDto: UpdateBlogDto) {
     // First, verify the blog exists
-    await this.findOneAdmin(id);
+    const existing = await this.findOneAdmin(id);
 
-    // Perform the update in Drizzle
-    const [updatedBlog] = await this.db
-      .update(schema.blogs)
-      .set({
-        ...updateDto,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.blogs.id, id))
-      .returning();
+    try {
+      // Perform the update in Drizzle
+      const [updatedBlog] = await this.db
+        .update(schema.blogs)
+        .set({
+          ...updateDto,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.blogs.id, id))
+        .returning();
 
-    return updatedBlog;
+      if (updateDto.images !== undefined) {
+        await this.uploadsService.cleanupRemovedAssets(
+          existing.images || [],
+          updateDto.images || [],
+        );
+      }
+
+      return updatedBlog;
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          `A blog post with the slug "${updateDto.slug}" already exists. Please use a different slug.`,
+        );
+      }
+      throw error;
+    }
   }
 }
