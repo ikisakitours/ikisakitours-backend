@@ -3,6 +3,7 @@ import {
   Inject,
   NotFoundException,
   ForbiddenException,
+  ConflictException,
 } from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, count, sql, and, inArray } from 'drizzle-orm';
@@ -25,13 +26,14 @@ export class AddpackagesService {
   // --- POST /addpackages -> Returns AddPackageResponseDto ---
   async create(
     dto: CreateAddPackageDto,
-    images: Express.Multer.File[],
+    images: Express.Multer.File[] = [],
   ): Promise<AddPackageResponseDto> {
-    // 1. Upload all images first, get back the array of URLs
-    const gallery = await this.uploadsService.uploadMultiple(
-      images,
-      'package-images',
-    );
+    // 1. Support both direct-to-R2 presigned URLs (dto.gallery) and legacy multipart file uploads
+    const uploadedUrls =
+      images && images.length > 0
+        ? await this.uploadsService.uploadMultiple(images, 'package-images')
+        : [];
+    const gallery = [...(dto.gallery ?? []), ...uploadedUrls];
 
     // 2. Ensure JSONB fields are plain JavaScript objects
     const plainDestinations = JSON.parse(JSON.stringify(dto.destinations));
@@ -45,49 +47,59 @@ export class AddpackagesService {
     );
 
     // 3. Insert into database using unified jsonb fields
-    const [newPackage] = await this.db
-      .insert(schema.packages)
-      .values({
-        // Shared Fields
-        type: dto.type,
-        category: dto.category,
-        origin: dto.origin,
-        duration: dto.duration,
-        badge: dto.badge,
-        slug: dto.slug,
-        price: dto.price.toString(),
-        discount: dto.discount !== undefined ? dto.discount.toString() : '0',
-        provider: dto.provider,
-        gallery: gallery,
-        likes: 0,
+    try {
+      const [newPackage] = await this.db
+        .insert(schema.packages)
+        .values({
+          // Shared Fields
+          type: dto.type,
+          category: dto.category,
+          origin: dto.origin,
+          duration: dto.duration,
+          badge: dto.badge,
+          slug: dto.slug,
+          price: dto.price.toString(),
+          discount:
+            dto.discount !== undefined ? dto.discount.toString() : '0',
+          provider: dto.provider,
+          gallery: gallery,
+          likes: 0,
 
-        // Complex JSONB Structures
-        activityDetails: plainActivityDetails,
-        itinerary: plainItinerary,
-        destinations: plainDestinations,
-        pricingConfig: plainPricingConfig,
+          // Complex JSONB Structures
+          activityDetails: plainActivityDetails,
+          itinerary: plainItinerary,
+          destinations: plainDestinations,
+          pricingConfig: plainPricingConfig,
 
-        // Multilingual JSONB Text Fields
-        title: dto.title,
-        titleEmphasis: dto.titleEmphasis,
-        leadTitle: dto.leadTitle,
-        leadDescription: dto.leadDescription,
-        description: dto.description,
+          // Multilingual JSONB Text Fields
+          title: dto.title,
+          titleEmphasis: dto.titleEmphasis,
+          leadTitle: dto.leadTitle,
+          leadDescription: dto.leadDescription,
+          description: dto.description,
 
-        // Multilingual JSONB Array Fields
-        highlights: dto.highlights,
-        includes: dto.includes,
-        excludes: dto.excludes,
-      })
-      .returning();
+          // Multilingual JSONB Array Fields
+          highlights: dto.highlights,
+          includes: dto.includes,
+          excludes: dto.excludes,
+        })
+        .returning();
 
-    // 4. Return the minimal response for the success message
-    return {
-      id: newPackage.id,
-      slug: newPackage.slug,
-      message: 'Package created successfully!',
-      createdAt: newPackage.createdAt,
-    };
+      // 4. Return the minimal response for the success message
+      return {
+        id: newPackage.id,
+        slug: newPackage.slug,
+        message: 'Package created successfully!',
+        createdAt: newPackage.createdAt,
+      };
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          `A package with the slug "${dto.slug}" already exists. Please use a different slug.`,
+        );
+      }
+      throw error;
+    }
   }
 
   // --- GET /addpackages -> Returns minimal admin list ---
@@ -163,76 +175,100 @@ export class AddpackagesService {
     return updated;
   }
 
-  //update text only
+  //update text & gallery
   async updateTextOnly(
     slug: string,
     dto: Partial<CreateAddPackageDto>,
   ): Promise<PackageResponseDto> {
     // 1. Fetch existing to fill in any missing fields from the partial DTO
-    const existing = await this.findOne(slug);
+    const existing = await this.findOne(slug, undefined, true);
+    const nextGallery =
+      dto.gallery !== undefined ? dto.gallery : existing.gallery;
 
     // 2. Perform update
-    const [updatedPkg] = await this.db
-      .update(schema.packages)
-      .set({
-        // Shared fields
-        type: dto.type ?? (existing.type as any),
-        category: dto.category ?? existing.category,
-        origin: dto.origin ?? existing.origin,
-        duration: dto.duration ?? existing.duration,
-        badge: dto.badge ?? existing.badge,
-        slug: dto.slug ?? existing.slug,
-        price:
-          dto.price !== undefined
-            ? dto.price.toString()
-            : existing.price.toString(),
-        discount:
-          dto.discount !== undefined
-            ? dto.discount.toString()
-            : (existing.discount ?? 0).toString(),
-        provider: dto.provider ?? existing.provider,
+    let updatedPkg: typeof schema.packages.$inferSelect;
+    try {
+      const [row] = await this.db
+        .update(schema.packages)
+        .set({
+          // Shared fields
+          type: dto.type ?? (existing.type as any),
+          category: dto.category ?? existing.category,
+          origin: dto.origin ?? existing.origin,
+          duration: dto.duration ?? existing.duration,
+          badge: dto.badge ?? existing.badge,
+          slug: dto.slug ?? existing.slug,
+          price:
+            dto.price !== undefined
+              ? dto.price.toString()
+              : existing.price.toString(),
+          discount:
+            dto.discount !== undefined
+              ? dto.discount.toString()
+              : (existing.discount ?? 0).toString(),
+          provider: dto.provider ?? existing.provider,
+          gallery: nextGallery,
 
-        // ── Multilingual JSONB Text Fields ──
-        title: dto.title ?? existing.title,
-        titleEmphasis: dto.titleEmphasis ?? existing.titleEmphasis,
-        leadTitle: dto.leadTitle ?? existing.leadTitle,
-        leadDescription: dto.leadDescription ?? existing.leadDescription,
-        description: dto.description ?? existing.description,
+          // ── Multilingual JSONB Text Fields ──
+          title: dto.title ?? existing.title,
+          titleEmphasis: dto.titleEmphasis ?? existing.titleEmphasis,
+          leadTitle: dto.leadTitle ?? existing.leadTitle,
+          leadDescription: dto.leadDescription ?? existing.leadDescription,
+          description: dto.description ?? existing.description,
 
-        // ── Multilingual JSONB Arrays ──
-        highlights: dto.highlights ?? existing.highlights,
-        includes: dto.includes ?? existing.includes,
-        excludes: dto.excludes ?? existing.excludes,
+          // ── Multilingual JSONB Arrays ──
+          highlights: dto.highlights ?? existing.highlights,
+          includes: dto.includes ?? existing.includes,
+          excludes: dto.excludes ?? existing.excludes,
 
-        // ── Complex JSONB Structures ──
-        activityDetails: dto.activityDetails
-          ? JSON.parse(JSON.stringify(dto.activityDetails))
-          : existing.activityDetails,
-        itinerary: dto.itinerary
-          ? JSON.parse(JSON.stringify(dto.itinerary))
-          : existing.itinerary,
-        destinations: dto.destinations
-          ? JSON.parse(JSON.stringify(dto.destinations))
-          : existing.destinations,
-        pricingConfig: this.mergePricingConfig(
-          dto.pricingConfig,
-          dto.pricingNotes,
-          existing.pricingConfig,
-        ),
+          // ── Complex JSONB Structures ──
+          activityDetails: dto.activityDetails
+            ? JSON.parse(JSON.stringify(dto.activityDetails))
+            : existing.activityDetails,
+          itinerary: dto.itinerary
+            ? JSON.parse(JSON.stringify(dto.itinerary))
+            : existing.itinerary,
+          destinations: dto.destinations
+            ? JSON.parse(JSON.stringify(dto.destinations))
+            : existing.destinations,
+          pricingConfig: this.mergePricingConfig(
+            dto.pricingConfig,
+            dto.pricingNotes,
+            existing.pricingConfig,
+          ),
 
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.packages.slug, slug))
-      .returning();
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.packages.slug, slug))
+        .returning();
+
+      updatedPkg = row;
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          `A package with the slug "${dto.slug}" already exists. Please use a different slug.`,
+        );
+      }
+      throw error;
+    }
+
+    // 3. Clean up any gallery images removed during the update from Cloudflare R2
+    if (dto.gallery !== undefined) {
+      await this.uploadsService.cleanupRemovedAssets(
+        existing.gallery || [],
+        nextGallery || [],
+      );
+    }
 
     return this.mapToPackageResponseDto(updatedPkg);
   }
 
-  // --- DELETE /addpackages/:slug -> Removes a package ---
+  // --- DELETE /addpackages/:slug -> Removes a package & purges R2 assets ---
   async remove(slug: string): Promise<{ success: boolean; message: string }> {
-    const existing = await this.findOne(slug);
+    const existing = await this.findOne(slug, undefined, true);
 
     await this.db.delete(schema.packages).where(eq(schema.packages.slug, slug));
+    await this.uploadsService.deleteAssets(existing.gallery || []);
 
     // Extract title for the message using the dictionary (falling back to English or empty string)
     const titleObj = existing.title || {};

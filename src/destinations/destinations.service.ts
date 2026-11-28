@@ -1,4 +1,9 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PostgresJsDatabase } from 'drizzle-orm/postgres-js';
 import { eq, desc, inArray, and } from 'drizzle-orm';
 import * as schema from '../database/schema';
@@ -9,11 +14,13 @@ import { DestinationPreviewResponseDto } from './dto/destination-preview-respons
 import { DestinationMapResponseDto } from './dto/destination-map-response.dto';
 import { DestinationPackageResponseDto } from './dto/destination-package-response.dto';
 import { UpdateDestinationDto } from './dto/update-destination.dto';
+import { UploadsService } from '../uploads/uploads.service';
 
 @Injectable()
 export class DestinationsService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: PostgresJsDatabase<typeof schema>,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   // Helper method: Generate URL-friendly slug from text
@@ -127,25 +134,34 @@ export class DestinationsService {
       dto.slug?.trim() ||
       (titleForSlug ? this.slugify(titleForSlug) : `destination-${Date.now()}`);
 
-    const [newDest] = await this.db
-      .insert(schema.destinations)
-      .values({
-        title: dto.title,
-        slug: slug,
-        summary: dto.summary,
-        description: dto.description,
-        province: dto.province,
-        highlights: dto.highlights,
-        images: dto.images ?? [],
-        bestTimeToVisit: dto.bestTimeToVisit,
-        climate: dto.climate,
-        primaryLanguage: dto.primaryLanguage,
-        localCurrency: dto.localCurrency,
-        coordinates: dto.coordinates,
-      })
-      .returning();
+    try {
+      const [newDest] = await this.db
+        .insert(schema.destinations)
+        .values({
+          title: dto.title,
+          slug: slug,
+          summary: dto.summary,
+          description: dto.description,
+          province: dto.province,
+          highlights: dto.highlights,
+          images: dto.images ?? [],
+          bestTimeToVisit: dto.bestTimeToVisit,
+          climate: dto.climate,
+          primaryLanguage: dto.primaryLanguage,
+          localCurrency: dto.localCurrency,
+          coordinates: dto.coordinates,
+        })
+        .returning();
 
-    return this.mapToDestinationResponseDto(newDest, 'en');
+      return this.mapToDestinationResponseDto(newDest, 'en');
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          `A destination with the slug "${slug}" already exists. Please use a different slug.`,
+        );
+      }
+      throw error;
+    }
   }
 
   // 2. Fetch small previews for card display on frontend
@@ -217,15 +233,17 @@ export class DestinationsService {
     return updatedDest;
   }
 
-  // 5. Delete destination by ID
+  // 5. Delete destination by ID & purge R2 assets
   async remove(id: string): Promise<{ message: string }> {
-    await this.findOne(id);
+    const existing = await this.findOneAdmin(id);
 
     await this.db
       .delete(schema.destinations)
       .where(eq(schema.destinations.id, id));
 
-    return { message: `Destination with ID "${id}" deleted successfully.` };
+    await this.uploadsService.deleteAssets(existing.images || []);
+
+    return { message: `Destination deleted successfully.` };
   }
 
   // 6. Fetch lightweight data specifically for map markers
@@ -272,21 +290,37 @@ export class DestinationsService {
     return destination;
   }
 
-  // ADMIN 3: Update an existing destination by ID
+  // ADMIN 3: Update an existing destination by ID & purge removed R2 assets
   async update(id: string, updateDto: UpdateDestinationDto) {
     // First, verify the destination exists
-    await this.findOneAdmin(id);
+    const existing = await this.findOneAdmin(id);
 
-    // Perform the update in Drizzle
-    const [updatedDestination] = await this.db
-      .update(schema.destinations)
-      .set({
-        ...updateDto,
-        updatedAt: new Date(),
-      })
-      .where(eq(schema.destinations.id, id))
-      .returning();
+    try {
+      // Perform the update in Drizzle
+      const [updatedDestination] = await this.db
+        .update(schema.destinations)
+        .set({
+          ...updateDto,
+          updatedAt: new Date(),
+        })
+        .where(eq(schema.destinations.id, id))
+        .returning();
 
-    return updatedDestination;
+      if (updateDto.images !== undefined) {
+        await this.uploadsService.cleanupRemovedAssets(
+          existing.images || [],
+          updateDto.images || [],
+        );
+      }
+
+      return updatedDestination;
+    } catch (error: any) {
+      if (error?.code === '23505') {
+        throw new ConflictException(
+          `A destination with the slug "${updateDto.slug}" already exists. Please use a different slug.`,
+        );
+      }
+      throw error;
+    }
   }
 }
